@@ -38,9 +38,12 @@ class SmartWorker:
 
         # Set base directory
         if base_dir is None:
-            self.base_dir = os.path.expanduser('~/group/ai_swarm/')
+            self.base_dir = os.environ.get('AI_SWARM_DIR', '/tmp/ai_swarm/')
         else:
             self.base_dir = base_dir
+
+        # Auto-create base directory
+        os.makedirs(self.base_dir, exist_ok=True)
 
         # Setup paths
         self.status_log = os.path.join(self.base_dir, 'status.log')

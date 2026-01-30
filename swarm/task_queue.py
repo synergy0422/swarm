@@ -27,7 +27,8 @@ class TaskQueue:
             tasks_file: Path to tasks.json file
         """
         if tasks_file is None:
-            base_dir = os.path.expanduser('~/group/ai_swarm/')
+            base_dir = os.environ.get('AI_SWARM_DIR', '/tmp/ai_swarm/')
+            os.makedirs(base_dir, exist_ok=True)
             tasks_file = os.path.join(base_dir, 'tasks.json')
 
         self.tasks_file = tasks_file
