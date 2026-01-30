@@ -20,6 +20,11 @@
 
 **Requirements:** CORE-11, CORE-12
 
+**Plans:** 1 plan
+
+**Plan list:**
+- [ ] 01-PLAN.md — Restructure Phase 2 code into MVP layout, configure paths, verify tests
+
 **Success Criteria:**
 1. ✅ `/home/user/AAA/swarm/` 包含 Phase 2 核心文件
 2. ✅ 路径修改为 `/tmp/ai_swarm/`
