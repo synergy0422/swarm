@@ -12,9 +12,8 @@ import shutil
 import unittest
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-import config
+from swarm import config
+from swarm import task_queue
 
 
 class TestTaskQueue(unittest.TestCase):
@@ -54,8 +53,6 @@ class TestTaskQueue(unittest.TestCase):
     def test_create_new_queue_file(self):
         """Test: Should create new tasks.json if it doesn't exist"""
         # This will FAIL until task_queue.py is implemented
-        import task_queue
-
         tq = task_queue.TaskQueue(self.tasks_file)
         tq.init_queue()
 
@@ -73,8 +70,6 @@ class TestTaskQueue(unittest.TestCase):
         with open(self.tasks_file, 'w') as f:
             json.dump(self.sample_tasks, f)
 
-        import task_queue
-
         tq = task_queue.TaskQueue(self.tasks_file)
         tasks = tq.load_tasks()
 
@@ -86,8 +81,6 @@ class TestTaskQueue(unittest.TestCase):
         with open(self.tasks_file, 'w') as f:
             json.dump(self.sample_tasks, f)
 
-        import task_queue
-
         tq = task_queue.TaskQueue(self.tasks_file)
         pending = tq.get_pending_tasks()
 
@@ -98,8 +91,6 @@ class TestTaskQueue(unittest.TestCase):
         """Test: Should assign task to worker and update status"""
         with open(self.tasks_file, 'w') as f:
             json.dump(self.sample_tasks, f)
-
-        import task_queue
 
         tq = task_queue.TaskQueue(self.tasks_file)
         tq.assign_task('task_001', 'worker-1')
@@ -115,8 +106,6 @@ class TestTaskQueue(unittest.TestCase):
         with open(self.tasks_file, 'w') as f:
             json.dump(self.sample_tasks, f)
 
-        import task_queue
-
         tq = task_queue.TaskQueue(self.tasks_file)
         tq.complete_task('task_001', '/tmp/ai_swarm/results/task_001.md')
 
@@ -130,8 +119,6 @@ class TestTaskQueue(unittest.TestCase):
         """Test: Should mark task as failed with error message"""
         with open(self.tasks_file, 'w') as f:
             json.dump(self.sample_tasks, f)
-
-        import task_queue
 
         tq = task_queue.TaskQueue(self.tasks_file)
         tq.fail_task('task_001', 'API timeout')
@@ -147,8 +134,6 @@ class TestTaskQueue(unittest.TestCase):
         with open(self.tasks_file, 'w') as f:
             json.dump(self.sample_tasks, f)
 
-        import task_queue
-
         tq = task_queue.TaskQueue(self.tasks_file)
         tq.add_task("New task prompt", priority=3)
 
@@ -160,8 +145,6 @@ class TestTaskQueue(unittest.TestCase):
 
     def test_validate_valid_task(self):
         """Test: Should accept valid task"""
-        import task_queue
-
         valid_task = {
             "id": "task_003",
             "prompt": "Valid prompt",
@@ -176,8 +159,6 @@ class TestTaskQueue(unittest.TestCase):
 
     def test_validate_missing_required_fields(self):
         """Test: Should reject task without required fields"""
-        import task_queue
-
         invalid_task = {
             "system": "Test persona"
             # Missing required 'id' and 'prompt'
@@ -189,8 +170,6 @@ class TestTaskQueue(unittest.TestCase):
 
     def test_validate_invalid_model(self):
         """Test: Should reject task with invalid model"""
-        import task_queue
-
         invalid_task = {
             "id": "task_004",
             "prompt": "Test",

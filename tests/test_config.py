@@ -10,8 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+from swarm import config
 
 
 class TestConfig(unittest.TestCase):
@@ -35,7 +34,6 @@ class TestConfig(unittest.TestCase):
         # This test will FAIL until config.py is implemented
         os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
 
-        import config
         api_key = config.get_api_key()
 
         self.assertEqual(api_key, 'sk-ant-test123456')
@@ -44,7 +42,6 @@ class TestConfig(unittest.TestCase):
         """Test: Should validate standard Anthropic API key format"""
         os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
 
-        import config
         is_valid = config.validate_api_key_format()
 
         self.assertTrue(is_valid)
@@ -54,7 +51,6 @@ class TestConfig(unittest.TestCase):
         # ccswitch proxy keys may have different formats
         os.environ['ANTHROPIC_API_KEY'] = 'ccswitch-proxy-key-12345'
 
-        import config
         is_valid = config.validate_api_key_format()
 
         self.assertTrue(is_valid)
@@ -63,7 +59,6 @@ class TestConfig(unittest.TestCase):
         """Test: Should reject empty API key"""
         os.environ['ANTHROPIC_API_KEY'] = ''
 
-        import config
         is_valid = config.validate_api_key_format()
 
         self.assertFalse(is_valid)
@@ -74,8 +69,6 @@ class TestConfig(unittest.TestCase):
         if 'ANTHROPIC_API_KEY' in os.environ:
             del os.environ['ANTHROPIC_API_KEY']
 
-        import config
-
         with self.assertRaises(RuntimeError) as context:
             config.get_api_key()
 
@@ -83,23 +76,17 @@ class TestConfig(unittest.TestCase):
 
     def test_default_model_constants(self):
         """Test: Should have correct default model constants"""
-        import config
-
         self.assertEqual(config.DEFAULT_MODEL, 'claude-3-haiku-20240307')
         self.assertEqual(config.DEFAULT_MAX_TOKENS, 1024)
 
     def test_model_pricing_dictionary(self):
         """Test: Should have pricing for all Claude 3 models"""
-        import config
-
         self.assertIn('claude-3-haiku-20240307', config.MODEL_PRICING)
         self.assertIn('claude-3-sonnet-20240229', config.MODEL_PRICING)
         self.assertIn('claude-3-opus-20240229', config.MODEL_PRICING)
 
     def test_calculate_cost_for_haiku(self):
         """Test: Should calculate cost correctly for Haiku"""
-        import config
-
         cost = config.calculate_cost(
             'claude-3-haiku-20240307',
             1000,  # input tokens
@@ -114,8 +101,6 @@ class TestConfig(unittest.TestCase):
 
     def test_calculate_cost_for_sonnet(self):
         """Test: Should calculate cost correctly for Sonnet"""
-        import config
-
         cost = config.calculate_cost(
             'claude-3-sonnet-20240229',
             1000,
@@ -128,8 +113,6 @@ class TestConfig(unittest.TestCase):
 
     def test_jitter_range_constant(self):
         """Test: Should define jitter range for status updates"""
-        import config
-
         self.assertEqual(config.JITTER_RANGE, (0, 1))
 
 

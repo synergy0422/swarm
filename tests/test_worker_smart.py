@@ -15,9 +15,8 @@ from pathlib import Path
 import time
 import requests
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-import config
+from swarm import config
+from swarm import worker_smart
 
 
 class TestSmartWorker(unittest.TestCase):
@@ -51,8 +50,6 @@ class TestSmartWorker(unittest.TestCase):
     def test_worker_initialization(self):
         """Test: Worker should initialize with base directory"""
         # This will FAIL until worker_smart.py is implemented
-        import worker_smart
-
         worker = worker_smart.SmartWorker(
             'test-worker',
             base_dir=self.test_dir
@@ -61,7 +58,7 @@ class TestSmartWorker(unittest.TestCase):
         self.assertEqual(worker.name, 'test-worker')
         self.assertEqual(worker.base_dir, self.test_dir)
 
-    @patch('worker_smart.requests.post')
+    @patch('swarm.worker_smart.requests.post')
     def test_api_call_with_system_prompt(self, mock_post):
         """Test: Should include system parameter in API call"""
         # Mock successful API response
@@ -74,8 +71,6 @@ class TestSmartWorker(unittest.TestCase):
         mock_post.return_value = mock_response
 
         os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
-
-        import worker_smart
 
         worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
 
@@ -97,7 +92,7 @@ class TestSmartWorker(unittest.TestCase):
         self.assertIn('system', request_body)
         self.assertEqual(request_body['system'], 'Test persona')
 
-    @patch('worker_smart.requests.post')
+    @patch('swarm.worker_smart.requests.post')
     def test_api_call_with_task_overrides(self, mock_post):
         """Test: Should use task-level max_tokens and model overrides"""
         mock_response = Mock()
@@ -109,8 +104,6 @@ class TestSmartWorker(unittest.TestCase):
         mock_post.return_value = mock_response
 
         os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
-
-        import worker_smart
 
         worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
 
@@ -130,8 +123,6 @@ class TestSmartWorker(unittest.TestCase):
 
     def test_jitter_timing(self):
         """Test: Status updates should have random jitter (2-3 seconds)"""
-        import worker_smart
-
         # Test jitter calculation
         timings = []
         for _ in range(10):
@@ -143,7 +134,7 @@ class TestSmartWorker(unittest.TestCase):
         for t in timings:
             self.assertTrue(2 <= t < 3)
 
-    @patch('worker_smart.requests.post')
+    @patch('swarm.worker_smart.requests.post')
     def test_save_result_with_metadata(self, mock_post):
         """Test: Should save result with enhanced metadata header"""
         mock_response = Mock()
@@ -155,8 +146,6 @@ class TestSmartWorker(unittest.TestCase):
         mock_post.return_value = mock_response
 
         os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
-
-        import worker_smart
 
         worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
 
@@ -185,7 +174,7 @@ class TestSmartWorker(unittest.TestCase):
         self.assertIn('input_tokens: 100', content)
         self.assertIn('output_tokens: 200', content)
 
-    @patch('worker_smart.requests.post')
+    @patch('swarm.worker_smart.requests.post')
     def test_handle_401_unauthorized(self, mock_post):
         """Test: Should handle 401 authentication error"""
         http_error = requests.exceptions.HTTPError()
@@ -198,8 +187,6 @@ class TestSmartWorker(unittest.TestCase):
         mock_post.return_value.raise_for_status.side_effect = http_error
 
         os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-invalid'
-
-        import worker_smart
 
         worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
 
@@ -215,7 +202,7 @@ class TestSmartWorker(unittest.TestCase):
             log = json.loads(f.readlines()[-1])
             self.assertEqual(log['status'], 'ERROR')
 
-    @patch('worker_smart.requests.post')
+    @patch('swarm.worker_smart.requests.post')
     def test_handle_429_rate_limit(self, mock_post):
         """Test: Should handle 429 rate limit error"""
         mock_response = Mock()
@@ -227,8 +214,6 @@ class TestSmartWorker(unittest.TestCase):
 
         os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
 
-        import worker_smart
-
         worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
 
         # Should log error, not crash
@@ -238,15 +223,13 @@ class TestSmartWorker(unittest.TestCase):
             # Expected to handle gracefully
             pass
 
-    @patch('worker_smart.requests.post')
+    @patch('swarm.worker_smart.requests.post')
     def test_handle_timeout_error(self, mock_post):
         """Test: Should handle request timeout"""
         import requests
         mock_post.side_effect = requests.exceptions.Timeout()
 
         os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
-
-        import worker_smart
 
         worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
 
@@ -259,8 +242,6 @@ class TestSmartWorker(unittest.TestCase):
 
     def test_cost_tracking_per_model(self):
         """Test: Should calculate cost correctly for each model"""
-        import worker_smart
-
         # Haiku cost
         cost = worker_smart.calculate_cost(
             'claude-3-haiku-20240307',
@@ -277,7 +258,7 @@ class TestSmartWorker(unittest.TestCase):
         )
         self.assertAlmostEqual(cost, 0.0105, places=6)
 
-    @patch('worker_smart.requests.post')
+    @patch('swarm.worker_smart.requests.post')
     @patch('time.sleep')  # Mock sleep to speed up tests
     def test_streaming_with_jittered_updates(self, mock_sleep, mock_post):
         """Test: Streaming should update status with jittered timing"""
@@ -291,8 +272,6 @@ class TestSmartWorker(unittest.TestCase):
         mock_post.return_value = mock_response
 
         os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
-
-        import worker_smart
 
         worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
 
