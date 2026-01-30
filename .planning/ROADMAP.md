@@ -7,7 +7,7 @@
 
 | # | Phase | Goal | Requirements | Status |
 |---|-------|------|--------------|--------|
-| 1 | **项目初始化** | 复制 Phase 2 代码，搭建目录结构 | CORE-11, CORE-12 | Pending |
+| 1 | **项目初始化** | 复制 Phase 2 代码，搭建目录结构 | CORE-11, CORE-12 | Complete |
 | 2 | **tmux 集成层** | 实现资源发现、capture/send 封装 | CORE-01, CORE-02 | Pending |
 | 3 | **共享状态系统** | 实现状态广播、任务锁机制 | CORE-03, CORE-04, CORE-05 | Pending |
 | 4 | **Master 实现** | Master 扫描、自动救援、任务分配 | CORE-06, CORE-07, CORE-08 | Pending |
