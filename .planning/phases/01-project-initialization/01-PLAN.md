@@ -130,36 +130,47 @@ README.md (already exists)
 </task>
 
 <task type="auto">
-  <name>Update paths to use /tmp/ai_swarm/</name>
+  <name>Update paths with auto-create and env-override rules</name>
   <files>
     /home/user/AAA/swarm/swarm/task_queue.py
     /home/user/AAA/swarm/swarm/worker_smart.py
   </files>
   <action>
-    Update path references to use /tmp/ai_swarm/:
+    **CRITICAL CONSTRAINTS (must follow):**
 
-    In /home/user/AAA/swarm/swarm/task_queue.py:
-    - Line 30: Change `base_dir = os.path.expanduser('~/group/ai_swarm/')` to `base_dir = os.environ.get('AI_SWARM_DIR', '/tmp/ai_swarm/')`
+    1. **API Key only from env vars** - NO dotenv loading, NO .env auto-load
+    2. **Auto-create /tmp/ai_swarm** - Use os.makedirs(base_dir, exist_ok=True)
+    3. **AI_SWARM_DIR override** - Default /tmp/ai_swarm, use os.environ.get('AI_SWARM_DIR', '/tmp/ai_swarm/')
+    4. **Use os.path.join** - Never concatenate with trailing slash: use os.path.join(base_dir, 'tasks.json')
 
-    In /home/user/AAA/swarm/swarm/worker_smart.py:
-    - Line 40-41: Change to use `self.base_dir = os.environ.get('AI_SWARM_DIR', '/tmp/ai_swarm/')`
+    **Changes in task_queue.py:**
+    - Line 30: Change to `base_dir = os.environ.get('AI_SWARM_DIR', '/tmp/ai_swarm/')`
+    - Add: `os.makedirs(base_dir, exist_ok=True)` before any file operations
+    - Change file paths to use `os.path.join(base_dir, 'tasks.json')`, `os.path.join(base_dir, 'locks/')`, etc.
 
-    Add to config.py:
-    - Add AI_SWARM_DIR as a configurable environment variable
-    - Update docstrings to reflect /tmp/ai_swarm/ as default
+    **Changes in worker_smart.py:**
+    - Line 40-41: Change to `self.base_dir = os.environ.get('AI_SWARM_DIR', '/tmp/ai_swarm/')`
+    - Add: `os.makedirs(self.base_dir, exist_ok=True)` in __init__
+    - Change file paths to use `os.path.join(self.base_dir, 'status.log')`, etc.
+
+    **Verify no dotenv loading** - grep for 'dotenv', 'load_dotenv', '.env' - none should exist
   </action>
   <verify>
-    grep -n "AI_SWARM_DIR\|/tmp/ai_swarm" /home/user/AAA/swarm/swarm/task_queue.py
-    grep -n "AI_SWARM_DIR\|/tmp/ai_swarm" /home/user/AAA/swarm/swarm/worker_smart.py
+    grep -n "AI_SWARM_DIR\|/tmp/ai_swarm\|os.makedirs\|os.path.join" /home/user/AAA/swarm/swarm/task_queue.py
+    grep -n "AI_SWARM_DIR\|/tmp/ai_swarm\|os.makedirs\|os.path.join" /home/user/AAA/swarm/swarm/worker_smart.py
+    grep -E "dotenv|load_dotenv" /home/user/AAA/swarm/swarm/*.py || echo "No dotenv found - PASS"
   </verify>
   <done>
-    task_queue.py uses /tmp/ai_swarm/ (with AI_SWARM_DIR override)
-    worker_smart.py uses /tmp/ai_swarm/ (with AI_SWARM_DIR override)
+    task_queue.py and worker_smart.py:
+    - Use AI_SWARM_DIR env var (default /tmp/ai_swarm/)
+    - Auto-create directory with os.makedirs(exist_ok=True)
+    - Use os.path.join for all path construction
+    - No dotenv or .env loading
   </done>
 </task>
 
 <task type="auto">
-  <name>Update tests for new package structure</name>
+  <name>Update tests with isolation fixture via env injection</name>
   <files>
     /home/user/AAA/swarm/tests/__init__.py
     /home/user/AAA/swarm/tests/conftest.py
@@ -169,31 +180,54 @@ README.md (already exists)
     /home/user/AAA/swarm/tests/test_master_dispatcher.py
   </files>
   <action>
-    Update all test files to import from swarm package:
-    1. Create /home/user/AAA/swarm/tests/__init__.py
-    2. Create /home/user/AAA/swarm/tests/conftest.py with pytest fixtures and path setup
-    3. Update test_config.py:
-       - Change `import config` to `from swarm import config`
-    4. Update test_task_queue.py:
-       - Change `import task_queue` to `from swarm import task_queue`
-       - Change `import config` to `from swarm import config`
-    5. Update test_worker_smart.py:
-       - Change `import worker_smart` to `from swarm import worker_smart`
-       - Change `import config` to `from swarm import config`
-       - Change `import task_queue` to `from swarm import task_queue`
-    6. Update test_master_dispatcher.py (if exists):
-       - Update all imports to use "from swarm import" pattern
+    **CRITICAL CONSTRAINT:** Tests must be repeatable with pytest -q (no pollution between runs)
 
-    Add cleanup fixture to conftest.py that removes /tmp/ai_swarm/ after tests.
+    1. Create /home/user/AAA/swarm/tests/__init__.py
+
+    2. Create /home/user/AAA/swarm/tests/conftest.py with:
+       - A pytest fixture that sets AI_SWARM_DIR to a temp directory
+       - Fixture uses monkeypatch to set os.environ['AI_SWARM_DIR']
+       - Fixture creates temp dir via tempfile.mkdtemp()
+       - Fixture cleanup removes temp dir after test
+       - All tests use this fixture to ensure isolation
+
+    Example conftest.py pattern:
+    ```python
+    import pytest
+    import tempfile
+    import shutil
+    import os
+
+    @pytest.fixture(autouse=True)
+    def isolated_swarm_dir(monkeypatch):
+        temp_dir = tempfile.mkdtemp(prefix='ai_swarm_test_')
+        monkeypatch.setenv('AI_SWARM_DIR', temp_dir)
+        os.makedirs(temp_dir, exist_ok=True)
+        yield temp_dir
+        shutil.rmtree(temp_dir, ignore_errors=True)
+    ```
+
+    3. Update all test files to import from swarm package:
+       - test_config.py: `from swarm import config`
+       - test_task_queue.py: `from swarm import task_queue, config`
+       - test_worker_smart.py: `from swarm import worker_smart, task_queue, config`
+       - test_master_dispatcher.py: Update all imports
+
+    4. Ensure NO test loads .env file directly
   </action>
   <verify>
     grep -r "from swarm import" /home/user/AAA/swarm/tests/
-    pytest -q /home/user/AAA/swarm/tests/ --tb=short 2>&1 | head -30
+    grep -r "monkeypatch.*AI_SWARM_DIR\|tempfile.*ai_swarm" /home/user/AAA/swarm/tests/conftest.py || echo "Fixture not found"
+    # Run tests twice to verify isolation
+    pytest -q /home/user/AAA/swarm/tests/ --tb=short 2>&1 | tail -5
+    pytest -q /home/user/AAA/swarm/tests/ --tb=short 2>&1 | tail -5
   </verify>
   <done>
+    conftest.py has isolated_swarm_dir fixture that:
+    - Sets AI_SWARM_DIR to temp directory via monkeypatch
+    - Cleans up after each test session
     All test files import from swarm package
-    Tests pass with pytest -q
-    Test isolation via /tmp/ai_swarm/ cleanup
+    Tests pass and are repeatable (run twice, same result)
   </done>
 </task>
 
