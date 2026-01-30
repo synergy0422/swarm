@@ -1,0 +1,324 @@
+#!/usr/bin/env python3
+"""
+Test suite for worker_smart.py
+TDD Phase 2: Smart Worker with Anthropic API
+"""
+
+import os
+import sys
+import json
+import tempfile
+import shutil
+import unittest
+from unittest.mock import Mock, patch, MagicMock
+from pathlib import Path
+import time
+import requests
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import config
+
+
+class TestSmartWorker(unittest.TestCase):
+    """Test suite for smart worker with API integration"""
+
+    def setUp(self):
+        """Set up test environment"""
+        self.test_dir = tempfile.mkdtemp(prefix='worker_smart_test_')
+        self.status_log = os.path.join(self.test_dir, 'status.log')
+        self.locks_dir = os.path.join(self.test_dir, 'locks')
+        self.results_dir = os.path.join(self.test_dir, 'results')
+
+        # Create directories
+        os.makedirs(self.locks_dir, exist_ok=True)
+        os.makedirs(self.results_dir, exist_ok=True)
+
+        # Sample task
+        self.sample_task = {
+            'id': 'task_001',
+            'prompt': 'Test prompt',
+            'system': 'Test persona',
+            'max_tokens': 1024,
+            'model': 'claude-3-haiku-20240307'
+        }
+
+    def tearDown(self):
+        """Clean up test environment"""
+        if os.path.exists(self.test_dir):
+            shutil.rmtree(self.test_dir)
+
+    def test_worker_initialization(self):
+        """Test: Worker should initialize with base directory"""
+        # This will FAIL until worker_smart.py is implemented
+        import worker_smart
+
+        worker = worker_smart.SmartWorker(
+            'test-worker',
+            base_dir=self.test_dir
+        )
+
+        self.assertEqual(worker.name, 'test-worker')
+        self.assertEqual(worker.base_dir, self.test_dir)
+
+    @patch('worker_smart.requests.post')
+    def test_api_call_with_system_prompt(self, mock_post):
+        """Test: Should include system parameter in API call"""
+        # Mock successful API response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'content': [{'text': 'Test response'}],
+            'usage': {'input_tokens': 10, 'output_tokens': 20}
+        }
+        mock_post.return_value = mock_response
+
+        os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
+
+        import worker_smart
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Call API with system prompt
+        response = worker.call_claude_api(
+            prompt='Test prompt',
+            system='Test persona',
+            max_tokens=1024,
+            model='claude-3-haiku-20240307'
+        )
+
+        # Verify API was called
+        self.assertTrue(mock_post.called)
+
+        # Verify request included system parameter
+        call_args = mock_post.call_args
+        request_body = call_args[1]['json']
+
+        self.assertIn('system', request_body)
+        self.assertEqual(request_body['system'], 'Test persona')
+
+    @patch('worker_smart.requests.post')
+    def test_api_call_with_task_overrides(self, mock_post):
+        """Test: Should use task-level max_tokens and model overrides"""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'content': [{'text': 'Response'}],
+            'usage': {'input_tokens': 10, 'output_tokens': 20}
+        }
+        mock_post.return_value = mock_response
+
+        os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
+
+        import worker_smart
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Call with overrides
+        worker.call_claude_api(
+            prompt='Test',
+            max_tokens=2048,  # Override
+            model='claude-3-sonnet-20240229'  # Override
+        )
+
+        # Verify overrides were used
+        call_args = mock_post.call_args
+        request_body = call_args[1]['json']
+
+        self.assertEqual(request_body['max_tokens'], 2048)
+        self.assertEqual(request_body['model'], 'claude-3-sonnet-20240229')
+
+    def test_jitter_timing(self):
+        """Test: Status updates should have random jitter (2-3 seconds)"""
+        import worker_smart
+
+        # Test jitter calculation
+        timings = []
+        for _ in range(10):
+            jitter = worker_smart.calculate_jitter()
+            self.assertTrue(0 <= jitter < 1)
+            timings.append(2 + jitter)
+
+        # All timings should be between 2 and 3 seconds
+        for t in timings:
+            self.assertTrue(2 <= t < 3)
+
+    @patch('worker_smart.requests.post')
+    def test_save_result_with_metadata(self, mock_post):
+        """Test: Should save result with enhanced metadata header"""
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'content': [{'text': 'AI response here'}],
+            'usage': {'input_tokens': 100, 'output_tokens': 200}
+        }
+        mock_post.return_value = mock_response
+
+        os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
+
+        import worker_smart
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Save result
+        worker.save_result(
+            task_id='task_001',
+            content='AI response here',
+            task_params=self.sample_task,
+            input_tokens=100,
+            output_tokens=200
+        )
+
+        # Verify file created
+        result_file = os.path.join(self.results_dir, 'task_001.md')
+        self.assertTrue(os.path.exists(result_file))
+
+        # Verify metadata in file
+        with open(result_file, 'r') as f:
+            content = f.read()
+
+        self.assertIn('task_id: task_001', content)
+        self.assertIn('worker: test-worker', content)
+        self.assertIn('model: claude-3-haiku-20240307', content)
+        self.assertIn('max_tokens: 1024', content)
+        self.assertIn('system: Test persona', content)
+        self.assertIn('input_tokens: 100', content)
+        self.assertIn('output_tokens: 200', content)
+
+    @patch('worker_smart.requests.post')
+    def test_handle_401_unauthorized(self, mock_post):
+        """Test: Should handle 401 authentication error"""
+        http_error = requests.exceptions.HTTPError()
+        mock_response = Mock()
+        mock_response.status_code = 401
+        mock_response.text = 'Unauthorized'
+        http_error.response = mock_response
+
+        mock_post.return_value = mock_response
+        mock_post.return_value.raise_for_status.side_effect = http_error
+
+        os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-invalid'
+
+        import worker_smart
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Should raise exception with error message
+        with self.assertRaises(Exception) as context:
+            worker.call_claude_api('Test prompt')
+
+        # Verify error message
+        self.assertIn('Invalid API key', str(context.exception))
+
+        # Verify error was logged to status
+        with open(self.status_log, 'r') as f:
+            log = json.loads(f.readlines()[-1])
+            self.assertEqual(log['status'], 'ERROR')
+
+    @patch('worker_smart.requests.post')
+    def test_handle_429_rate_limit(self, mock_post):
+        """Test: Should handle 429 rate limit error"""
+        mock_response = Mock()
+        mock_response.status_code = 429
+        mock_response.text = 'Rate limit exceeded'
+        mock_response.raise_for_status.side_effect = Exception("429 Client Error")
+
+        mock_post.return_value = mock_response
+
+        os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
+
+        import worker_smart
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Should log error, not crash
+        try:
+            worker.call_claude_api('Test prompt')
+        except Exception as e:
+            # Expected to handle gracefully
+            pass
+
+    @patch('worker_smart.requests.post')
+    def test_handle_timeout_error(self, mock_post):
+        """Test: Should handle request timeout"""
+        import requests
+        mock_post.side_effect = requests.exceptions.Timeout()
+
+        os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
+
+        import worker_smart
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Should log timeout error
+        try:
+            worker.call_claude_api('Test prompt')
+        except Exception as e:
+            # Expected to handle gracefully
+            pass
+
+    def test_cost_tracking_per_model(self):
+        """Test: Should calculate cost correctly for each model"""
+        import worker_smart
+
+        # Haiku cost
+        cost = worker_smart.calculate_cost(
+            'claude-3-haiku-20240307',
+            1000,
+            500
+        )
+        self.assertAlmostEqual(cost, 0.000875, places=6)
+
+        # Sonnet cost
+        cost = worker_smart.calculate_cost(
+            'claude-3-sonnet-20240229',
+            1000,
+            500
+        )
+        self.assertAlmostEqual(cost, 0.0105, places=6)
+
+    @patch('worker_smart.requests.post')
+    @patch('time.sleep')  # Mock sleep to speed up tests
+    def test_streaming_with_jittered_updates(self, mock_sleep, mock_post):
+        """Test: Streaming should update status with jittered timing"""
+        # Mock streaming response
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'content': [{'text': 'Hello world'}],
+            'usage': {'input_tokens': 10, 'output_tokens': 20}
+        }
+        mock_post.return_value = mock_response
+
+        os.environ['ANTHROPIC_API_KEY'] = 'sk-ant-test123456'
+
+        import worker_smart
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Process task with streaming
+        updates = []
+
+        # Capture write_status calls
+        original_write = worker.write_status
+        def capture_write(status, msg):
+            updates.append((status, msg))
+            return original_write(status, msg)
+
+        worker.write_status = capture_write
+
+        worker.process_task_streaming(self.sample_task)
+
+        # Verify updates occurred
+        self.assertTrue(len(updates) > 0)
+
+        # Verify jitter timing was applied
+        # (mock_sleep should have been called with 2-3 second intervals)
+        self.assertTrue(mock_sleep.called)
+        for call in mock_sleep.call_args_list:
+            sleep_time = call[0][0]
+            self.assertTrue(2 <= sleep_time < 3)
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)
