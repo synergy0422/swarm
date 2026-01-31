@@ -27,6 +27,7 @@ class BroadcastState(str, Enum):
     States are fixed and not细分 - use meta field for additional context.
     """
     START = 'START'
+    ASSIGNED = 'ASSIGNED'
     DONE = 'DONE'
     WAIT = 'WAIT'
     ERROR = 'ERROR'
@@ -52,8 +53,8 @@ class StatusBroadcaster:
     Log format: One JSON object per line (JSON Lines format).
 
     Example:
-        {"state": "START", "task_id": "task-123", "timestamp": "2026-01-31T12:00:00.000Z", "message": "开始执行"}
-        {"state": "DONE", "task_id": "task-123", "timestamp": "2026-01-31T12:00:05.000Z", "message": "执行完成"}
+        {"ts": "2026-01-31T12:00:00.000Z", "worker_id": "worker-1", "task_id": "task-123", "state": "START", "message": "开始执行"}
+        {"ts": "2026-01-31T12:00:05.000Z", "worker_id": "worker-1", "task_id": "task-123", "state": "DONE", "message": "执行完成"}
     """
 
     def __init__(self, worker_id: str):
@@ -136,9 +137,10 @@ class StatusBroadcaster:
             meta: Optional dictionary with additional context
         """
         entry = {
-            'state': state.value,
+            'ts': self._get_timestamp(),
+            'worker_id': self.worker_id,
             'task_id': task_id,
-            'timestamp': self._get_timestamp(),
+            'state': state.value,
             'message': message,
         }
 
@@ -222,6 +224,16 @@ class StatusBroadcaster:
             message: Optional human-readable message
         """
         self._broadcast(BroadcastState.SKIP, task_id, message)
+
+    def broadcast_assigned(self, task_id: str, message: str = "") -> None:
+        """
+        Convenience method to broadcast ASSIGNED state.
+
+        Args:
+            task_id: Unique task identifier
+            message: Optional human-readable message
+        """
+        self._broadcast(BroadcastState.ASSIGNED, task_id, message)
 
     def __enter__(self):
         """Context manager entry - returns self"""
