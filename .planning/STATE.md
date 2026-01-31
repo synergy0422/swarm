@@ -14,33 +14,35 @@ See: .planning/PROJECT.md
 | 1 | 项目初始化 | Complete | 100% (1/1 plans) |
 | 2 | tmux 集成层 | Complete | 100% (1/1 plans) |
 | 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
-| 4 | Master 实现 | In Progress | 67% (2/3 plans) |
+| 4 | Master 实现 | Complete | 100% (3/3 plans) |
 | 5 | CLI 与启动脚本 | Pending | 0% |
 | 6 | 集成测试 | Pending | 0% |
 
 ## Current Position
 
-**Phase 4: Master 实现** - Plan 02 COMPLETE ✓
+**Phase 4: Master 实现** - COMPLETE ✓
 
 Completed:
 - `swarm/master_scanner.py` with MasterScanner class (269 lines)
 - `swarm/auto_rescuer.py` with WaitPatternDetector and AutoRescuer classes (397 lines)
+- `swarm/master_dispatcher.py` with MasterDispatcher class (388 lines)
 - PatternCategory enum (INTERACTIVE_CONFIRM, PRESS_ENTER, CONFIRM_PROMPT, NONE)
 - WaitPattern dataclass with should_auto_confirm flag
+- TaskInfo and DispatchResult dataclasses for task management
+- ASSIGNED broadcast state for task dispatch notification
 - Conservative auto-confirm policy (disabled by default, Press ENTER only)
-- Blacklist keyword filtering (delete, rm -rf, sudo, password, key, 删除, etc.)
-- Detection limited to last 20 lines and 30 second window
-- Case-insensitive regex-based pattern matching
-- 40 tests for master scanner and auto rescuer
-- 138 tests pass total (no regressions)
+- FIFO task dispatch with atomic lock acquisition
+- Worker idle detection (DONE/SKIP/ERROR with no lock)
+- 57 tests for Master components (scanner, rescuer, dispatcher)
+- 155 tests pass total (no regressions)
 
 ## Recent Changes
 
+- 2026-01-31: Phase 4 Plan 03 complete - Master Dispatcher
 - 2026-01-31: Phase 4 Plan 02 complete - Auto Rescuer
 - 2026-01-31: Phase 4 Plan 01 complete - Master Scanner
-- 6 commits for Phase 4 execution
-- AutoRescuer with conservative WAIT detection and auto-confirm
-- All must-haves verified
+- 9 commits for Phase 4 execution
+- All Phase 4 modules exported from swarm package
 
 ## Decisions Made
 
@@ -65,11 +67,16 @@ Completed:
 | 04-02 | Blacklist keywords always block auto-action | delete, rm -rf, sudo, password, key, 删除, etc. |
 | 04-02 | Detection limited to last 20 lines and 30 seconds | Reduces false positives from old prompts |
 | 04-02 | Priority-based pattern detection | INTERACTIVE_CONFIRM > PRESS_ENTER > CONFIRM_PROMPT |
+| 04-03 | FIFO dispatch within priority groups | First-in-first-out for same-priority tasks |
+| 04-03 | Lock acquisition before dispatch (atomic O_CREAT|O_EXCL) | Prevents duplicate task execution |
+| 04-03 | Idle worker = terminal state (DONE/SKIP/ERROR) + no lock | Ensures worker truly available |
+| 04-03 | Synchronous dispatch_loop (not async) | Simpler implementation, easier testing |
+| 04-03 | Factory function create_dispatcher() for consistency | Matches create_scanner() pattern |
 
 ## Session Continuity
 
-Last session: 2026-01-31T04:45:35Z
-Stopped at: Completed Phase 4 Plan 02 - Auto Rescuer
+Last session: 2026-01-31T04:49:45Z
+Stopped at: Completed Phase 4 Plan 03 - Master Dispatcher
 Resume file: None
 
 ---
