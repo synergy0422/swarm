@@ -2,31 +2,22 @@
 """
 Unit Tests for Master Dispatcher
 
-TDD Approach: Write tests FIRST, then implement.
+Tests for MasterDispatcher class including task loading, worker idle detection,
+and dispatch functionality.
 """
 
-import os
-import sys
 import json
+import os
 import unittest
 import tempfile
 import shutil
-from pathlib import Path
 
-from swarm import config
-from swarm import task_queue
-
-# Note: master_dispatcher module is not yet implemented in swarm package
-# This test will fail until master_dispatcher.py is added to swarm/
-try:
-    from swarm import master_dispatcher
-    MASTER_DISPATCHER_AVAILABLE = True
-except ImportError:
-    master_dispatcher = None
-    MASTER_DISPATCHER_AVAILABLE = False
+from swarm import master_dispatcher
+from swarm import master_scanner
+from swarm import task_lock
+from swarm import status_broadcaster
 
 
-@unittest.skipUnless(MASTER_DISPATCHER_AVAILABLE, "master_dispatcher not yet implemented")
 class TestMasterDispatcher(unittest.TestCase):
     """Test MasterDispatcher functionality"""
 
@@ -37,30 +28,14 @@ class TestMasterDispatcher(unittest.TestCase):
 
         # Create directory structure
         os.makedirs(self.base_dir, exist_ok=True)
-        os.makedirs(os.path.join(self.base_dir, 'instructions'), exist_ok=True)
         os.makedirs(os.path.join(self.base_dir, 'locks'), exist_ok=True)
-        os.makedirs(os.path.join(self.base_dir, 'results'), exist_ok=True)
-
-        # Create status log
-        self.status_log = os.path.join(self.base_dir, 'status.log')
-        with open(self.status_log, 'w') as f:
-            pass
 
         # Create tasks.json
         self.tasks_file = os.path.join(self.base_dir, 'tasks.json')
-        with open(self.tasks_file, 'w') as f:
-            json.dump({'tasks': []}, f)
 
         # Initialize dispatcher
         self.dispatcher = master_dispatcher.MasterDispatcher(
-            base_dir=self.base_dir,
-            scan_interval=1,
-            max_concurrent_tasks=3
-        )
-
-        # Initialize task queue
-        self.dispatcher.task_queue = task_queue.TaskQueue(
-            tasks_file=self.tasks_file
+            cluster_id='test-cluster'
         )
 
     def tearDown(self):
@@ -68,178 +43,320 @@ class TestMasterDispatcher(unittest.TestCase):
         if os.path.exists(self.test_dir):
             shutil.rmtree(self.test_dir)
 
+    def _create_tasks_file(self, tasks):
+        """Helper to create tasks.json with given tasks"""
+        tasks_data = {'tasks': tasks}
+        with open(self.tasks_file, 'w') as f:
+            json.dump(tasks_data, f)
+
     def test_dispatcher_initialization(self):
-        """Test: Dispatcher should initialize with base directory"""
-        self.assertEqual(self.dispatcher.base_dir, self.base_dir)
-        self.assertEqual(self.dispatcher.max_concurrent_tasks, 3)
-        self.assertIsInstance(self.dispatcher.stats, dict)
+        """Test: Dispatcher should initialize with cluster_id"""
+        self.assertEqual(self.dispatcher.cluster_id, 'test-cluster')
+        self.assertIsInstance(self.dispatcher._scanner, master_scanner.MasterScanner)
+        self.assertIsInstance(self.dispatcher._lock_manager, task_lock.TaskLockManager)
+        self.assertIsInstance(
+            self.dispatcher._broadcaster,
+            status_broadcaster.StatusBroadcaster
+        )
 
-    def test_get_idle_workers_with_no_workers(self):
-        """Test: Should return empty list when no workers active"""
-        idle = self.dispatcher.get_idle_workers()
-
-        self.assertIsInstance(idle, list)
-        self.assertEqual(len(idle), 0)
-
-    def test_get_idle_workers_with_active_workers(self):
-        """Test: Should identify idle workers from status updates"""
-        # Add status updates for workers
-        worker_states = [
-            {'node': 'worker-1', 'status': 'DONE', 'msg': 'Task completed', 'time': '2026-01-28 12:00:00'},
-            {'node': 'worker-2', 'status': 'START', 'msg': 'Starting task', 'time': '2026-01-28 12:00:01'},
-            {'node': 'worker-3', 'status': 'THINKING', 'msg': 'Processing', 'time': '2026-01-28 12:00:02'},
-        ]
-
-        # Write to status log
-        for state in worker_states:
-            entry = {
-                'time': state['time'],
-                'node': state['node'],
-                'status': state['status'],
-                'msg': state['msg']
+    def test_load_tasks_from_json(self):
+        """Test: load_tasks reads tasks.json with proper format"""
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test task 1',
+                'priority': 1,
+                'status': 'pending'
+            },
+            {
+                'id': 'task-002',
+                'prompt': 'Test task 2',
+                'priority': 2,
+                'status': 'pending'
             }
-            with open(self.status_log, 'a') as f:
-                f.write(json.dumps(entry) + '\n')
+        ]
+        self._create_tasks_file(tasks)
 
-        # Scan and update states (dispatcher.scan_log() returns new entries)
-        new_entries = self.dispatcher.scan_log()
-        for entry in new_entries:
-            self.dispatcher.update_state(entry)
+        # Set AI_SWARM_DIR to test directory
+        os.environ['AI_SWARM_DIR'] = self.base_dir
 
-        # Get idle workers (worker-1 DONE, worker-2 START are idle)
-        idle = self.dispatcher.get_idle_workers()
+        loaded_tasks = self.dispatcher.load_tasks()
 
-        self.assertIn('worker-1', idle)
-        self.assertIn('worker-2', idle)  # START is idle (ready for tasks)
-        self.assertNotIn('worker-3', idle)  # THINKING is busy
+        self.assertEqual(len(loaded_tasks), 2)
+        self.assertEqual(loaded_tasks[0].task_id, 'task-001')
+        self.assertEqual(loaded_tasks[0].command, 'Test task 1')
+        self.assertEqual(loaded_tasks[0].priority, 1)
+        self.assertEqual(loaded_tasks[0].status, 'pending')
 
-    def test_assign_task_to_worker(self):
-        """Test: Should create instruction file for worker"""
-        task = {
-            'id': 'task_001',
-            'prompt': 'Test prompt',
-            'status': 'pending',
-            'priority': 1
+    def test_load_tasks_empty_file(self):
+        """Test: load_tasks returns empty list when no tasks.json"""
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
+        loaded_tasks = self.dispatcher.load_tasks()
+
+        self.assertEqual(len(loaded_tasks), 0)
+        self.assertIsInstance(loaded_tasks, list)
+
+    def test_is_worker_idle_done_no_lock(self):
+        """Test: DONE state with no lock = idle"""
+        status = master_scanner.WorkerStatus(
+            worker_id='worker-1',
+            state='DONE',
+            task_id='task-001',
+            timestamp='2026-01-31T12:00:00.000Z',
+            message='Task completed'
+        )
+
+        # Mock scanner to return no lock
+        self.dispatcher._scanner.read_lock_state = lambda task_id: None
+
+        is_idle = self.dispatcher.is_worker_idle(status)
+
+        self.assertTrue(is_idle)
+
+    def test_is_worker_idle_error_no_lock(self):
+        """Test: ERROR state with no lock = idle"""
+        status = master_scanner.WorkerStatus(
+            worker_id='worker-1',
+            state='ERROR',
+            task_id='task-001',
+            timestamp='2026-01-31T12:00:00.000Z',
+            message='Task failed'
+        )
+
+        # Mock scanner to return no lock
+        self.dispatcher._scanner.read_lock_state = lambda task_id: None
+
+        is_idle = self.dispatcher.is_worker_idle(status)
+
+        self.assertTrue(is_idle)
+
+    def test_is_worker_idle_skip_no_lock(self):
+        """Test: SKIP state with no lock = idle"""
+        status = master_scanner.WorkerStatus(
+            worker_id='worker-1',
+            state='SKIP',
+            task_id='task-001',
+            timestamp='2026-01-31T12:00:00.000Z',
+            message='Task skipped'
+        )
+
+        # Mock scanner to return no lock
+        self.dispatcher._scanner.read_lock_state = lambda task_id: None
+
+        is_idle = self.dispatcher.is_worker_idle(status)
+
+        self.assertTrue(is_idle)
+
+    def test_is_worker_idle_busy_start(self):
+        """Test: START state = not idle"""
+        status = master_scanner.WorkerStatus(
+            worker_id='worker-1',
+            state='START',
+            task_id='task-001',
+            timestamp='2026-01-31T12:00:00.000Z',
+            message='Starting task'
+        )
+
+        is_idle = self.dispatcher.is_worker_idle(status)
+
+        self.assertFalse(is_idle)
+
+    def test_is_worker_idle_busy_wait(self):
+        """Test: WAIT state = not idle"""
+        status = master_scanner.WorkerStatus(
+            worker_id='worker-1',
+            state='WAIT',
+            task_id='task-001',
+            timestamp='2026-01-31T12:00:00.000Z',
+            message='Waiting for input'
+        )
+
+        is_idle = self.dispatcher.is_worker_idle(status)
+
+        self.assertFalse(is_idle)
+
+    def test_is_worker_idle_has_lock(self):
+        """Test: worker with DONE but holds lock = not idle"""
+        status = master_scanner.WorkerStatus(
+            worker_id='worker-1',
+            state='DONE',
+            task_id='task-001',
+            timestamp='2026-01-31T12:00:00.000Z',
+            message='Task completed'
+        )
+
+        # Create a lock manager to acquire a lock
+        lock_mgr = task_lock.TaskLockManager(worker_id='worker-1')
+        lock_mgr.acquire_lock('task-001')
+
+        try:
+            # Scanner should find the lock
+            is_idle = self.dispatcher.is_worker_idle(status)
+
+            self.assertFalse(is_idle)
+        finally:
+            lock_mgr.release_lock('task-001')
+
+    def test_find_idle_worker(self):
+        """Test: find_idle_worker returns first idle worker"""
+        worker_statuses = {
+            'worker-1': master_scanner.WorkerStatus(
+                worker_id='worker-1',
+                state='DONE',
+                task_id='task-001',
+                timestamp='2026-01-31T12:00:00.000Z',
+                message='Done'
+            ),
+            'worker-2': master_scanner.WorkerStatus(
+                worker_id='worker-2',
+                state='START',
+                task_id='task-002',
+                timestamp='2026-01-31T12:00:01.000Z',
+                message='Starting'
+            )
         }
 
-        result = self.dispatcher.assign_task_to_worker(task, 'worker-1')
+        idle_worker = self.dispatcher.find_idle_worker(worker_statuses)
 
+        self.assertEqual(idle_worker, 'worker-1')
+
+    def test_find_idle_worker_none(self):
+        """Test: find_idle_worker returns None when no idle workers"""
+        worker_statuses = {
+            'worker-1': master_scanner.WorkerStatus(
+                worker_id='worker-1',
+                state='START',
+                task_id='task-001',
+                timestamp='2026-01-31T12:00:00.000Z',
+                message='Starting'
+            ),
+            'worker-2': master_scanner.WorkerStatus(
+                worker_id='worker-2',
+                state='WAIT',
+                task_id='task-002',
+                timestamp='2026-01-31T12:00:01.000Z',
+                message='Waiting'
+            )
+        }
+
+        idle_worker = self.dispatcher.find_idle_worker(worker_statuses)
+
+        self.assertIsNone(idle_worker)
+
+    def test_dispatch_acquires_lock(self):
+        """Test: successful dispatch acquires lock"""
+        task = master_dispatcher.TaskInfo(
+            task_id='task-001',
+            command='Test command',
+            priority=1,
+            status='pending'
+        )
+
+        result = self.dispatcher.dispatch_one(task, 'worker-1')
+
+        # Should succeed
         self.assertTrue(result)
 
-        # Verify instruction file created
-        instruction_file = os.path.join(self.base_dir, 'instructions', 'worker-1.json')
-        self.assertTrue(os.path.exists(instruction_file))
+        # Lock should be acquired
+        lock_info = self.dispatcher._scanner.read_lock_state('task-001')
+        self.assertIsNotNone(lock_info)
+        self.assertEqual(lock_info.worker_id, 'master-dispatcher')
 
-        # Verify file content
-        with open(instruction_file, 'r') as f:
-            loaded_task = json.load(f)
+        # Cleanup
+        self.dispatcher._lock_manager.release_lock('task-001')
 
-        self.assertEqual(loaded_task['task_id'], 'task_001')
-        self.assertEqual(loaded_task['prompt'], 'Test prompt')
+    def test_dispatch_skips_locked_task(self):
+        """Test: dispatch skips task with valid lock"""
+        task = master_dispatcher.TaskInfo(
+            task_id='task-001',
+            command='Test command',
+            priority=1,
+            status='pending'
+        )
 
-    def test_assign_task_to_worker_fails_for_busy_worker(self):
-        """Test: Should not assign task if worker already has instruction"""
-        # Create existing instruction file
-        instruction_file = os.path.join(self.base_dir, 'instructions', 'worker-1.json')
-        with open(instruction_file, 'w') as f:
-            json.dump({'task_id': 'existing_task'}, f)
+        # Another worker acquires the lock
+        other_lock_mgr = task_lock.TaskLockManager(worker_id='worker-2')
+        other_lock_mgr.acquire_lock('task-001')
 
-        task = {
-            'id': 'task_002',
-            'prompt': 'New task',
-            'status': 'pending'
+        try:
+            # Try to dispatch
+            result = self.dispatcher.dispatch_one(task, 'worker-1')
+
+            # Should fail
+            self.assertFalse(result)
+        finally:
+            other_lock_mgr.release_lock('task-001')
+
+    def test_dispatch_to_idle_worker(self):
+        """Test: dispatch_all dispatches to idle worker"""
+        # Create tasks
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test task 1',
+                'priority': 1,
+                'status': 'pending'
+            }
+        ]
+        self._create_tasks_file(tasks)
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
+        # Create worker status
+        worker_statuses = {
+            'worker-1': master_scanner.WorkerStatus(
+                worker_id='worker-1',
+                state='DONE',
+                task_id=None,
+                timestamp='2026-01-31T12:00:00.000Z',
+                message='Idle'
+            )
         }
 
-        result = self.dispatcher.assign_task_to_worker(task, 'worker-1')
+        results = self.dispatcher.dispatch_all(worker_statuses)
 
-        self.assertFalse(result)
+        self.assertEqual(len(results), 1)
+        self.assertTrue(results[0].success)
+        self.assertEqual(results[0].task_id, 'task-001')
+        self.assertEqual(results[0].worker_id, 'worker-1')
 
-    def test_dispatch_tasks_to_idle_workers(self):
-        """Test: Should dispatch pending tasks to idle workers"""
-        # Add pending tasks
-        self.dispatcher.task_queue.add_task('Task 1', priority=1)
-        self.dispatcher.task_queue.add_task('Task 2', priority=2)
+        # Cleanup
+        self.dispatcher._lock_manager.release_lock('task-001')
 
-        # Simulate idle worker
-        with open(self.status_log, 'a') as f:
-            entry = {
-                'time': '2026-01-28 12:00:00',
-                'node': 'worker-1',
-                'status': 'DONE',
-                'msg': 'Ready'
-            }
-            f.write(json.dumps(entry) + '\n')
+    def test_dispatch_result_structure(self):
+        """Test: DispatchResult has correct fields"""
+        result = master_dispatcher.DispatchResult(
+            success=True,
+            task_id='task-001',
+            worker_id='worker-1',
+            reason=None
+        )
 
-        self.dispatcher.scan_log()
+        self.assertTrue(result.success)
+        self.assertEqual(result.task_id, 'task-001')
+        self.assertEqual(result.worker_id, 'worker-1')
+        self.assertIsNone(result.reason)
 
-        dispatched = self.dispatcher.dispatch_tasks()
+    def test_task_info_structure(self):
+        """Test: TaskInfo has correct fields"""
+        task = master_dispatcher.TaskInfo(
+            task_id='task-001',
+            command='python run.py',
+            priority=1,
+            status='pending'
+        )
 
-        self.assertGreaterEqual(dispatched, 0)
-        self.assertLessEqual(dispatched, 2)
+        self.assertEqual(task.task_id, 'task-001')
+        self.assertEqual(task.command, 'python run.py')
+        self.assertEqual(task.priority, 1)
+        self.assertEqual(task.status, 'pending')
 
-    def test_dispatch_tasks_respects_max_concurrent(self):
-        """Test: Should not exceed max_concurrent_tasks limit"""
-        # Add many tasks
-        for i in range(10):
-            self.dispatcher.task_queue.add_task(f'Task {i}', priority=i+1)
+    def test_create_dispatcher_factory(self):
+        """Test: create_dispatcher factory function works"""
+        dispatcher = master_dispatcher.create_dispatcher('test-cluster-2')
 
-        # Simulate many idle workers
-        for i in range(5):
-            with open(self.status_log, 'a') as f:
-                entry = {
-                    'time': '2026-01-28 12:00:00',
-                    'node': f'worker-{i}',
-                    'status': 'DONE',
-                    'msg': 'Ready'
-                }
-                f.write(json.dumps(entry) + '\n')
-
-        self.dispatcher.scan_log()
-
-        dispatched = self.dispatcher.dispatch_tasks()
-
-        self.assertLessEqual(dispatched, self.dispatcher.max_concurrent_tasks)
-
-    def test_update_statistics(self):
-        """Test: Should update statistics from task queue"""
-        # Add some tasks
-        task_id_1 = self.dispatcher.task_queue.add_task('Task 1')
-        task_id_2 = self.dispatcher.task_queue.add_task('Task 2')
-
-        # Assign and complete one task
-        self.dispatcher.task_queue.assign_task(task_id_1, 'worker-1')
-        self.dispatcher.task_queue.complete_task(task_id_1, '/path/to/result.md')
-
-        # Assign and fail one task
-        self.dispatcher.task_queue.assign_task(task_id_2, 'worker-2')
-        self.dispatcher.task_queue.fail_task(task_id_2, 'Test error')
-
-        # Update statistics
-        self.dispatcher.update_statistics()
-
-        # Should have completed and failed tasks
-        self.assertGreater(self.dispatcher.stats['tasks_completed'], 0)
-        self.assertGreater(self.dispatcher.stats['tasks_failed'], 0)
-
-    def test_format_status_table_with_stats(self):
-        """Test: Status table should include statistics"""
-        # Add some worker activity
-        with open(self.status_log, 'a') as f:
-            entry = {
-                'time': '2026-01-28 12:00:00',
-                'node': 'worker-1',
-                'status': 'START',
-                'msg': 'Starting'
-            }
-            f.write(json.dumps(entry) + '\n')
-
-        self.dispatcher.scan_log()
-        self.dispatcher.update_statistics()
-
-        table = self.dispatcher.format_status_table()
-
-        self.assertIn('AI Swarm Status', table)
-        self.assertIsInstance(table, str)
+        self.assertIsInstance(dispatcher, master_dispatcher.MasterDispatcher)
+        self.assertEqual(dispatcher.cluster_id, 'test-cluster-2')
 
 
 if __name__ == '__main__':
