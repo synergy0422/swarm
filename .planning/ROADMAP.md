@@ -11,7 +11,7 @@
 | 2 | **tmux 集成层** | 实现资源发现、capture/send 封装 | CORE-01, CORE-02 | Complete |
 | | 3 | **共享状态系统** | 实现状态广播、任务锁机制 | CORE-03, CORE-04, CORE-05 | Complete |
 | 4 | **Master 实现** | Master 扫描、自动救援、任务分配 | CORE-06, CORE-07, CORE-08 | Complete |
-| 5 | **CLI 与启动脚本** | 统一 CLI 命令，一键启动 | CORE-09, CORE-10 | Pending |
+| 5 | **CLI 与启动脚本** | 统一 CLI 命令，一键启动 | CORE-09, CORE-10 | Complete |
 | 6 | **集成测试** | 验证完整工作流 | CORE-13 | Pending |
 
 ## Phase 1: 项目初始化
@@ -120,7 +120,7 @@
 **Plans:** 1 plan in 1 wave
 
 **Plan list:**
-- [ ] 05-01-PLAN.md — CLI module with init, up, master, worker, status, down commands
+- [x] 05-01-PLAN.md — CLI module with init, up, master, worker, status, down commands
 
 **Success Criteria:**
 1. ✅ `swarm init` 初始化环境检查和目录创建
@@ -162,4 +162,4 @@
 
 ---
 *Roadmap created: 2026-01-31*
-*Last updated: 2026-01-31 after MVP scope definition*
+*Last updated: 2026-01-31 after Phase 5 completion*

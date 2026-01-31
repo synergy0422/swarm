@@ -14,11 +14,14 @@ import signal
 import fcntl
 import shutil
 import requests
+import threading
 from datetime import datetime
 from pathlib import Path
 
 from swarm import config
 from swarm import task_queue
+from swarm.status_broadcaster import StatusBroadcaster, BroadcastState
+from swarm.task_lock import TaskLockManager
 
 
 class SmartWorker:
@@ -35,6 +38,7 @@ class SmartWorker:
         self.name = name
         self.running = True
         self.lock_fd = None
+        self._mailbox_offset = 0  # Track read position in mailbox
 
         # Set base directory
         if base_dir is None:
@@ -51,11 +55,18 @@ class SmartWorker:
         self.results_dir = os.path.join(self.base_dir, 'results')
         self.instructions_dir = os.path.join(self.base_dir, 'instructions')
         self.lock_file = os.path.join(self.locks_dir, f'{self.name}.lock')
+        self.mailbox_path = os.path.join(self.instructions_dir, f'{self.name}.jsonl')
 
         # Ensure directories exist
         os.makedirs(self.locks_dir, exist_ok=True)
         os.makedirs(self.results_dir, exist_ok=True)
         os.makedirs(self.instructions_dir, exist_ok=True)
+
+        # Initialize status broadcaster for unified JSONL logging
+        self.broadcaster = StatusBroadcaster(worker_id=self.name)
+
+        # Initialize task lock manager for task-level locking
+        self.lock_manager = TaskLockManager(worker_id=self.name)
 
         # Register signal handlers
         signal.signal(signal.SIGINT, self.shutdown)
@@ -77,7 +88,7 @@ class SmartWorker:
             frame: Current stack frame
         """
         print(f"\n[{self.name}] Received signal {signum}, shutting down...")
-        self.write_status('SHUTDOWN', f'Received signal {signum}')
+        self.broadcaster.broadcast_done(task_id="", message=f'Received signal {signum}')
         self.release_lock()
         self.running = False
 
@@ -117,31 +128,6 @@ class SmartWorker:
 
             except Exception as e:
                 print(f"[{self.name}] Error releasing lock: {e}")
-
-    def write_status(self, status, msg):
-        """
-        Write status update to log
-
-        Args:
-            status: Status code
-            msg: Status message
-        """
-        try:
-            log_entry = {
-                'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'node': self.name,
-                'status': status,
-                'msg': msg
-            }
-
-            with open(self.status_log, 'a') as f:
-                f.write(json.dumps(log_entry) + '\n')
-                f.flush()
-
-            print(f"[{self.name}] [{status}] {msg}")
-
-        except Exception as e:
-            print(f"[{self.name}] Error writing status: {e}")
 
     @staticmethod
     def calculate_jitter():
@@ -210,12 +196,12 @@ class SmartWorker:
 
         except requests.exceptions.Timeout:
             error_msg = 'API request timed out'
-            self.write_status('ERROR', error_msg)
+            self.broadcaster.broadcast_error(task_id="", message=error_msg)
             raise Exception(error_msg)
 
         except requests.exceptions.ConnectionError:
             error_msg = 'Network connection failed'
-            self.write_status('ERROR', error_msg)
+            self.broadcaster.broadcast_error(task_id="", message=error_msg)
             raise Exception(error_msg)
 
         except requests.exceptions.HTTPError as e:
@@ -230,13 +216,13 @@ class SmartWorker:
             else:
                 error_msg = f'API error ({status_code})'
 
-            self.write_status('ERROR', error_msg)
+            self.broadcaster.broadcast_error(task_id="", message=error_msg)
             raise Exception(error_msg)
 
         except Exception as e:
             # Catch-all for other errors
             error_msg = f'Unexpected error: {e}'
-            self.write_status('ERROR', error_msg)
+            self.broadcaster.broadcast_error(task_id="", message=error_msg)
             raise Exception(error_msg)
 
     def save_result(self, task_id, content, task_params, input_tokens, output_tokens):
@@ -286,13 +272,16 @@ class SmartWorker:
 
     def process_task_streaming(self, task):
         """
-        Process task with streaming responses and jittered status updates
+        Process task with streaming responses and jittered status updates.
+
+        Uses task-level locking to prevent duplicate execution across workers.
+        Heartbeat is updated every 10 seconds while holding the lock.
 
         Args:
             task: Task dictionary with all parameters
 
         Returns:
-            str: Path to result file
+            str: Path to result file, or None if lock acquisition failed
         """
         task_id = task['id']
         prompt = task['prompt']
@@ -300,10 +289,34 @@ class SmartWorker:
         max_tokens = task.get('max_tokens', config.DEFAULT_MAX_TOKENS)
         model = task.get('model', config.DEFAULT_MODEL)
 
-        # START
-        self.write_status('START', f'Starting task: {task_id}')
+        # Try to acquire task lock
+        if not self.lock_manager.acquire_lock(task_id):
+            # Task is already being processed by another worker
+            self.broadcaster.broadcast_skip(
+                task_id=task_id,
+                message=f'Task {task_id} already locked, skipping'
+            )
+            return None
+
+        # Background heartbeat thread
+        heartbeat_stop = threading.Event()
+        heartbeat_thread = None
+
+        def heartbeat_loop():
+            """Background thread to update heartbeat every 10 seconds"""
+            while not heartbeat_stop.is_set():
+                self.lock_manager.update_heartbeat(task_id)
+                # Wait for 10 seconds or until stop signal
+                heartbeat_stop.wait(10.0)
 
         try:
+            # START
+            self.broadcaster.broadcast_start(task_id=task_id, message=f'Starting task: {task_id}')
+
+            # Start heartbeat thread
+            heartbeat_thread = threading.Thread(target=heartbeat_loop, daemon=True)
+            heartbeat_thread.start()
+
             # Call API (simplified - in real implementation would use streaming)
             response = self.call_claude_api(prompt, system, max_tokens, model)
 
@@ -322,9 +335,12 @@ class SmartWorker:
 
                 # Write status with jittered timing
                 if i < 9:  # Don't sleep on last iteration
-                    self.write_status('THINKING', f'Generating... (~{token_count} tokens)')
+                    self.broadcaster.broadcast_wait(
+                        task_id=task_id,
+                        message=f'Generating... (~{token_count} tokens)'
+                    )
 
-                    # 🆕 Jitter: sleep for 2-3 seconds
+                    # Jitter: sleep for 2-3 seconds
                     jitter = self.calculate_jitter()
                     time.sleep(2 + jitter)
 
@@ -341,42 +357,101 @@ class SmartWorker:
             model = task.get('model', config.DEFAULT_MODEL)
             cost = config.calculate_cost(model, input_tokens, output_tokens)
 
-            self.write_status(
-                'DONE',
-                f'Completed: {task_id} | Tokens: {input_tokens}+{output_tokens} | Cost: ${cost:.6f}'
+            self.broadcaster.broadcast_done(
+                task_id=task_id,
+                message=f'Completed: {task_id} | Tokens: {input_tokens}+{output_tokens} | Cost: ${cost:.6f}'
             )
 
             return result_file
 
         except Exception as e:
-            self.write_status('ERROR', f'Task {task_id} failed: {e}')
+            self.broadcaster.broadcast_error(task_id=task_id, message=f'Task {task_id} failed: {e}')
             raise
+        finally:
+            # Stop heartbeat thread
+            if heartbeat_stop:
+                heartbeat_stop.set()
+            # Wait for heartbeat thread to finish (with timeout)
+            if heartbeat_thread and heartbeat_thread.is_alive():
+                heartbeat_thread.join(timeout=1.0)
+
+            # Always release the lock
+            self.lock_manager.release_lock(task_id)
 
     def poll_for_instructions(self):
         """
-        Poll for instruction files from dispatcher
+        Poll mailbox for new RUN_TASK instructions (JSONL format).
+
+        Reads new lines from mailbox since last read, tracking offset.
+        Only processes action == "RUN_TASK" instructions.
 
         Returns:
             dict: Task parameters or None
         """
-        instruction_file = os.path.join(self.instructions_dir, f'{self.name}.json')
+        if not os.path.exists(self.mailbox_path):
+            return None
 
-        if os.path.exists(instruction_file):
-            try:
-                with open(instruction_file, 'r') as f:
-                    task = json.load(f)
+        try:
+            with open(self.mailbox_path, 'r') as f:
+                lines = f.readlines()
 
-                # Consume the instruction file
-                os.remove(instruction_file)
+            # Process new lines since last offset
+            for i in range(self._mailbox_offset, len(lines)):
+                line = lines[i].strip()
+                if not line:
+                    continue
 
-                print(f"[{self.name}] Received task: {task.get('task_id')}")
-                return task
+                try:
+                    instruction = json.loads(line)
 
-            except Exception as e:
-                print(f"[{self.name}] Error reading instruction file: {e}")
-                return None
+                    # Update offset (we've read up to this line)
+                    self._mailbox_offset = i + 1
+
+                    # Only process RUN_TASK actions
+                    if instruction.get('action') == 'RUN_TASK':
+                        task_id = instruction.get('task_id')
+                        payload = instruction.get('payload', {})
+
+                        # Verify lock ownership before execution
+                        if self._verify_task_lock(task_id):
+                            print(f"[{self.name}] Received task: {task_id}")
+                            # Convert payload to task format
+                            return {
+                                'id': task_id,
+                                'prompt': payload.get('prompt', ''),
+                                'priority': payload.get('priority', 999)
+                            }
+                        else:
+                            # Lock not owned, skip this task
+                            self.broadcaster.broadcast_skip(
+                                task_id=task_id,
+                                message=f'Task {task_id} lock not owned, skipping'
+                            )
+
+                except json.JSONDecodeError:
+                    continue
+
+        except Exception as e:
+            print(f"[{self.name}] Error reading mailbox: {e}")
 
         return None
+
+    def _verify_task_lock(self, task_id: str) -> bool:
+        """
+        Verify that this worker owns the lock for the task.
+
+        Args:
+            task_id: Task ID to verify
+
+        Returns:
+            bool: True if lock is owned by this worker
+        """
+        lock_info = self.lock_manager.get_lock_info(task_id)
+        if lock_info is None:
+            return False
+
+        # Check if lock is owned by this worker
+        return lock_info.worker_id == self.name
 
     def run(self):
         """
@@ -389,14 +464,14 @@ class SmartWorker:
             return 1
 
         # Write initial status so dispatcher can detect this worker
-        self.write_status('START', 'Smart Worker initialized')
+        self.broadcaster.broadcast_start(task_id="", message='Smart Worker initialized')
 
         print(f"[{self.name}] Smart Worker started")
         print(f"[{self.name}] Model: {config.DEFAULT_MODEL}")
 
         try:
             while self.running:
-                # Poll for instructions
+                # Poll for instructions from mailbox (every 1s)
                 task = self.poll_for_instructions()
 
                 if task:
@@ -405,8 +480,8 @@ class SmartWorker:
                     except Exception as e:
                         print(f"[{self.name}] Task processing error: {e}")
                 else:
-                    # No task, wait before next poll
-                    time.sleep(2)
+                    # No task, wait before next poll (1s)
+                    time.sleep(1)
 
         except KeyboardInterrupt:
             print(f"\n[{self.name}] Interrupted by user")

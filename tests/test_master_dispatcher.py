@@ -258,13 +258,14 @@ class TestMasterDispatcher(unittest.TestCase):
         # Should succeed
         self.assertTrue(result)
 
-        # Lock should be acquired
+        # Lock should be acquired by the target worker
         lock_info = self.dispatcher._scanner.read_lock_state('task-001')
         self.assertIsNotNone(lock_info)
-        self.assertEqual(lock_info.worker_id, 'master-dispatcher')
+        self.assertEqual(lock_info.worker_id, 'worker-1')
 
-        # Cleanup
-        self.dispatcher._lock_manager.release_lock('task-001')
+        # Cleanup (use worker's lock manager to release)
+        worker_lock_mgr = task_lock.TaskLockManager(worker_id='worker-1')
+        worker_lock_mgr.release_lock('task-001')
 
     def test_dispatch_skips_locked_task(self):
         """Test: dispatch skips task with valid lock"""

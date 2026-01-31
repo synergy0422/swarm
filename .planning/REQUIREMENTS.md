@@ -24,13 +24,13 @@
 
 ### CLI 与交付 (CORE)
 
-- [ ] **CORE-09**: CLI 工具 — `swarm init/run/master/worker` 命令
-- [ ] **CORE-10**: 启动脚本 — 一键 tmux 会话初始化 + Master + N Workers
+- [x] **CORE-09**: CLI 工具 — `swarm init/run/master/worker` 命令
+- [x] **CORE-10**: 启动脚本 — 一键 tmux 会话初始化 + Master + N Workers
 
 ### 现有代码复用 (CORE)
 
-- [ ] **CORE-11**: 复制 Phase 2 实现 — config.py、task_queue.py、worker_smart.py
-- [ ] **CORE-12**: 适配新目录 — 修改路径为 /tmp/ai_swarm/
+- [x] **CORE-11**: 复制 Phase 2 实现 — config.py、task_queue.py、worker_smart.py
+- [x] **CORE-12**: 适配新目录 — 修改路径为 /tmp/ai_swarm/
 - [ ] **CORE-13**: 集成测试 — 验证完整工作流
 
 ## v2 Requirements
@@ -78,8 +78,8 @@
 | CORE-06 | Phase 4 | Complete |
 | CORE-07 | Phase 4 | Complete |
 | CORE-08 | Phase 4 | Complete |
-| CORE-09 | Phase 5 | Pending |
-| CORE-10 | Phase 5 | Pending |
+| CORE-09 | Phase 5 | Complete |
+| CORE-10 | Phase 5 | Complete |
 | CORE-11 | Phase 1 | Complete |
 | CORE-12 | Phase 1 | Complete |
 | CORE-13 | Phase 6 | Pending |
@@ -96,4 +96,4 @@
 
 ---
 *Requirements defined: 2026-01-31*
-*Last updated: 2026-01-31 after MVP scope definition*
+*Last updated: 2026-01-31 after Phase 5 completion*

@@ -27,6 +27,7 @@ ENV_TASKS_FILE = 'AI_SWARM_TASKS_FILE'
 DEFAULT_AI_SWARM_DIR = '/tmp/ai_swarm'
 ENV_POLL_INTERVAL = 'AI_SWARM_POLL_INTERVAL'
 DEFAULT_POLL_INTERVAL = 1.0
+DEFAULT_INSTRUCTIONS_DIR = 'instructions'
 
 
 # ==================== Helper Functions ====================
@@ -39,6 +40,29 @@ def get_ai_swarm_dir() -> str:
         str: Path to AI Swarm directory
     """
     return os.environ.get('AI_SWARM_DIR', DEFAULT_AI_SWARM_DIR)
+
+
+def get_instructions_dir() -> str:
+    """
+    Get instructions directory path.
+
+    Returns:
+        str: Path to instructions directory
+    """
+    return os.path.join(get_ai_swarm_dir(), DEFAULT_INSTRUCTIONS_DIR)
+
+
+def get_mailbox_path(worker_id: str) -> str:
+    """
+    Get mailbox file path for a worker.
+
+    Args:
+        worker_id: Worker identifier
+
+    Returns:
+        str: Path to worker's mailbox JSONL file
+    """
+    return os.path.join(get_instructions_dir(), f'{worker_id}.jsonl')
 
 
 def get_tasks_file_path() -> str:
@@ -136,11 +160,15 @@ class MasterDispatcher:
         """
         self.cluster_id = cluster_id
         self._ai_swarm_dir = get_ai_swarm_dir()
+        self._instructions_dir = get_instructions_dir()
         self._scanner = master_scanner.MasterScanner(cluster_id)
         self._lock_manager = task_lock.TaskLockManager(worker_id='master-dispatcher')
         self._broadcaster = status_broadcaster.StatusBroadcaster(
             worker_id='master-dispatcher'
         )
+
+        # Ensure instructions directory exists
+        os.makedirs(self._instructions_dir, exist_ok=True)
 
     def _get_tasks_file_path(self) -> str:
         """
@@ -244,7 +272,11 @@ class MasterDispatcher:
         """
         Dispatch a single task to a worker.
 
-        Acquires task lock, then broadcasts ASSIGNED status.
+        Dispatch sequence:
+        1. Acquire task lock using worker's ID (skip if already locked)
+        2. Broadcast ASSIGNED status with meta
+        3. Write RUN_TASK instruction to worker's mailbox (JSONL)
+        4. Update tasks.json status to ASSIGNED
 
         Args:
             task: Task to dispatch
@@ -253,26 +285,109 @@ class MasterDispatcher:
         Returns:
             bool: True if dispatch succeeded, False otherwise
         """
-        # Try to acquire lock for the task
-        acquired = self._lock_manager.acquire_lock(task.task_id)
+        # 2.1 Acquire task lock using worker's ID (not master's)
+        # Create temporary lock manager for the target worker
+        worker_lock_manager = task_lock.TaskLockManager(worker_id=worker_id)
+        acquired = worker_lock_manager.acquire_lock(task.task_id)
 
         if not acquired:
             # Task is already locked, skip
             return False
 
         try:
-            # Broadcast ASSIGNED state
-            self._broadcaster.broadcast_assigned(
+            # 2.2 Broadcast ASSIGNED status with meta
+            import time
+            ts_ms = int(time.time() * 1000)
+            self._broadcaster._broadcast(
+                state=status_broadcaster.BroadcastState.START,
                 task_id=task.task_id,
-                message=f'Task assigned to {worker_id}'
+                message=f'Task assigned to {worker_id}',
+                meta={
+                    'assigned_worker_id': worker_id,
+                    'event': 'ASSIGNED'
+                }
             )
+
+            # 2.3 Write to mailbox (JSONL append-only)
+            self._write_to_mailbox(task, worker_id)
+
+            # 2.4 Update tasks.json
+            self._update_task_status(task.task_id, worker_id, ts_ms)
 
             return True
 
-        except Exception:
+        except Exception as e:
             # If dispatch fails, release the lock
-            self._lock_manager.release_lock(task.task_id)
+            print(f"[MasterDispatcher] Dispatch failed for {task.task_id}: {e}")
+            worker_lock_manager.release_lock(task.task_id)
             return False
+
+    def _write_to_mailbox(self, task: TaskInfo, worker_id: str) -> None:
+        """
+        Write RUN_TASK instruction to worker's mailbox.
+
+        Args:
+            task: Task to dispatch
+            worker_id: Worker to dispatch to
+        """
+        import time
+        mailbox_path = get_mailbox_path(worker_id)
+
+        # Ensure instructions directory exists
+        os.makedirs(os.path.dirname(mailbox_path), exist_ok=True)
+
+        # Build instruction
+        ts_ms = int(time.time() * 1000)
+        instruction = {
+            'ts': ts_ms,
+            'task_id': task.task_id,
+            'action': 'RUN_TASK',
+            'payload': {
+                'id': task.task_id,
+                'prompt': task.command,
+                'priority': task.priority
+            },
+            'attempt': 1
+        }
+
+        # Append to mailbox (JSONL)
+        with open(mailbox_path, 'a') as f:
+            f.write(json.dumps(instruction) + '\n')
+
+    def _update_task_status(self, task_id: str, worker_id: str, ts_ms: int) -> None:
+        """
+        Update task status in tasks.json to ASSIGNED.
+
+        Args:
+            task_id: Task ID
+            worker_id: Worker ID
+            ts_ms: Timestamp in milliseconds
+        """
+        tasks_file = self._get_tasks_file_path()
+
+        if not os.path.exists(tasks_file):
+            return
+
+        try:
+            with open(tasks_file, 'r') as f:
+                data = json.load(f)
+
+            # Find and update the task
+            for task_dict in data.get('tasks', []):
+                if task_dict.get('id') == task_id:
+                    task_dict['status'] = 'ASSIGNED'
+                    task_dict['assigned_worker_id'] = worker_id
+                    task_dict['assigned_at'] = ts_ms
+                    break
+
+            # Write back atomically
+            temp_path = tasks_file + '.tmp'
+            with open(temp_path, 'w') as f:
+                json.dump(data, f, indent=2)
+            os.replace(temp_path, tasks_file)
+
+        except (json.JSONDecodeError, FileNotFoundError, IOError) as e:
+            print(f"[MasterDispatcher] Failed to update tasks.json: {e}")
 
     def dispatch_all(
         self,

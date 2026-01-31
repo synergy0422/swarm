@@ -197,10 +197,13 @@ class TestSmartWorker(unittest.TestCase):
         # Verify error message
         self.assertIn('Invalid API key', str(context.exception))
 
-        # Verify error was logged to status
-        with open(self.status_log, 'r') as f:
+        # Verify error was logged to status via broadcaster
+        # StatusBroadcaster uses AI_SWARM_DIR (set by isolated_swarm_dir fixture)
+        status_log = os.path.join(os.environ['AI_SWARM_DIR'], 'status.log')
+        with open(status_log, 'r') as f:
             log = json.loads(f.readlines()[-1])
-            self.assertEqual(log['status'], 'ERROR')
+            self.assertEqual(log['state'], 'ERROR')
+            self.assertIn('worker_id', log)
 
     @patch('swarm.worker_smart.requests.post')
     def test_handle_429_rate_limit(self, mock_post):
@@ -275,16 +278,14 @@ class TestSmartWorker(unittest.TestCase):
 
         worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
 
-        # Process task with streaming
+        # Mock broadcaster to capture calls
         updates = []
+        original_broadcast_wait = worker.broadcaster.broadcast_wait
+        def capture_wait(task_id, message="", meta=None):
+            updates.append(('WAIT', task_id, message))
+            return None
 
-        # Capture write_status calls
-        original_write = worker.write_status
-        def capture_write(status, msg):
-            updates.append((status, msg))
-            return original_write(status, msg)
-
-        worker.write_status = capture_write
+        worker.broadcaster.broadcast_wait = capture_wait
 
         worker.process_task_streaming(self.sample_task)
 

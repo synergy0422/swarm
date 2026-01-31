@@ -31,7 +31,8 @@ class TestStatusBroadcaster(unittest.TestCase):
         self.assertEqual(entry['state'], 'START')
         self.assertEqual(entry['task_id'], 'task-001')
         self.assertEqual(entry['message'], 'Starting task')
-        self.assertIn('timestamp', entry)
+        self.assertIn('ts', entry)
+        self.assertIn('worker_id', entry)
 
     def test_broadcast_done_creates_jsonl_line(self):
         """Test: broadcast_done should create proper DONE state line"""
@@ -143,7 +144,7 @@ class TestStatusBroadcaster(unittest.TestCase):
         self.assertEqual(entry['meta']['timeout_sec'], 30)
 
     def test_broadcast_timestamp_format(self):
-        """Test: timestamp should be ISO 8601 format with milliseconds"""
+        """Test: ts should be ISO 8601 format with milliseconds"""
         from swarm import status_broadcaster
 
         sb = status_broadcaster.StatusBroadcaster('worker-1')
@@ -154,10 +155,10 @@ class TestStatusBroadcaster(unittest.TestCase):
             line = f.readline().strip()
 
         entry = json.loads(line)
-        timestamp = entry['timestamp']
+        ts = entry['ts']
 
         # Check format: 2026-01-31T12:00:00.000Z
-        self.assertRegex(timestamp, r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$')
+        self.assertRegex(ts, r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$')
 
     def test_broadcast_creates_directory(self):
         """Test: broadcast should auto-create AI_SWARM_DIR subdirectory"""
@@ -193,7 +194,8 @@ class TestStatusBroadcaster(unittest.TestCase):
             entry = json.loads(line.strip())
             self.assertIn('state', entry)
             self.assertIn('task_id', entry)
-            self.assertIn('timestamp', entry)
+            self.assertIn('ts', entry)
+            self.assertIn('worker_id', entry)
 
     def test_convenience_methods(self):
         """Test: all convenience methods work correctly"""
