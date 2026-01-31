@@ -93,13 +93,22 @@ class LockInfo:
         )
 
     def to_json(self) -> str:
-        """Serialize lock info to JSON string"""
-        return json.dumps(asdict(self), indent=2)
+        """Serialize lock info to JSON string with backward compatibility"""
+        data = asdict(self)
+        # Write both ttl_sec and ttl for backward compatibility
+        data['ttl_sec'] = self.ttl
+        data['ttl'] = self.ttl
+        return json.dumps(data, indent=2)
 
     @classmethod
     def from_json(cls, json_str: str) -> 'LockInfo':
-        """Deserialize lock info from JSON string"""
+        """Deserialize lock info from JSON string with backward compatibility"""
         data = json.loads(json_str)
+        # Prefer ttl_sec, fallback to ttl for backward compatibility
+        ttl_value = data.get('ttl_sec') or data.get('ttl', DEFAULT_LOCK_TTL)
+        # Remove ttl_sec from data to avoid unexpected keyword argument
+        data.pop('ttl_sec', None)
+        data['ttl'] = ttl_value
         return cls(**data)
 
     def is_expired(self) -> bool:
@@ -234,8 +243,8 @@ class TaskLockManager:
         if os.path.exists(lock_path):
             try:
                 with open(lock_path, 'r') as f:
-                    lock_data = json.load(f)
-                    lock_info = LockInfo(**lock_data)
+                    lock_data = f.read()
+                    lock_info = LockInfo.from_json(lock_data)
 
                 # Check if expired
                 if self._is_lock_expired(lock_info):
@@ -285,8 +294,8 @@ class TaskLockManager:
 
         try:
             with open(lock_path, 'r') as f:
-                lock_data = json.load(f)
-                lock_info = LockInfo(**lock_data)
+                lock_data = f.read()
+                lock_info = LockInfo.from_json(lock_data)
 
             # Check ownership
             if lock_info.worker_id != self.worker_id:
@@ -318,8 +327,8 @@ class TaskLockManager:
 
         try:
             with open(lock_path, 'r') as f:
-                lock_data = json.load(f)
-                lock_info = LockInfo(**lock_data)
+                lock_data = f.read()
+                lock_info = LockInfo.from_json(lock_data)
 
             # Check ownership
             if lock_info.worker_id != self.worker_id:
@@ -356,8 +365,8 @@ class TaskLockManager:
 
         try:
             with open(lock_path, 'r') as f:
-                lock_data = json.load(f)
-                lock_info = LockInfo(**lock_data)
+                lock_data = f.read()
+                lock_info = LockInfo.from_json(lock_data)
                 return not self._is_lock_expired(lock_info)
         except (json.JSONDecodeError, KeyError, FileNotFoundError):
             return False
@@ -379,8 +388,8 @@ class TaskLockManager:
 
         try:
             with open(lock_path, 'r') as f:
-                lock_data = json.load(f)
-                return LockInfo(**lock_data)
+                lock_data = f.read()
+                return LockInfo.from_json(lock_data)
         except (json.JSONDecodeError, KeyError, FileNotFoundError):
             return None
 
@@ -415,8 +424,8 @@ class TaskLockManager:
                     lock_path = os.path.join(locks_dir, filename)
                     try:
                         with open(lock_path, 'r') as f:
-                            lock_data = json.load(f)
-                            lock_info = LockInfo(**lock_data)
+                            lock_data = f.read()
+                            lock_info = LockInfo.from_json(lock_data)
 
                         if self._is_lock_expired(lock_info):
                             os.unlink(lock_path)
