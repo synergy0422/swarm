@@ -11,7 +11,7 @@
 | 2 | **tmux 集成层** | 实现资源发现、capture/send 封装 | CORE-01, CORE-02 | Complete |
 | | 3 | **共享状态系统** | 实现状态广播、任务锁机制 | CORE-03, CORE-04, CORE-05 | Complete |
 | 4 | **Master 实现** | Master 扫描、自动救援、任务分配 | CORE-06, CORE-07, CORE-08 | Complete |
-| 5 | **CLI 与启动脚本** | 统一 CLI 命令，一键启动 | CORE-09, CORE-10 | Complete |
+| 5 | **CLI 与启动脚本** | 统一 CLI 命令，一键启动 | CORE-09, CORE-10 | Complete (gaps closed) |
 | 6 | **集成测试** | 验证完整工作流 | CORE-13 | Pending |
 
 ## Phase 1: 项目初始化
@@ -117,10 +117,12 @@
 
 **Requirements:** CORE-09, CORE-10
 
-**Plans:** 1 plan in 1 wave
+**Plans:** 1 plan (+ 2 gap closure plans)
 
 **Plan list:**
 - [x] 05-01-PLAN.md — CLI module with init, up, master, worker, status, down commands
+- [x] 05-02-PLAN.md — Gap closure: Fix --cluster-id flag position for subcommand usage
+- [x] 05-03-PLAN.md — Gap closure: Remove cli import to fix RuntimeWarning
 
 **Success Criteria:**
 1. ✅ `swarm init` 初始化环境检查和目录创建
@@ -131,6 +133,8 @@
 6. ✅ `swarm down` 终止 tmux 会话
 7. ✅ setup.py 配置 console_scripts 入口点
 8. ✅ README.md 5 行使用说明
+9. ✅ `swarm status --cluster-id default` works (gap closed)
+10. ✅ `python3 -m swarm.cli` runs without RuntimeWarning (gap closed)
 
 **Key Tasks:**
 - [x] 创建 `cli.py` 入口点（argparse 结构）
@@ -140,6 +144,8 @@
 - [x] 实现 status/down 命令（状态查询、会话终止）
 - [x] 创建 setup.py（console_scripts）
 - [x] 更新 README.md（Usage 部分）
+- [x] Gap 05-02: 使用 argparse parents 模式添加 --cluster-id 到所有子命令
+- [x] Gap 05-03: 移除 __init__.py 中的 cli 导入
 
 ## Phase 6: 集成测试
 
@@ -162,4 +168,4 @@
 
 ---
 *Roadmap created: 2026-01-31*
-*Last updated: 2026-01-31 after Phase 5 completion*
+*Last updated: 2026-01-31 after Phase 5 gap closure planning*
