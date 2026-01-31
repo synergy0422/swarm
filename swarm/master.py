@@ -19,6 +19,7 @@ from typing import Optional, Dict, List
 from swarm.task_queue import TaskQueue
 from swarm.task_lock import TaskLockManager
 from swarm.status_broadcaster import get_ai_swarm_dir, StatusBroadcaster
+from swarm.master_dispatcher import MasterDispatcher
 
 
 # Default configuration
@@ -213,92 +214,6 @@ class WaitDetector:
         return False
 
 
-class TaskDispatcher:
-    """
-    Assigns tasks from queue to idle workers.
-
-    Uses simple FIFO dispatch:
-    1. Scan for idle workers
-    2. Get first unassigned task from queue
-    3. Try to acquire task lock
-    4. If lock acquired, assign task to worker
-    """
-
-    def __init__(self):
-        """Initialize TaskDispatcher"""
-        self.task_queue = TaskQueue()
-
-    def find_idle_workers(self, workers: Dict[str, dict]) -> List[str]:
-        """
-        Find workers that are idle (available for new task).
-
-        Args:
-            workers: Dict of worker_id -> status
-
-        Returns:
-            List of idle worker IDs
-        """
-        idle = []
-        scanner = MasterScanner()
-
-        for worker_id, status in workers.items():
-            if scanner.is_worker_idle(status):
-                # Verify no lock held (check lock files)
-                # For MVP, assume status is authoritative
-                idle.append(worker_id)
-
-        return idle
-
-    def assign_tasks(self, idle_workers: List[str]) -> List[dict]:
-        """
-        Assign tasks to idle workers.
-
-        Args:
-            idle_workers: List of worker IDs ready for work
-
-        Returns:
-            List of assignment dicts: [{'worker_id': ..., 'task_id': ...}]
-        """
-        assignments = []
-
-        if not idle_workers:
-            return assignments
-
-        # Get all pending tasks
-        tasks = self.task_queue.get_tasks()
-        if not tasks:
-            return assignments
-
-        for worker_id in idle_workers:
-            # Find first unassigned task
-            for task in tasks:
-                task_id = task.get('id')
-                if not task_id:
-                    continue
-
-                # Skip if task is already assigned/locked
-                if task.get('status') in ('ASSIGNED', 'RUNNING', 'DONE'):
-                    continue
-
-                # Try to acquire lock
-                lock_manager = TaskLockManager(worker_id=worker_id)
-                if lock_manager.acquire_lock(task_id):
-                    # Lock acquired, assign task
-                    task['status'] = 'ASSIGNED'
-                    task['assigned_to'] = worker_id
-                    self.task_queue.update_task(task_id, task)
-
-                    assignments.append({
-                        'worker_id': worker_id,
-                        'task_id': task_id
-                    })
-
-                    # Move to next worker
-                    break
-
-        return assignments
-
-
 class Master:
     """
     Main Master node for AI Swarm coordination.
@@ -307,7 +222,7 @@ class Master:
     1. Scan worker status (from status.log)
     2. Detect WAIT states (check for auto-confirm)
     3. Find idle workers
-    4. Assign pending tasks to idle workers
+    4. Assign pending tasks to idle workers (via MasterDispatcher with mailbox)
     5. Sleep for poll_interval
 
     Conservative behavior:
@@ -316,19 +231,20 @@ class Master:
     - Use locks to prevent duplicate assignment
     """
 
-    def __init__(self, poll_interval: Optional[float] = None):
+    def __init__(self, poll_interval: Optional[float] = None, cluster_id: str = 'default'):
         """
         Initialize Master.
 
         Args:
             poll_interval: Scan interval in seconds (default from env or 1.0)
+            cluster_id: Cluster identifier for dispatcher
         """
         self.poll_interval = poll_interval or get_poll_interval()
         self.running = True
 
         self.scanner = MasterScanner()
         self.wait_detector = WaitDetector()
-        self.dispatcher = TaskDispatcher()
+        self.dispatcher = MasterDispatcher(cluster_id=cluster_id)
         self.broadcaster = StatusBroadcaster(worker_id='master')
 
         # Register signal handlers
@@ -378,7 +294,7 @@ class Master:
         Continuously:
         1. Scan worker status
         2. Handle WAIT states
-        3. Assign tasks to idle workers
+        3. Dispatch tasks to idle workers (via MasterDispatcher with mailbox)
         4. Sleep for poll_interval
         """
         print(f"[Master] Starting Master loop (poll_interval={self.poll_interval}s)")
@@ -386,22 +302,32 @@ class Master:
         while self.running:
             try:
                 # 1. Scan worker status
-                workers = self.scanner.scan_workers()
+                workers_dict = self.scanner.scan_workers()
+
+                # Convert dict to WorkerStatus objects
+                from swarm import master_scanner
+                worker_statuses = {}
+                for worker_id, status_dict in workers_dict.items():
+                    worker_statuses[worker_id] = master_scanner.WorkerStatus(
+                        worker_id=worker_id,
+                        task_id=status_dict.get('task_id'),
+                        state=status_dict.get('state'),
+                        message=status_dict.get('message', ''),
+                        timestamp=status_dict.get('ts', '')
+                    )
 
                 # 2. Handle WAIT states
-                self.handle_wait_states(workers)
+                self.handle_wait_states(workers_dict)
 
-                # 3. Find idle workers
-                idle_workers = self.dispatcher.find_idle_workers(workers)
+                # 3. Dispatch tasks to idle workers (includes mailbox writing)
+                results = self.dispatcher.dispatch_all(worker_statuses)
 
-                # 4. Assign tasks to idle workers
-                assignments = self.dispatcher.assign_tasks(idle_workers)
+                if results:
+                    for result in results:
+                        if result.success:
+                            print(f"[Master] Assigned {result.task_id} to {result.worker_id}")
 
-                if assignments:
-                    for assignment in assignments:
-                        print(f"[Master] Assigned {assignment['task_id']} to {assignment['worker_id']}")
-
-                # 5. Sleep before next scan
+                # 4. Sleep before next scan
                 time.sleep(self.poll_interval)
 
             except Exception as e:
