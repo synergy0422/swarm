@@ -16,7 +16,7 @@ See: .planning/PROJECT.md
 | 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
 | 4 | Master 实现 | Complete | 100% (3/3 plans) |
 | 5 | CLI 与启动脚本 | Complete | 100% (3/3 plans: 01 + 02 + 03 gap closure) |
-| 6 | 集成测试 | In Progress | 14% (1/7 plans) |
+| 6 | 集成测试 | In Progress | 29% (2/7 plans: 01, 02 complete) |
 
 ## Current Position
 
@@ -28,13 +28,15 @@ All issues from UAT closed:
 
 **Phase 6: 集成测试** - IN PROGRESS
 
-Plan 06-01 complete:
-- Created `tests/test_e2e_happy_path.py` (196 lines)
-- Single E2E test: `test_cli_commands_work`
-- Verifies: `swarm up` -> `swarm status` -> `swarm down`
-- Uses real tmux sessions with isolated environment
-- Marked `@pytest.mark.integration` for CI compatibility
-- No LLM API key dependency
+Plan 06-02 complete:
+- Created `tests/test_auto_rescuer_patterns.py` (479 lines)
+- 46 pytest unit tests for WaitPatternDetector and AutoRescuer
+- Tests use mock tmux_manager (fast, CI-friendly)
+- Pattern detection: INTERACTIVE_CONFIRM, PRESS_ENTER, CONFIRM_PROMPT
+- Chinese patterns: 按回车, 确认, 确定吗
+- Blacklist blocking: delete, rm -rf, sudo, password, prod
+- Priority order: interactive > press_enter > confirm
+- Line count limit: DETECTION_LINE_COUNT (20) tested
 
 Completed:
 - `swarm/cli.py` with argparse-based command routing (472 lines)
@@ -52,6 +54,7 @@ Completed:
 
 ## Recent Changes
 
+- 2026-01-31: Phase 6 Plan 02 complete - Auto Rescuer pattern tests (46 tests)
 - 2026-01-31: Phase 6 Plan 01 complete - E2E test for CLI verification
 - 2026-01-31: Phase 5 gap closure complete - 2 issues fixed
 - 2026-01-31: Phase 5 Plan 02 - --cluster-id flag position fixed
@@ -99,12 +102,13 @@ Completed:
 | 05-02 | argparse parents pattern for shared subparser arguments | Enables --cluster-id flag after subcommands |
 | 05-03 | Removed eager cli import from __init__.py | Prevents duplicate import RuntimeWarning |
 | 06-01 | E2E test uses `sys.executable -m swarm.cli` | Consistent CLI invocation with test isolation |
+| 06-02 | pytest over unittest for pattern tests | Modern fixtures, better reporting, mock tmux |
 
 ## Session Continuity
 
-Last session: 2026-01-31
-Stopped at: Completed Phase 6 Plan 01 - E2E test for CLI verification
+Last session: 2026-01-31T07:50:23Z
+Stopped at: Completed Phase 6 Plan 02 - Auto Rescuer pattern tests
 Resume file: None
 
 ---
-*State updated: 2026-01-31*
+*State updated: 2026-01-31T07:50:23Z*
