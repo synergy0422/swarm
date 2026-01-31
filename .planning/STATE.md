@@ -14,28 +14,32 @@ See: .planning/PROJECT.md
 | 1 | 项目初始化 | Complete | 100% (1/1 plans) |
 | 2 | tmux 集成层 | Complete | 100% (1/1 plans) |
 | 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
-| 4 | Master 实现 | In Progress | 33% (1/3 plans) |
+| 4 | Master 实现 | In Progress | 67% (2/3 plans) |
 | 5 | CLI 与启动脚本 | Pending | 0% |
 | 6 | 集成测试 | Pending | 0% |
 
 ## Current Position
 
-**Phase 4: Master 实现** - Plan 01 COMPLETE ✓
+**Phase 4: Master 实现** - Plan 02 COMPLETE ✓
 
 Completed:
 - `swarm/master_scanner.py` with MasterScanner class (269 lines)
-- WorkerStatus dataclass for worker state representation
-- read_worker_status() parses status.log JSONL, returns last status per worker
-- read_lock_state() checks task lock state via TaskLockManager
-- scan_loop() continuous monitoring with threading.Event for graceful shutdown
-- 12 tests for master scanner
-- 110 tests pass total (no regressions)
+- `swarm/auto_rescuer.py` with WaitPatternDetector and AutoRescuer classes (397 lines)
+- PatternCategory enum (INTERACTIVE_CONFIRM, PRESS_ENTER, CONFIRM_PROMPT, NONE)
+- WaitPattern dataclass with should_auto_confirm flag
+- Conservative auto-confirm policy (disabled by default, Press ENTER only)
+- Blacklist keyword filtering (delete, rm -rf, sudo, password, key, 删除, etc.)
+- Detection limited to last 20 lines and 30 second window
+- Case-insensitive regex-based pattern matching
+- 40 tests for master scanner and auto rescuer
+- 138 tests pass total (no regressions)
 
 ## Recent Changes
 
+- 2026-01-31: Phase 4 Plan 02 complete - Auto Rescuer
 - 2026-01-31: Phase 4 Plan 01 complete - Master Scanner
-- 2 commits for Phase 4 Plan 01 execution
-- MasterScanner class with periodic worker/lock scanning
+- 6 commits for Phase 4 execution
+- AutoRescuer with conservative WAIT detection and auto-confirm
 - All must-haves verified
 
 ## Decisions Made
@@ -56,11 +60,16 @@ Completed:
 | 04-01 | read_worker_status returns last status per worker | Latest state is most relevant for dispatch |
 | 04-01 | scan_loop uses threading.Event for graceful shutdown | Standard Python pattern |
 | 04-01 | Factory function create_scanner() for consistency | Clean instantiation pattern |
+| 04-02 | Auto-confirm disabled by default - opt-in policy | Prevents unintended automated actions |
+| 04-02 | Only Press ENTER patterns auto-confirm (never y/n) | Conservative safety - only send Enter key |
+| 04-02 | Blacklist keywords always block auto-action | delete, rm -rf, sudo, password, key, 删除, etc. |
+| 04-02 | Detection limited to last 20 lines and 30 seconds | Reduces false positives from old prompts |
+| 04-02 | Priority-based pattern detection | INTERACTIVE_CONFIRM > PRESS_ENTER > CONFIRM_PROMPT |
 
 ## Session Continuity
 
-Last session: 2026-01-31T04:47:00Z
-Stopped at: Completed Phase 4 Plan 01 - Master Scanner
+Last session: 2026-01-31T04:45:35Z
+Stopped at: Completed Phase 4 Plan 02 - Auto Rescuer
 Resume file: None
 
 ---
