@@ -9,7 +9,7 @@
 |---|-------|------|--------------|--------|
 | 1 | **项目初始化** | 复制 Phase 2 代码，搭建目录结构 | CORE-11, CORE-12 | Complete |
 | 2 | **tmux 集成层** | 实现资源发现、capture/send 封装 | CORE-01, CORE-02 | Complete |
-| 3 | **共享状态系统** | 实现状态广播、任务锁机制 | CORE-03, CORE-04, CORE-05 | In Progress |
+| | 3 | **共享状态系统** | 实现状态广播、任务锁机制 | CORE-03, CORE-04, CORE-05 | Complete | |
 | 4 | **Master 实现** | Master 扫描、自动救援、任务分配 | CORE-06, CORE-07, CORE-08 | Pending |
 | 5 | **CLI 与启动脚本** | 统一 CLI 命令，一键启动 | CORE-09, CORE-10 | Pending |
 | 6 | **集成测试** | 验证完整工作流 | CORE-13 | Pending |
@@ -73,10 +73,10 @@
 - [x] 03-PLAN.md — Status broadcaster and task lock modules with tests
 
 **Success Criteria:**
-1. [ ] `/tmp/ai_swarm/` 目录结构正确
-2. [ ] 状态日志写入格式正确
-3. [ ] 任务锁防止重复执行
-4. [ ] 原子写入操作
+1. ✅ `/tmp/ai_swarm/` 目录结构正确
+2. ✅ 状态日志写入格式正确
+3. ✅ 任务锁防止重复执行
+4. ✅ 原子写入操作
 
 **Key Tasks:**
 - [x] 创建 `status_broadcaster.py` 模块

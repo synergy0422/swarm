@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** Phase 3 - 共享状态系统
+**Current focus:** Phase 4 - Master 实现
 
 ## Phase Status
 
@@ -13,29 +13,27 @@ See: .planning/PROJECT.md
 |---|-------|--------|----------|
 | 1 | 项目初始化 | Complete | 100% (1/1 plans) |
 | 2 | tmux 集成层 | Complete | 100% (1/1 plans) |
-| 3 | 共享状态系统 | In Progress | 50% (1/2 plans) |
+| 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
 | 4 | Master 实现 | Pending | 0% |
 | 5 | CLI 与启动脚本 | Pending | 0% |
 | 6 | 集成测试 | Pending | 0% |
 
 ## Current Position
 
-**Phase 3: 共享状态系统** - PLAN 1 COMPLETE
+**Phase 3: 共享状态系统** - COMPLETE ✓
 
-Completed Plan 1:
-- `swarm/status_broadcaster.py` with StatusBroadcaster class
-- `swarm/task_lock.py` with TaskLockManager class
+Completed:
+- `swarm/status_broadcaster.py` with StatusBroadcaster class (JSONL format)
+- `swarm/task_lock.py` with TaskLockManager class (atomic O_CREAT|O_EXCL locks)
 - 12 tests for status broadcasting
 - 25 tests for task locking
-- 90 tests pass total
-
-Next: Plan 2 - Status polling/listening mechanism for Master
+- 90 tests pass total (no regressions)
 
 ## Recent Changes
 
-- 2026-01-31: Phase 3-01 complete - shared state system (status + locking)
-- 2026-01-31: 5 commits for Phase 3-01 execution
-- All tests passing (90 tests)
+- 2026-01-31: Phase 3 complete - shared state system
+- 6 commits for Phase 3 execution
+- All must-haves verified
 
 ## Decisions Made
 
@@ -48,20 +46,15 @@ Next: Plan 2 - Status polling/listening mechanism for Master
 | 02 | libtmux for tmux automation | Full programmatic control, dynamic session creation |
 | 02 | AgentStatus enum for agent state tracking | PENDING, RUNNING, STOPPED, FAILED, UNKNOWN |
 | 02 | Async methods for output streaming | Non-blocking real-time output capture |
-| 03 | fcntl.flock for status log append | Safe concurrent writes from multiple workers |
-| 03 | O_CREAT\|O_EXCL for atomic lock acquisition | Platform-independent alternative to fcntl.flock |
-| 03 | Fixed timezone bug in expiration check | UTC consistency for cross-timezone lock validity |
-| 03 | BroadcastState is fixed set with meta field | Simplifies state machine, extensible via meta |
-
-## Issues/Blockers
-
-None - Phase 3-01 completed successfully.
+| 03 | JSON Lines format for status broadcasting | Simple, parseable, tool-friendly |
+| 03 | O_CREAT|O_EXCL for atomic lock acquisition | Platform-independent, no fcntl dependency |
+| 03 | Heartbeat 10s, TTL 300s, lazy cleanup | Fault-tolerant lock management |
 
 ## Next Action
 
-Ready for Phase 3-02: Status polling/listening mechanism
+Ready for Phase 4: Master 实现
 
-Run `/gsd:execute-phase 3-02` to continue with Phase 3.
+Run `/gsd:discuss-phase 4` to gather context for Phase 4.
 
 ---
 *State updated: 2026-01-31*
