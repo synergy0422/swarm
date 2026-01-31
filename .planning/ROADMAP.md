@@ -91,18 +91,25 @@
 
 **Requirements:** CORE-06, CORE-07, CORE-08
 
+**Plans:** 3 plans in 2 waves
+
+**Plan list:**
+- [x] 04-01-PLAN.md — MasterScanner with scan_loop, status reading, lock checking
+- [x] 04-02-PLAN.md — AutoRescuer with WAIT pattern detection and conservative auto-confirm
+- [x] 04-03-PLAN.md — MasterDispatcher with FIFO dispatch, lock acquisition, ASSIGNED broadcast
+
 **Success Criteria:**
-1. ✅ Master 定期扫描所有 worker
-2. ✅ 检测 `[y/n]`、`[Y/n]`、`确认` 等等待模式
-3. ✅ 检测 `Error`、`Failed`、`Exception` 等错误模式
-4. ✅ 可配置是否自动确认（默认否）
-5. ✅ 任务分配到空闲 worker
+1. Master 定期扫描所有 worker
+2. 检测 `[y/n]`、`[Y/n]`、`确认` 等等待模式
+3. 检测 `Error`、`Failed`、`Exception` 等错误模式
+4. 可配置是否自动确认（默认否）
+5. 任务分配到空闲 worker
 
 **Key Tasks:**
-- [ ] 实现 `master_scanner.py` 模块
-- [ ] 实现 `auto_rescuer.py` 模块
-- [ ] 实现 `master_dispatcher.py`（从 Phase 2 补齐）
-- [ ] 集成测试覆盖
+- [x] 实现 `master_scanner.py` 模块
+- [x] 实现 `auto_rescuer.py` 模块
+- [x] 实现 `master_dispatcher.py`
+- [x] 集成测试覆盖
 
 ## Phase 5: CLI 与启动脚本
 
