@@ -402,26 +402,27 @@ def cmd_down(args):
 
 def main():
     """Main CLI entry point"""
-    parser = argparse.ArgumentParser(
-        description='AI Swarm - Multi-Agent Task Processing System',
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-
-    # Global flags
-    parser.add_argument(
+    # Parent parser for common arguments (shared across subcommands)
+    parent_parser = argparse.ArgumentParser(add_help=False)
+    parent_parser.add_argument(
         '--cluster-id',
         default=DEFAULT_CLUSTER_ID,
         help=f'Cluster identifier (default: {DEFAULT_CLUSTER_ID})'
     )
 
+    parser = argparse.ArgumentParser(
+        description='AI Swarm - Multi-Agent Task Processing System',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+
     # Subcommands
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
-    # init command
+    # init command (no --cluster-id - creates the environment, cluster not yet relevant)
     subparsers.add_parser('init', help='Initialize swarm environment')
 
     # up command
-    up_parser = subparsers.add_parser('up', help='Launch tmux session with master + workers')
+    up_parser = subparsers.add_parser('up', parents=[parent_parser], help='Launch tmux session with master + workers')
     up_parser.add_argument(
         '--workers',
         type=int,
@@ -430,10 +431,10 @@ def main():
     )
 
     # master command
-    subparsers.add_parser('master', help='Launch master process')
+    subparsers.add_parser('master', parents=[parent_parser], help='Launch master process')
 
     # worker command
-    worker_parser = subparsers.add_parser('worker', help='Launch single worker')
+    worker_parser = subparsers.add_parser('worker', parents=[parent_parser], help='Launch single worker')
     worker_parser.add_argument(
         '--id',
         type=int,
@@ -442,10 +443,10 @@ def main():
     )
 
     # status command
-    subparsers.add_parser('status', help='View swarm status')
+    subparsers.add_parser('status', parents=[parent_parser], help='View swarm status')
 
     # down command
-    subparsers.add_parser('down', help='Terminate swarm session')
+    subparsers.add_parser('down', parents=[parent_parser], help='Terminate swarm session')
 
     # Parse args
     args = parser.parse_args()
