@@ -12,7 +12,7 @@
 | | 3 | **共享状态系统** | 实现状态广播、任务锁机制 | CORE-03, CORE-04, CORE-05 | Complete |
 | 4 | **Master 实现** | Master 扫描、自动救援、任务分配 | CORE-06, CORE-07, CORE-08 | Complete |
 | 5 | **CLI 与启动脚本** | 统一 CLI 命令，一键启动 | CORE-09, CORE-10 | Complete (gaps closed) |
-| 6 | **集成测试** | 验证完整工作流 | CORE-13 | Pending |
+| 6 | **集成测试** | 验证完整工作流 | CORE-13 | Complete |
 
 ## Phase 1: 项目初始化
 

@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** Phase 6 - 集成测试
+**Current focus:** All phases complete - v1.0 milestone ready for audit
 
 ## Phase Status
 
@@ -16,7 +16,7 @@ See: .planning/PROJECT.md
 | 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
 | 4 | Master 实现 | Complete | 100% (3/3 plans) |
 | 5 | CLI 与启动脚本 | Complete | 100% (3/3 plans: 01 + 02 + 03 gap closure) |
-| 6 | 集成测试 | In Progress | 43% (3/7 plans: 01, 02, 03 complete) |
+| 6 | 集成测试 | Complete | 100% (3/3 plans) |
 
 ## Current Position
 

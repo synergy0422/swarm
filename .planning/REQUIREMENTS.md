@@ -31,7 +31,7 @@
 
 - [x] **CORE-11**: 复制 Phase 2 实现 — config.py、task_queue.py、worker_smart.py
 - [x] **CORE-12**: 适配新目录 — 修改路径为 /tmp/ai_swarm/
-- [ ] **CORE-13**: 集成测试 — 验证完整工作流
+- [x] **CORE-13**: 集成测试 — 验证完整工作流
 
 ## v2 Requirements
 
@@ -82,7 +82,7 @@
 | CORE-10 | Phase 5 | Complete |
 | CORE-11 | Phase 1 | Complete |
 | CORE-12 | Phase 1 | Complete |
-| CORE-13 | Phase 6 | Pending |
+| CORE-13 | Phase 6 | Complete |
 | PIPE-01 | Phase 2 | Pending |
 | P2P-01 | Phase 2 | Pending |
 | WEB-01 | Phase 2 | Pending |
