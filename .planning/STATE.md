@@ -15,12 +15,16 @@ See: .planning/PROJECT.md
 | 2 | tmux 集成层 | Complete | 100% (1/1 plans) |
 | 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
 | 4 | Master 实现 | Complete | 100% (3/3 plans) |
-| 5 | CLI 与启动脚本 | Complete | 100% (1/1 plans) |
+| 5 | CLI 与启动脚本 | Complete | 100% (3/3 plans: 01 + 02 + 03 gap closure) |
 | 6 | 集成测试 | Pending | 0% |
 
 ## Current Position
 
 **Phase 5: CLI 与启动脚本** - COMPLETE ✓
+
+All issues from UAT closed:
+- Gap 02: --cluster-id flag now works after subcommands (e.g., `swarm status --cluster-id default`)
+- Gap 03: No RuntimeWarning when running `python -m swarm.cli`
 
 Completed:
 - `swarm/cli.py` with argparse-based command routing (472 lines)
@@ -33,14 +37,19 @@ Completed:
 - Preflight checks for tmux/libtmux dependencies
 - Helper functions: get_session(), parse_status_log()
 - All commands tested and working
+- --cluster-id flag available on all subcommands (05-02 gap closure)
+- Clean import behavior without warnings (05-03 gap closure)
 
 ## Recent Changes
 
+- 2026-01-31: Phase 5 gap closure complete - 2 issues fixed
+- 2026-01-31: Phase 5 Plan 02 - --cluster-id flag position fixed
+- 2026-01-31: Phase 5 Plan 03 - RuntimeWarning fixed
 - 2026-01-31: Phase 5 Plan 01 complete - CLI 与启动脚本
 - 2026-01-31: Phase 4 Plan 03 complete - Master Dispatcher
 - 2026-01-31: Phase 4 Plan 02 complete - Auto Rescuer
 - 2026-01-31: Phase 4 Plan 01 complete - Master Scanner
-- 14 commits for Phase 5 execution (5 tasks)
+- 14 commits for Phase 5 execution (5 tasks + 2 gap closures)
 - All Phase 5 modules exported from swarm package
 
 ## Decisions Made
@@ -76,11 +85,15 @@ Completed:
 | 05-01 | Session naming: swarm-{cluster_id} | Multi-cluster support |
 | 05-01 | CLI flags > env vars > defaults priority | Configuration flexibility |
 | 05-01 | Preflight checks before session creation | Fail fast with clear error messages |
+| 05-02 | argparse parents pattern for shared subparser arguments | Enables --cluster-id flag after subcommands |
+| 05-03 | Removed eager cli import from __init__.py | Prevents duplicate import RuntimeWarning |
 
 ## Session Continuity
 
-Last session: 2026-01-31T05:24:14Z
-Stopped at: Completed Phase 5 Plan 01 - CLI 与启动脚本
+Last session: 2026-01-31T06:22:31Z
+Stopped at: Completed Phase 5 gap closure - both issues fixed
+- 05-02: --cluster-id flag position fixed (argparse parents pattern)
+- 05-03: RuntimeWarning fixed (removed cli import from __init__.py)
 Resume file: None
 
 ---
