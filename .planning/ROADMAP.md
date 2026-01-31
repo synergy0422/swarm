@@ -8,8 +8,8 @@
 | # | Phase | Goal | Requirements | Status |
 |---|-------|------|--------------|--------|
 | 1 | **项目初始化** | 复制 Phase 2 代码，搭建目录结构 | CORE-11, CORE-12 | Complete |
-| 2 | **tmux 集成层** | 实现资源发现、capture/send 封装 | CORE-01, CORE-02 | Pending |
-| 3 | **共享状态系统** | 实现状态广播、任务锁机制 | CORE-03, CORE-04, CORE-05 | Pending |
+| 2 | **tmux 集成层** | 实现资源发现、capture/send 封装 | CORE-01, CORE-02 | Complete |
+| 3 | **共享状态系统** | 实现状态广播、任务锁机制 | CORE-03, CORE-04, CORE-05 | In Progress |
 | 4 | **Master 实现** | Master 扫描、自动救援、任务分配 | CORE-06, CORE-07, CORE-08 | Pending |
 | 5 | **CLI 与启动脚本** | 统一 CLI 命令，一键启动 | CORE-09, CORE-10 | Pending |
 | 6 | **集成测试** | 验证完整工作流 | CORE-13 | Pending |
@@ -42,6 +42,11 @@
 
 **Requirements:** CORE-01, CORE-02
 
+**Plans:** 1 plan
+
+**Plan list:**
+- [x] 02-PLAN.md — TmuxSwarmManager with AgentStatus and AgentPane
+
 **Success Criteria:**
 1. ✅ `tmux list-sessions` 封装可用
 2. ✅ `tmux list-windows -a` 封装可用
@@ -50,11 +55,11 @@
 5. ✅ 特殊按键支持（C-c、Enter、Escape 等）
 
 **Key Tasks:**
-- [ ] 创建 `tmux_client.py` 模块
-- [ ] 实现 `TmuxResource` 类（资源发现）
-- [ ] 实现 `TmuxCapture` 类（读取终端）
-- [ ] 实现 `TmuxControl` 类（发送命令）
-- [ ] 单元测试覆盖
+- [x] 创建 `tmux_client.py` 模块
+- [x] 实现 `TmuxResource` 类（资源发现）
+- [x] 实现 `TmuxCapture` 类（读取终端）
+- [x] 实现 `TmuxControl` 类（发送命令）
+- [x] 单元测试覆盖
 
 ## Phase 3: 共享状态系统
 
@@ -62,18 +67,23 @@
 
 **Requirements:** CORE-03, CORE-04, CORE-05
 
+**Plans:** 1 plan
+
+**Plan list:**
+- [x] 03-PLAN.md — Status broadcaster and task lock modules with tests
+
 **Success Criteria:**
-1. ✅ `/tmp/ai_swarm/` 目录结构正确
-2. ✅ 状态日志写入格式正确
-3. ✅ 任务锁防止重复执行
-4. ✅ 原子写入操作
+1. [ ] `/tmp/ai_swarm/` 目录结构正确
+2. [ ] 状态日志写入格式正确
+3. [ ] 任务锁防止重复执行
+4. [ ] 原子写入操作
 
 **Key Tasks:**
-- [ ] 创建 `status_broadcaster.py` 模块
-- [ ] 实现 START/DONE/WAIT/ERROR/HELP/SKIP 状态
-- [ ] 创建 `task_lock.py` 模块（fcntl 锁）
-- [ ] 集成到现有 task_queue.py
-- [ ] 单元测试覆盖
+- [x] 创建 `status_broadcaster.py` 模块
+- [x] 实现 START/DONE/WAIT/ERROR/HELP/SKIP 状态
+- [x] 创建 `task_lock.py` 模块（原子文件锁）
+- [x] 集成到现有 task_queue.py
+- [x] 单元测试覆盖
 
 ## Phase 4: Master 实现
 
