@@ -117,18 +117,29 @@
 
 **Requirements:** CORE-09, CORE-10
 
+**Plans:** 1 plan in 1 wave
+
+**Plan list:**
+- [ ] 05-01-PLAN.md — CLI module with init, up, master, worker, status, down commands
+
 **Success Criteria:**
-1. ✅ `swarm init` 初始化 tmux 会话
-2. ✅ `swarm run` 启动所有组件
-3. ✅ `swarm master` 单独启动 master
-4. ✅ `swarm worker` 单独启动 worker
-5. ✅ 一键脚本支持配置 N 个 worker
+1. ✅ `swarm init` 初始化环境检查和目录创建
+2. ✅ `swarm up` 启动 tmux 会话（master + N workers）
+3. ✅ `swarm master` 单独启动 master 进程
+4. ✅ `swarm worker --id <n>` 单独启动 worker
+5. ✅ `swarm status` 显示会话和 agent 状态
+6. ✅ `swarm down` 终止 tmux 会话
+7. ✅ setup.py 配置 console_scripts 入口点
+8. ✅ README.md 5 行使用说明
 
 **Key Tasks:**
-- [ ] 创建 `cli.py` 入口点
-- [ ] 实现 `swarm` 命令
-- [ ] 创建 `swarm_launcher.sh` 启动脚本
-- [ ] 创建示例配置
+- [x] 创建 `cli.py` 入口点（argparse 结构）
+- [x] 实现 init 命令（依赖检查、目录创建）
+- [x] 实现 master/worker 命令（直接导入执行）
+- [x] 实现 up 命令（tmux session 编排）
+- [x] 实现 status/down 命令（状态查询、会话终止）
+- [x] 创建 setup.py（console_scripts）
+- [x] 更新 README.md（Usage 部分）
 
 ## Phase 6: 集成测试
 
