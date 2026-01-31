@@ -25,6 +25,7 @@ BLACKLIST_KEYWORDS = [
     'kill', 'terminate',
     'sudo', 'password', 'token', 'ssh', 'key',
     '生产', 'prod',
+    '删除',  # Chinese for delete
 ]
 
 
