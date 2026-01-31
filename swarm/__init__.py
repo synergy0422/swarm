@@ -28,6 +28,9 @@ from swarm.master_dispatcher import (
     create_dispatcher,
 )
 
+# CLI (Phase 5)
+from swarm import cli
+
 __all__ = [
     # Core
     'TaskQueue',
@@ -55,6 +58,8 @@ __all__ = [
     'TaskInfo',
     'DispatchResult',
     'create_dispatcher',
+    # CLI (Phase 5)
+    'cli',
 ]
 
 __version__ = "0.1.0"
