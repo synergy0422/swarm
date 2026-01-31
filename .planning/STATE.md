@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** Phase 5 - CLI 与启动脚本
+**Current focus:** Phase 6 - 集成测试
 
 ## Phase Status
 
@@ -15,34 +15,33 @@ See: .planning/PROJECT.md
 | 2 | tmux 集成层 | Complete | 100% (1/1 plans) |
 | 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
 | 4 | Master 实现 | Complete | 100% (3/3 plans) |
-| 5 | CLI 与启动脚本 | Pending | 0% |
+| 5 | CLI 与启动脚本 | Complete | 100% (1/1 plans) |
 | 6 | 集成测试 | Pending | 0% |
 
 ## Current Position
 
-**Phase 4: Master 实现** - COMPLETE ✓
+**Phase 5: CLI 与启动脚本** - COMPLETE ✓
 
 Completed:
-- `swarm/master_scanner.py` with MasterScanner class (269 lines)
-- `swarm/auto_rescuer.py` with WaitPatternDetector and AutoRescuer classes (397 lines)
-- `swarm/master_dispatcher.py` with MasterDispatcher class (388 lines)
-- PatternCategory enum (INTERACTIVE_CONFIRM, PRESS_ENTER, CONFIRM_PROMPT, NONE)
-- WaitPattern dataclass with should_auto_confirm flag
-- TaskInfo and DispatchResult dataclasses for task management
-- ASSIGNED broadcast state for task dispatch notification
-- Conservative auto-confirm policy (disabled by default, Press ENTER only)
-- FIFO task dispatch with atomic lock acquisition
-- Worker idle detection (DONE/SKIP/ERROR with no lock)
-- 57 tests for Master components (scanner, rescuer, dispatcher)
-- 155 tests pass total (no regressions)
+- `swarm/cli.py` with argparse-based command routing (472 lines)
+- 6 CLI commands: init, up, master, worker, status, down
+- Tmux session orchestration via libtmux
+- `setup.py` with console_scripts entry point for global `swarm` command
+- `README.md` with 5-line usage section and documentation
+- Direct class instantiation for master/worker (no subprocess)
+- Session naming: `swarm-{cluster_id}` for multi-cluster support
+- Preflight checks for tmux/libtmux dependencies
+- Helper functions: get_session(), parse_status_log()
+- All commands tested and working
 
 ## Recent Changes
 
+- 2026-01-31: Phase 5 Plan 01 complete - CLI 与启动脚本
 - 2026-01-31: Phase 4 Plan 03 complete - Master Dispatcher
 - 2026-01-31: Phase 4 Plan 02 complete - Auto Rescuer
 - 2026-01-31: Phase 4 Plan 01 complete - Master Scanner
-- 9 commits for Phase 4 execution
-- All Phase 4 modules exported from swarm package
+- 14 commits for Phase 5 execution (5 tasks)
+- All Phase 5 modules exported from swarm package
 
 ## Decisions Made
 
@@ -72,11 +71,16 @@ Completed:
 | 04-03 | Idle worker = terminal state (DONE/SKIP/ERROR) + no lock | Ensures worker truly available |
 | 04-03 | Synchronous dispatch_loop (not async) | Simpler implementation, easier testing |
 | 04-03 | Factory function create_dispatcher() for consistency | Matches create_scanner() pattern |
+| 05-01 | Use argparse only (not typer/click) | Minimize dependencies, use stdlib |
+| 05-01 | Direct class instantiation for master/worker | Avoids argparse conflicts with subprocess calls |
+| 05-01 | Session naming: swarm-{cluster_id} | Multi-cluster support |
+| 05-01 | CLI flags > env vars > defaults priority | Configuration flexibility |
+| 05-01 | Preflight checks before session creation | Fail fast with clear error messages |
 
 ## Session Continuity
 
-Last session: 2026-01-31T04:49:45Z
-Stopped at: Completed Phase 4 Plan 03 - Master Dispatcher
+Last session: 2026-01-31T05:24:14Z
+Stopped at: Completed Phase 5 Plan 01 - CLI 与启动脚本
 Resume file: None
 
 ---
