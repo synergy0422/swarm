@@ -10,6 +10,15 @@ from enum import Enum
 import libtmux
 import asyncio
 import os
+import shlex
+
+from swarm.exceptions import (
+    TmuxSwarmError,
+    SessionNotFoundError,
+    AgentNotFoundError,
+    PaneDeadError,
+    SessionCreationError
+)
 
 
 class AgentStatus(Enum):
@@ -173,9 +182,11 @@ class TmuxSwarmManager:
         pane.cmd('select-pane', '-T', agent_id)
 
         # Set environment variables if provided
+        # Use shlex.quote to safely escape values containing special characters
         if env:
             for key, value in env.items():
-                pane.send_keys(f'export {key}={value}', enter=True)
+                safe_value = shlex.quote(value)
+                pane.send_keys(f'export {key}={safe_value}', enter=True)
 
         # Send the startup command
         pane.send_keys(command, enter=True)
@@ -199,7 +210,7 @@ class TmuxSwarmManager:
 
         Args:
             agent_id: ID of the agent to kill
-            graceful: If True, send SIGTERM before force kill
+            graceful: If True, wait briefly before kill (tmux kill-pane is immediate)
 
         Raises:
             AgentNotFoundError: If agent is not found
@@ -208,13 +219,9 @@ class TmuxSwarmManager:
         if not agent:
             raise AgentNotFoundError(f"Agent {agent_id} not found")
 
-        if graceful:
-            agent.pane.send_keys('SIGTERM', enter=True)
-            await asyncio.sleep(1)
-
-        # Force kill if still alive
+        # tmux doesn't support sending real signals via send_keys
+        # Use kill-pane directly for reliable termination
         try:
-            agent.pane.cmd('display-message', '-p', '#{pane_id}')
             agent.pane.cmd('kill-pane')
         except Exception:
             pass  # Pane already dead

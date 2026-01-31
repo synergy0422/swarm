@@ -222,3 +222,11 @@ class StatusBroadcaster:
             message: Optional human-readable message
         """
         self._broadcast(BroadcastState.SKIP, task_id, message)
+
+    def __enter__(self):
+        """Context manager entry - returns self"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - no cleanup needed"""
+        pass
