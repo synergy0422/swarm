@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, List
 
+from swarm.tmux_manager import TmuxSwarmManager
+
 
 # ==================== Constants ====================
 
@@ -247,3 +249,148 @@ class WaitPatternDetector:
             if keyword.lower() in text_lower:
                 return True
         return False
+
+
+# ==================== AutoRescuer Class ====================
+
+class AutoRescuer:
+    """
+    Conservative auto-rescue for WAIT patterns.
+
+    Policy:
+    - Auto-confirm disabled by default (opt-in via enable())
+    - Only auto-confirms PRESS_ENTER patterns (sends Enter key only)
+    - NEVER auto-confirms y/n or other interactive prompts
+    - Blacklist keywords always block auto-action
+    - Returns pattern info for user to decide on interactive confirms
+
+    Usage:
+        rescuer = AutoRescuer(tmux_manager)
+        rescuer.enable()
+
+        pattern = rescuer.check_and_rescue(agent_id, pane_output)
+        if pattern and rescuer.should_request_help(pattern):
+            # Broadcast HELP state
+    """
+
+    def __init__(self, tmux_manager: TmuxSwarmManager):
+        """
+        Initialize AutoRescuer.
+
+        Args:
+            tmux_manager: TmuxSwarmManager instance for sending keys
+        """
+        self.tmux_manager = tmux_manager
+        self.detector = WaitPatternDetector()
+        self._enabled = False  # Always disabled by default (conservative)
+
+    def enable(self) -> None:
+        """Enable auto-confirm for safe patterns (PRESS_ENTER only)."""
+        self._enabled = True
+
+    def disable(self) -> None:
+        """Disable auto-confirm (default state)."""
+        self._enabled = False
+
+    def is_enabled(self) -> bool:
+        """Check if auto-confirm is enabled."""
+        return self._enabled
+
+    def check_and_rescue(
+        self,
+        agent_id: str,
+        pane_output: str,
+        recent_threshold: Optional[datetime] = None
+    ) -> Optional[WaitPattern]:
+        """
+        Check agent pane output for WAIT patterns and attempt auto-rescue.
+
+        Args:
+            agent_id: Agent identifier
+            pane_output: Full output from agent's tmux pane
+            recent_threshold: Only consider patterns after this timestamp
+                             (defaults to 30 seconds ago)
+
+        Returns:
+            WaitPattern if detected, None if safe
+
+        Rescue behavior:
+            - If PRESS_ENTER pattern and enabled: sends Enter key
+            - If INTERACTIVE_CONFIRM or CONFIRM_PROMPT: returns pattern only
+            - If blacklist keyword found: blocks auto-confirm
+        """
+        if recent_threshold is None:
+            recent_threshold = datetime.now() - timedelta(seconds=DETECTION_TIME_WINDOW)
+
+        # Detect pattern
+        pattern = self.detector.detect(pane_output, recent_threshold)
+
+        if not pattern:
+            return None
+
+        # Attempt auto-confirm only if:
+        # 1. Enabled AND
+        # 2. Pattern is PRESS_ENTER AND
+        # 3. should_auto_confirm is True (not blacklisted)
+        if (self._enabled and
+            pattern.category == PatternCategory.PRESS_ENTER and
+            pattern.should_auto_confirm):
+            self.send_enter(agent_id)
+
+        return pattern
+
+    def should_request_help(self, pattern: WaitPattern) -> bool:
+        """
+        Determine if pattern requires user help (HELP state broadcast).
+
+        Args:
+            pattern: Detected WaitPattern
+
+        Returns:
+            True if HELP state should be broadcast
+
+        HELP triggers:
+            - INTERACTIVE_CONFIRM patterns (y/n prompts)
+            - Patterns with blacklist keywords (should_auto_confirm=False)
+            - CONFIRM_PROMPT patterns
+        """
+        # Always request help for interactive confirms
+        if pattern.category == PatternCategory.INTERACTIVE_CONFIRM:
+            return True
+
+        # Request help for confirm prompts
+        if pattern.category == PatternCategory.CONFIRM_PROMPT:
+            return True
+
+        # Request help if blacklisted (even if PRESS_ENTER)
+        if not pattern.should_auto_confirm:
+            return True
+
+        return False
+
+    def send_enter(self, agent_id: str) -> bool:
+        """
+        Send Enter key to agent pane.
+
+        Args:
+            agent_id: Agent identifier
+
+        Returns:
+            True if successful, False otherwise
+
+        Note:
+            Only sends empty string with enter=True (tmux sends Enter key).
+            Never sends 'y', 'yes', or other text input.
+        """
+        try:
+            # Get agent from tmux manager
+            agent = self.tmux_manager._agents.get(agent_id)
+            if not agent:
+                return False
+
+            # Send Enter key only (empty string + enter)
+            agent.pane.send_keys('', enter=True)
+            return True
+        except Exception:
+            return False
+
