@@ -141,6 +141,52 @@ def cmd_init(args):
     return 0
 
 
+def cmd_master(args):
+    """
+    Launch master process.
+
+    Directly instantiates Master class to avoid argparse conflicts.
+    """
+    try:
+        from swarm.master import Master
+        print(f"[SWARM] Starting master for cluster: {args.cluster_id}")
+        print("[SWARM] Press Ctrl+C to stop")
+        master = Master()
+        master.run()
+        return 0
+    except KeyboardInterrupt:
+        print("\n[SWARM] Master interrupted by user")
+        return 0
+    except Exception as e:
+        print(f"[ERROR] Master failed: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+def cmd_worker(args):
+    """
+    Launch single worker process.
+
+    Creates SmartWorker instance and calls run().
+    """
+    try:
+        from swarm.worker_smart import SmartWorker
+        worker_name = f"worker-{args.id}"
+        print(f"[SWARM] Starting worker: {worker_name}")
+        print("[SWARM] Press Ctrl+C to stop")
+        worker = SmartWorker(name=worker_name)
+        return worker.run()
+    except KeyboardInterrupt:
+        print(f"\n[SWARM] Worker {args.id} interrupted by user")
+        return 0
+    except Exception as e:
+        print(f"[ERROR] Worker failed: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
@@ -198,11 +244,9 @@ def main():
         print("[ERROR] 'swarm up' not implemented yet - see Task 3")
         return 1
     elif args.command == 'master':
-        print("[ERROR] 'swarm master' not implemented yet - see Task 2")
-        return 1
+        return cmd_master(args)
     elif args.command == 'worker':
-        print("[ERROR] 'swarm worker' not implemented yet - see Task 2")
-        return 1
+        return cmd_worker(args)
     elif args.command == 'status':
         print("[ERROR] 'swarm status' not implemented yet - see Task 4")
         return 1
