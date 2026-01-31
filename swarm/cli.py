@@ -279,6 +279,127 @@ def cmd_up(args):
         return 1
 
 
+def parse_status_log(ai_swarm_dir, lines=10):
+    """
+    Parse last N lines from status.log.
+
+    Args:
+        ai_swarm_dir: Base directory
+        lines: Number of lines to read
+
+    Returns:
+        dict: Mapping of worker_id -> latest status
+    """
+    import json
+    from collections import defaultdict
+
+    status_log = os.path.join(ai_swarm_dir, 'status.log')
+    worker_status = {}
+
+    if not os.path.exists(status_log):
+        return worker_status
+
+    try:
+        all_lines = []
+        with open(status_log, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        entry = json.loads(line)
+                        all_lines.append(entry)
+                    except json.JSONDecodeError:
+                        continue
+
+        # Get last N lines and extract latest status per worker
+        for entry in all_lines[-lines:]:
+            worker_id = entry.get('worker_id')
+            if worker_id:
+                worker_status[worker_id] = entry
+
+    except (IOError, OSError):
+        pass
+
+    return worker_status
+
+
+def cmd_status(args):
+    """
+    Display swarm status.
+
+    Shows tmux session info and worker status from status.log.
+    """
+    ai_swarm_dir = os.environ.get('AI_SWARM_DIR', DEFAULT_AI_SWARM_DIR)
+    session_name = f"swarm-{args.cluster_id}"
+
+    # Check tmux session
+    session = get_session(args.cluster_id)
+
+    if not session:
+        print(f"[SWARM] No swarm session running: {session_name}")
+        print(f"[SWARM] Run 'swarm up --cluster-id {args.cluster_id}' to start")
+        return 0
+
+    print(f"[SWARM] Session: {session_name}")
+
+    # List windows/panes
+    print(f"\n[SWARM] TMUX Windows:")
+    for window in session.windows:
+        print(f"  - {window.name}")
+
+    # Parse status.log
+    worker_status = parse_status_log(ai_swarm_dir, lines=20)
+
+    if worker_status:
+        print(f"\n[SWARM] Agent Status (from status.log):")
+        print(f"  {'Agent':<15} {'State':<10} {'Message'}")
+        print(f"  {'-'*15} {'-'*10} {'-'*40}")
+
+        for worker_id in sorted(worker_status.keys()):
+            status = worker_status[worker_id]
+            state = status.get('state', 'UNKNOWN')
+            message = status.get('message', '')[:40]
+            print(f"  {worker_id:<15} {state:<10} {message}")
+    else:
+        print(f"\n[SWARM] No agent status available yet")
+
+    # Check active locks
+    locks_dir = os.path.join(ai_swarm_dir, 'locks')
+    if os.path.exists(locks_dir):
+        lock_files = [f for f in os.listdir(locks_dir) if f.endswith('.lock')]
+        if lock_files:
+            print(f"\n[SWARM] Active Locks: {len(lock_files)}")
+            for lock_file in sorted(lock_files)[:5]:  # Show first 5
+                print(f"  - {lock_file}")
+
+    return 0
+
+
+def cmd_down(args):
+    """
+    Terminate swarm session.
+
+    Kills tmux session if it exists.
+    """
+    session_name = f"swarm-{args.cluster_id}"
+
+    # Check if session exists
+    session = get_session(args.cluster_id)
+
+    if not session:
+        print(f"[SWARM] No swarm session running: {session_name}")
+        return 0
+
+    try:
+        # Kill session
+        session.kill_session()
+        print(f"[SWARM] Swarm session stopped: {session_name}")
+        return 0
+    except Exception as e:
+        print(f"[ERROR] Failed to stop session: {e}", file=sys.stderr)
+        return 1
+
+
 def main():
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
@@ -339,11 +460,9 @@ def main():
     elif args.command == 'worker':
         return cmd_worker(args)
     elif args.command == 'status':
-        print("[ERROR] 'swarm status' not implemented yet - see Task 4")
-        return 1
+        return cmd_status(args)
     elif args.command == 'down':
-        print("[ERROR] 'swarm down' not implemented yet - see Task 4")
-        return 1
+        return cmd_down(args)
     else:
         parser.print_help()
         return 1
