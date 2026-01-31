@@ -9,6 +9,8 @@ from swarm.task_queue import TaskQueue
 from swarm.worker_smart import SmartWorker
 from swarm.tmux_manager import TmuxSwarmManager, AgentStatus, AgentPane
 from swarm.exceptions import TmuxSwarmError
+from swarm.status_broadcaster import StatusBroadcaster, BroadcastState
+from swarm.task_lock import TaskLockManager, LockInfo
 
 __all__ = [
     'TaskQueue',
@@ -17,6 +19,10 @@ __all__ = [
     'AgentStatus',
     'AgentPane',
     'TmuxSwarmError',
+    'StatusBroadcaster',
+    'BroadcastState',
+    'TaskLockManager',
+    'LockInfo',
 ]
 
 __version__ = "0.1.0"
