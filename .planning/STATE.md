@@ -14,25 +14,28 @@ See: .planning/PROJECT.md
 | 1 | 项目初始化 | Complete | 100% (1/1 plans) |
 | 2 | tmux 集成层 | Complete | 100% (1/1 plans) |
 | 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
-| 4 | Master 实现 | Pending | 0% |
+| 4 | Master 实现 | In Progress | 33% (1/3 plans) |
 | 5 | CLI 与启动脚本 | Pending | 0% |
 | 6 | 集成测试 | Pending | 0% |
 
 ## Current Position
 
-**Phase 3: 共享状态系统** - COMPLETE ✓
+**Phase 4: Master 实现** - Plan 01 COMPLETE ✓
 
 Completed:
-- `swarm/status_broadcaster.py` with StatusBroadcaster class (JSONL format)
-- `swarm/task_lock.py` with TaskLockManager class (atomic O_CREAT|O_EXCL locks)
-- 12 tests for status broadcasting
-- 25 tests for task locking
-- 90 tests pass total (no regressions)
+- `swarm/master_scanner.py` with MasterScanner class (269 lines)
+- WorkerStatus dataclass for worker state representation
+- read_worker_status() parses status.log JSONL, returns last status per worker
+- read_lock_state() checks task lock state via TaskLockManager
+- scan_loop() continuous monitoring with threading.Event for graceful shutdown
+- 12 tests for master scanner
+- 110 tests pass total (no regressions)
 
 ## Recent Changes
 
-- 2026-01-31: Phase 3 complete - shared state system
-- 6 commits for Phase 3 execution
+- 2026-01-31: Phase 4 Plan 01 complete - Master Scanner
+- 2 commits for Phase 4 Plan 01 execution
+- MasterScanner class with periodic worker/lock scanning
 - All must-haves verified
 
 ## Decisions Made
@@ -49,12 +52,16 @@ Completed:
 | 03 | JSON Lines format for status broadcasting | Simple, parseable, tool-friendly |
 | 03 | O_CREAT|O_EXCL for atomic lock acquisition | Platform-independent, no fcntl dependency |
 | 03 | Heartbeat 10s, TTL 300s, lazy cleanup | Fault-tolerant lock management |
+| 04-01 | MasterScanner uses polling (1s default) rather than event-driven | Simple, reliable, no external dependencies |
+| 04-01 | read_worker_status returns last status per worker | Latest state is most relevant for dispatch |
+| 04-01 | scan_loop uses threading.Event for graceful shutdown | Standard Python pattern |
+| 04-01 | Factory function create_scanner() for consistency | Clean instantiation pattern |
 
-## Next Action
+## Session Continuity
 
-Ready for Phase 4: Master 实现
-
-Run `/gsd:discuss-phase 4` to gather context for Phase 4.
+Last session: 2026-01-31T04:47:00Z
+Stopped at: Completed Phase 4 Plan 01 - Master Scanner
+Resume file: None
 
 ---
 *State updated: 2026-01-31*
