@@ -16,7 +16,7 @@ See: .planning/PROJECT.md
 | 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
 | 4 | Master 实现 | Complete | 100% (3/3 plans) |
 | 5 | CLI 与启动脚本 | Complete | 100% (3/3 plans: 01 + 02 + 03 gap closure) |
-| 6 | 集成测试 | Pending | 0% |
+| 6 | 集成测试 | In Progress | 14% (1/7 plans) |
 
 ## Current Position
 
@@ -25,6 +25,16 @@ See: .planning/PROJECT.md
 All issues from UAT closed:
 - Gap 02: --cluster-id flag now works after subcommands (e.g., `swarm status --cluster-id default`)
 - Gap 03: No RuntimeWarning when running `python -m swarm.cli`
+
+**Phase 6: 集成测试** - IN PROGRESS
+
+Plan 06-01 complete:
+- Created `tests/test_e2e_happy_path.py` (196 lines)
+- Single E2E test: `test_cli_commands_work`
+- Verifies: `swarm up` -> `swarm status` -> `swarm down`
+- Uses real tmux sessions with isolated environment
+- Marked `@pytest.mark.integration` for CI compatibility
+- No LLM API key dependency
 
 Completed:
 - `swarm/cli.py` with argparse-based command routing (472 lines)
@@ -42,6 +52,7 @@ Completed:
 
 ## Recent Changes
 
+- 2026-01-31: Phase 6 Plan 01 complete - E2E test for CLI verification
 - 2026-01-31: Phase 5 gap closure complete - 2 issues fixed
 - 2026-01-31: Phase 5 Plan 02 - --cluster-id flag position fixed
 - 2026-01-31: Phase 5 Plan 03 - RuntimeWarning fixed
@@ -87,13 +98,12 @@ Completed:
 | 05-01 | Preflight checks before session creation | Fail fast with clear error messages |
 | 05-02 | argparse parents pattern for shared subparser arguments | Enables --cluster-id flag after subcommands |
 | 05-03 | Removed eager cli import from __init__.py | Prevents duplicate import RuntimeWarning |
+| 06-01 | E2E test uses `sys.executable -m swarm.cli` | Consistent CLI invocation with test isolation |
 
 ## Session Continuity
 
-Last session: 2026-01-31T06:22:31Z
-Stopped at: Completed Phase 5 gap closure - both issues fixed
-- 05-02: --cluster-id flag position fixed (argparse parents pattern)
-- 05-03: RuntimeWarning fixed (removed cli import from __init__.py)
+Last session: 2026-01-31
+Stopped at: Completed Phase 6 Plan 01 - E2E test for CLI verification
 Resume file: None
 
 ---
