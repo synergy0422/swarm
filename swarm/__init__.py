@@ -11,6 +11,15 @@ from swarm.tmux_manager import TmuxSwarmManager, AgentStatus, AgentPane
 from swarm.exceptions import TmuxSwarmError
 from swarm.status_broadcaster import StatusBroadcaster, BroadcastState
 from swarm.task_lock import TaskLockManager, LockInfo
+from swarm.auto_rescuer import (
+    AutoRescuer,
+    WaitPatternDetector,
+    WaitPattern,
+    PatternCategory,
+    DETECTION_LINE_COUNT,
+    DETECTION_TIME_WINDOW,
+    BLACKLIST_KEYWORDS,
+)
 
 __all__ = [
     'TaskQueue',
@@ -23,6 +32,13 @@ __all__ = [
     'BroadcastState',
     'TaskLockManager',
     'LockInfo',
+    'AutoRescuer',
+    'WaitPatternDetector',
+    'WaitPattern',
+    'PatternCategory',
+    'DETECTION_LINE_COUNT',
+    'DETECTION_TIME_WINDOW',
+    'BLACKLIST_KEYWORDS',
 ]
 
 __version__ = "0.1.0"
