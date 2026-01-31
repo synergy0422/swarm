@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** Phase 4 - Master 实现
+**Current focus:** Phase 5 - CLI 与启动脚本
 
 ## Phase Status
 

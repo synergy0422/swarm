@@ -18,9 +18,9 @@
 
 ### Master-Worker 协作 (CORE)
 
-- [ ] **CORE-06**: Master 扫描 — 定期 scan 其他终端输出
-- [ ] **CORE-07**: 自动救援 — 检测 `[y/n]`、`[Y/n]`、`确认` 等等待模式
-- [ ] **CORE-08**: 错误检测 — 检测 `Error`、`Failed`、`Exception` 等错误模式
+- [x] **CORE-06**: Master 扫描 — 定期 scan 其他终端输出
+- [x] **CORE-07**: 自动救援 — 检测 `[y/n]`、`[Y/n]`、`确认` 等等待模式
+- [x] **CORE-08**: 错误检测 — 检测 `Error`、`Failed`、`Exception` 等错误模式
 
 ### CLI 与交付 (CORE)
 
@@ -70,19 +70,19 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | Phase 1 | Pending |
-| CORE-02 | Phase 1 | Pending |
-| CORE-03 | Phase 1 | Pending |
-| CORE-04 | Phase 1 | Pending |
-| CORE-05 | Phase 1 | Pending |
-| CORE-06 | Phase 1 | Pending |
-| CORE-07 | Phase 1 | Pending |
-| CORE-08 | Phase 1 | Pending |
-| CORE-09 | Phase 1 | Pending |
-| CORE-10 | Phase 1 | Pending |
-| CORE-11 | Phase 1 | Pending |
-| CORE-12 | Phase 1 | Pending |
-| CORE-13 | Phase 1 | Pending |
+| CORE-01 | Phase 2 | Complete |
+| CORE-02 | Phase 2 | Complete |
+| CORE-03 | Phase 3 | Complete |
+| CORE-04 | Phase 3 | Complete |
+| CORE-05 | Phase 3 | Complete |
+| CORE-06 | Phase 4 | Complete |
+| CORE-07 | Phase 4 | Complete |
+| CORE-08 | Phase 4 | Complete |
+| CORE-09 | Phase 5 | Pending |
+| CORE-10 | Phase 5 | Pending |
+| CORE-11 | Phase 1 | Complete |
+| CORE-12 | Phase 1 | Complete |
+| CORE-13 | Phase 6 | Pending |
 | PIPE-01 | Phase 2 | Pending |
 | P2P-01 | Phase 2 | Pending |
 | WEB-01 | Phase 2 | Pending |
