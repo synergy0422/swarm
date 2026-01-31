@@ -16,7 +16,7 @@ See: .planning/PROJECT.md
 | 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
 | 4 | Master 实现 | Complete | 100% (3/3 plans) |
 | 5 | CLI 与启动脚本 | Complete | 100% (3/3 plans: 01 + 02 + 03 gap closure) |
-| 6 | 集成测试 | In Progress | 29% (2/7 plans: 01, 02 complete) |
+| 6 | 集成测试 | In Progress | 43% (3/7 plans: 01, 02, 03 complete) |
 
 ## Current Position
 
@@ -27,6 +27,12 @@ All issues from UAT closed:
 - Gap 03: No RuntimeWarning when running `python -m swarm.cli`
 
 **Phase 6: 集成测试** - IN PROGRESS
+
+Plan 06-03 complete:
+- Created `tests/test_e2e_auto_rescue.py` (390 lines)
+- 12 semi-black-box tests for AutoRescuer with mock tmux manager
+- Tests: Press ENTER, Chinese patterns, y/n, blacklist blocking, multi-worker
+- No real tmux or Master integration required
 
 Plan 06-02 complete:
 - Created `tests/test_auto_rescuer_patterns.py` (479 lines)
@@ -54,6 +60,7 @@ Completed:
 
 ## Recent Changes
 
+- 2026-01-31: Phase 6 Plan 03 complete - AutoRescuer semi-black-box E2E test (12 tests)
 - 2026-01-31: Phase 6 Plan 02 complete - Auto Rescuer pattern tests (46 tests)
 - 2026-01-31: Phase 6 Plan 01 complete - E2E test for CLI verification
 - 2026-01-31: Phase 5 gap closure complete - 2 issues fixed
@@ -103,12 +110,13 @@ Completed:
 | 05-03 | Removed eager cli import from __init__.py | Prevents duplicate import RuntimeWarning |
 | 06-01 | E2E test uses `sys.executable -m swarm.cli` | Consistent CLI invocation with test isolation |
 | 06-02 | pytest over unittest for pattern tests | Modern fixtures, better reporting, mock tmux |
+| 06-03 | Semi-black-box test with mock tmux manager | Real AutoRescuer + mock tmux for controlled testing |
 
 ## Session Continuity
 
-Last session: 2026-01-31T07:50:23Z
-Stopped at: Completed Phase 6 Plan 02 - Auto Rescuer pattern tests
+Last session: 2026-01-31T16:01:00Z
+Stopped at: Completed Phase 6 Plan 03 - AutoRescuer semi-black-box E2E test
 Resume file: None
 
 ---
-*State updated: 2026-01-31T07:50:23Z*
+*State updated: 2026-01-31T16:01:00Z*
