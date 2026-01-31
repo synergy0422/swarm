@@ -11,6 +11,7 @@ from swarm.tmux_manager import TmuxSwarmManager, AgentStatus, AgentPane
 from swarm.exceptions import TmuxSwarmError
 from swarm.status_broadcaster import StatusBroadcaster, BroadcastState
 from swarm.task_lock import TaskLockManager, LockInfo
+from swarm.master_scanner import MasterScanner, WorkerStatus, create_scanner
 from swarm.auto_rescuer import (
     AutoRescuer,
     WaitPatternDetector,
@@ -20,8 +21,15 @@ from swarm.auto_rescuer import (
     DETECTION_TIME_WINDOW,
     BLACKLIST_KEYWORDS,
 )
+from swarm.master_dispatcher import (
+    MasterDispatcher,
+    TaskInfo,
+    DispatchResult,
+    create_dispatcher,
+)
 
 __all__ = [
+    # Core
     'TaskQueue',
     'SmartWorker',
     'TmuxSwarmManager',
@@ -32,6 +40,10 @@ __all__ = [
     'BroadcastState',
     'TaskLockManager',
     'LockInfo',
+    # Master (Phase 4)
+    'MasterScanner',
+    'WorkerStatus',
+    'create_scanner',
     'AutoRescuer',
     'WaitPatternDetector',
     'WaitPattern',
@@ -39,6 +51,10 @@ __all__ = [
     'DETECTION_LINE_COUNT',
     'DETECTION_TIME_WINDOW',
     'BLACKLIST_KEYWORDS',
+    'MasterDispatcher',
+    'TaskInfo',
+    'DispatchResult',
+    'create_dispatcher',
 ]
 
 __version__ = "0.1.0"
