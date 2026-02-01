@@ -34,7 +34,7 @@
 5. 不修改任何 swarm/*.py 文件
 
 **Plan:**
-- [x] 11-01-PLAN.md — 通信脚本实现（待创建）
+- [x] 11-01-PLAN.md — 通信脚本实现 (4 tasks, Wave 1, 1 checkpoint)
 
 </details>
 
@@ -47,20 +47,6 @@
 
 Plans:
 - [x] 10-01-PLAN.md — 创建 4 窗口启动脚本，验证 tmux 中可见 Claude CLI
-
-</details>
-
-## v1.3 Phases (待规划)
-
-<details>
-<summary>⏳ v1.3 通信协议 (待规划)</summary>
-
-**范围:** Master ↔ Worker 消息传递协议
-- COMM-01: 消息格式定义
-- COMM-02: Master → Worker 指令发送
-- COMM-03: Worker → Master 状态回报
-- COMM-04: 状态标识
-- TEST-03: 通信协议测试
 
 </details>
 
