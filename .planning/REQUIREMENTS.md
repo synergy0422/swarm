@@ -7,15 +7,15 @@
 
 ### tmux 窗口管理
 
-- [ ] **TMUX-01**: tmux 窗口自动创建脚本 — 启动时创建 4 个独立窗口（master, worker-1, worker-2, worker-3）
-- [ ] **TMUX-02**: 窗口布局配置 — master 在主窗口，3 个 worker 在水平或垂直布局
-- [ ] **TMUX-03**: 会话命名规范 — swarm-claude-{timestamp} 或可配置
+- [x] **TMUX-01**: tmux 窗口自动创建脚本 — 启动时创建 4 个独立窗口（master, worker-0, worker-1, worker-2）
+- [x] **TMUX-02**: 窗口布局配置 — master 在主窗口，3 个 worker 窗口
+- [x] **TMUX-03**: 会话命名规范 — swarm-claude-default
 
 ### Claude CLI 启动
 
-- [ ] **CLAI-01**: Worker 启动命令 — 每个 worker 窗口启动 claude CLI（使用 claude command）
-- [ ] **CLAI-02**: Master 启动配置 — master 窗口启动 Master 协调进程
-- [ ] **CLAI-03**: 启动顺序控制 — 先创建窗口，再依次启动各进程
+- [x] **CLAI-01**: Worker 启动命令 — 每个 worker 窗口启动 claude CLI（使用 claude command）
+- [x] **CLAI-02**: Master 启动配置 — master 窗口启动 Claude CLI
+- [x] **CLAI-03**: 启动顺序控制 — 先创建窗口，再依次启动各进程
 
 ### 简单通信协议
 
@@ -26,8 +26,8 @@
 
 ### 验证与测试
 
-- [ ] **TEST-01**: 窗口可见性验证 — 进入 tmux 可看到 4 个 Claude CLI 交互窗口
-- [ ] **TEST-02**: 启动脚本测试 — 脚本执行后正确创建 4 窗口
+- [x] **TEST-01**: 窗口可见性验证 — 进入 tmux 可看到 4 个 Claude CLI 交互窗口
+- [x] **TEST-02**: 启动脚本测试 — 脚本执行后正确创建 4 窗口
 - [ ] **TEST-03**: 通信协议测试 — 简单的消息发送/接收测试
 
 ## v1.1 Requirements (Validated)
@@ -50,25 +50,25 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TMUX-01 | Phase 10 | Pending |
-| TMUX-02 | Phase 10 | Pending |
-| TMUX-03 | Phase 10 | Pending |
-| CLAI-01 | Phase 10 | Pending |
-| CLAI-02 | Phase 10 | Pending |
-| CLAI-03 | Phase 10 | Pending |
-| COMM-01 | Phase 10 | Pending |
-| COMM-02 | Phase 10 | Pending |
-| COMM-03 | Phase 10 | Pending |
-| COMM-04 | Phase 10 | Pending |
-| TEST-01 | Phase 10 | Pending |
-| TEST-02 | Phase 10 | Pending |
-| TEST-03 | Phase 10 | Pending |
+| TMUX-01 | Phase 10 | Complete |
+| TMUX-02 | Phase 10 | Complete |
+| TMUX-03 | Phase 10 | Complete |
+| CLAI-01 | Phase 10 | Complete |
+| CLAI-02 | Phase 10 | Complete |
+| CLAI-03 | Phase 10 | Complete |
+| COMM-01 | Phase 11+ | Pending |
+| COMM-02 | Phase 11+ | Pending |
+| COMM-03 | Phase 11+ | Pending |
+| COMM-04 | Phase 11+ | Pending |
+| TEST-01 | Phase 10 | Complete |
+| TEST-02 | Phase 10 | Complete |
+| TEST-03 | Phase 11+ | Pending |
 
 **Coverage:**
 - v1.2 requirements: 13 total
-- Mapped to phases: 13
-- Unmapped: 0 ✓
+- v1.2 Phase 10 completed: 8 requirements (TMUX-*, CLAI-*, TEST-01, TEST-02)
+- Remaining: 5 requirements (COMM-*, TEST-03) → Phase 11+
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after v1.2 milestone start*
+*Last updated: 2026-02-01 after Phase 10 completion*

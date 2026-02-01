@@ -20,14 +20,14 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | 7 | 协作命令封装 | Complete | 100% (1/1 plans) |
 | 8 | Master tmux 扫描 | Complete | 100% (1/1 plans) |
 | 9 | CLI 状态增强 | Complete | 100% (1/1 plans) |
-| 10 | v1.2 Claude Code CLI | Pending | 0% (待规划) |
+| 10 | v1.2 Claude Code CLI | Complete | 100% (1/1 plans) |
 
 ## Current Position
 
 **Phase 10: v1.2 Claude Code CLI 多窗口**
 
-Status: Defining requirements
-Last activity: 2026-02-01 — Milestone v1.2 started
+Status: Complete
+Last activity: 2026-02-01 — Phase 10 completed, run_claude_swarm.sh created
 
 ## Key Decisions
 

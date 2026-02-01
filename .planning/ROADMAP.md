@@ -14,10 +14,10 @@
 <details>
 <summary>⏳ v1.2 Claude Code CLI 多窗口 (1 phase, 1 plan)</summary>
 
-- [ ] Phase 10: 4 窗口 Claude CLI 启动 (1/1 plan) — 2026-02-01
+- [x] Phase 10: 4 窗口 Claude CLI 启动 (1/1 plan) — 2026-02-01
 
 Plans:
-- [ ] 10-01-PLAN.md — 创建 4 窗口启动脚本，验证 tmux 中可见 Claude CLI
+- [x] 10-01-PLAN.md — 创建 4 窗口启动脚本，验证 tmux 中可见 Claude CLI
 
 </details>
 
