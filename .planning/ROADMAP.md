@@ -15,11 +15,12 @@
 
 - [x] Phase 7: 协作命令封装 (1/1 plan) — 2026-02-01
 - [x] Phase 8: Master 集成扫描 (1/1 plan) — 2026-02-01
-- [ ] Phase 9: CLI 状态增强 (待规划)
+- [ ] Phase 9: CLI 状态增强 (1/1 plan) — 2026-02-01
 - [ ] Phase 10: 验收测试 (待规划)
 
 Plans:
 - [x] 08-01-PLAN.md — Master 集成 tmux 实时扫描 (WaitDetector.detect_in_pane, PaneScanner, 30s cooldown)
+- [ ] 09-01-PLAN.md — Add --panes parameter to swarm status command (6 tasks)
 
 </details>
 
