@@ -57,6 +57,15 @@ WAIT_PATTERNS = [
     (r'[Cc]onfirm|[Aa]re you sure|确认|确定吗', 3),
 ]
 
+# ENTER patterns for pane detection (Priority 2 - safe to auto-confirm)
+ENTER_PATTERNS = [
+    r'[Pp]ress [Ee]nter',
+    r'[Pp]ress [Rr]eturn',
+    r'[Hh]it [Ee]nter',
+    r'回车继续',
+    r'按回车',
+]
+
 # Blacklist keywords (never auto-confirm)
 BLACKLIST_KEYWORDS = [
     'delete', 'remove', 'rm -rf', 'format', 'overwrite',
@@ -212,6 +221,25 @@ class WaitDetector:
             return True
 
         return False
+
+    def detect_in_pane(self, content: str) -> List[str]:
+        """
+        Detect ENTER patterns in pane content.
+
+        Args:
+            content: String content from tmux pane
+
+        Returns:
+            List of matching patterns found in content
+        """
+        if not content:
+            return []
+
+        matches = []
+        for pattern in ENTER_PATTERNS:
+            if re.search(pattern, content, re.IGNORECASE):
+                matches.append(pattern)
+        return matches
 
 
 class Master:
