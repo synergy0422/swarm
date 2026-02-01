@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-01-31)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** Phase 8 - 待规划 (Master 集成 tmux 实时扫描)
+**Current focus:** Phase 8 - Master 集成 tmux 实时扫描
 
 ## Phase Status
 
@@ -18,23 +18,29 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 | 5 | CLI 与启动脚本 | Complete | 100% (3/3 plans) |
 | 6 | 集成测试 | Complete | 100% (5/5 plans) |
 | 7 | 协作命令封装 | Complete | 100% (1/1 plans) |
+| 8 | Master tmux 扫描 | In Progress | 33% (1/3 plans) |
 
 ## Current Position
 
-**Phase 7: 协作命令封装 (collaboration encapsulation)**
+**Phase 8: Master tmux 扫描 (Master tmux scan)**
 
-Plan 07-01 completed:
-- Created TmuxCollaboration class with 4 methods
-- Added 17 tests (100% coverage)
-- Updated to modern libtmux 0.53.0 API
+Plan 08-01 completed:
+- Added WaitDetector.detect_in_pane() method with 5 ENTER patterns
+- Added PaneScanner class with scan_all() and send_enter() methods
+- Integrated TmuxCollaboration into Master with 3s pane polling interval
+- Added 30s cooldown per window for auto-ENTER
+- Created 25 integration tests (all passing)
 
-Progress: ████████████████████████████████████ 100% (1/1 plans)
+Progress: ████████████░░░░░░░░░░░░░░░░ 33% (1/3 plans)
 
 ## Recent Changes
 
-- 2026-02-01: Started Phase 7 collaboration encapsulation
-- 2026-02-01: Created TmuxCollaboration class for batch window operations
-- 2026-02-01: Added 17 integration tests (100% coverage)
+- 2026-02-01: Completed Phase 8 Plan 1 (Master tmux scan integration)
+- 2026-02-01: Added detect_in_pane() method for ENTER pattern detection
+- 2026-02-01: Added PaneScanner class for tmux pane operations
+- 2026-02-01: Integrated pane scanning in Master run() loop
+- 2026-02-01: Updated CLI to inject TmuxCollaboration into Master
+- 2026-02-01: Created 25 integration tests (333 lines)
 
 ## Key Decisions
 
@@ -59,13 +65,18 @@ Progress: ███████████████████████�
 | 05-01 | Session naming: swarm-{cluster_id} | Multi-cluster support | ✅ Validated |
 | 05-02 | argparse parents pattern for --cluster-id | Flag after subcommands | ✅ Validated |
 | 05-03 | Removed eager cli import from __init__.py | Prevents RuntimeWarning | ✅ Validated |
-| 07-01 | Updated to libtmux 0.53.0 modern API | Server.sessions.get() instead of find_where() | ✅ Just added |
+| 07-01 | Updated to libtmux 0.53.0 modern API | Server.sessions.get() instead of find_where() | ✅ Validated |
+| 08-01 | Pane poll interval: 3 seconds | Independent from poll_interval, configurable via constructor | ✅ Just added |
+| 08-01 | ENTER patterns: 5 total | press enter, press return, hit enter, 回车继续, 按回车 | ✅ Just added |
+| 08-01 | Cooldown: 30 seconds per window | Prevents repeated ENTERs | ✅ Just added |
+| 08-01 | Minimal logging for auto-ENTER | `[Master] Auto-ENTER for {window_name}` | ✅ Just added |
+| 08-01 | tmux unavailable: silently skip | No errors raised | ✅ Just added |
 
 ## Session Continuity
 
-Last session: 2026-02-01T07:00:00Z
-Stopped at: Phase 7 complete, ready for Phase 8
+Last session: 2026-02-01T07:31:30Z
+Stopped at: Phase 8 Plan 1 complete
 Resume file: None
 
 ---
-*State updated: 2026-02-01T07:00:00Z*
+*State updated: 2026-02-01T07:45:00Z*
