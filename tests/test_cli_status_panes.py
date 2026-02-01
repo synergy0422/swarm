@@ -211,3 +211,144 @@ class TestWindowOrder:
         assert "=== worker-0 [ ] ===" in result
         assert "=== worker-1 [ ] ===" in result
         assert "=== worker-2 [ ] ===" in result
+
+
+# Integration tests for --panes flag (require tmux)
+import sys
+import os
+import uuid
+import subprocess
+
+
+def run_swarm_command(cluster_id, command, args, swarm_dir):
+    """
+    Run swarm CLI with isolated AI_SWARM_DIR.
+
+    Args:
+        cluster_id: The cluster identifier
+        command: CLI subcommand (up, status, down, etc.)
+        args: Additional arguments for the command
+        swarm_dir: Isolated AI_SWARM_DIR path
+
+    Returns:
+        subprocess.CompletedProcess with stdout/stderr
+    """
+    cmd = [
+        sys.executable, '-m', 'swarm.cli',
+        command,
+        '--cluster-id', cluster_id
+    ] + args
+
+    env = os.environ.copy()
+    env['AI_SWARM_DIR'] = swarm_dir
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        env=env
+    )
+    return result
+
+
+def cleanup_cluster(cluster_id, swarm_dir):
+    """Cleanup tmux session and files."""
+    # Kill the tmux session
+    subprocess.run(
+        ['tmux', 'kill-session', '-t', f'swarm-{cluster_id}'],
+        capture_output=True
+    )
+
+    # Remove the isolated swarm directory
+    if os.path.exists(swarm_dir):
+        import shutil
+        shutil.rmtree(swarm_dir)
+
+
+def session_exists(cluster_id):
+    """Check if tmux session exists for the given cluster."""
+    result = subprocess.run(
+        ['tmux', 'has-session', '-t', f'swarm-{cluster_id}'],
+        capture_output=True
+    )
+    return result.returncode == 0
+
+
+@pytest.fixture
+def unique_cluster_id():
+    """Generate unique cluster ID for tmux session naming."""
+    return f"test-panes-{uuid.uuid4().hex[:8]}"
+
+
+@pytest.fixture
+def isolated_swarm_dir(tmp_path, unique_cluster_id):
+    """Create isolated AI_SWARM_DIR for this test."""
+    swarm_dir = tmp_path / "ai_swarm" / unique_cluster_id
+    swarm_dir.mkdir(parents=True, exist_ok=True)
+    return str(swarm_dir)
+
+
+@pytest.mark.integration
+def test_status_panes_flag(unique_cluster_id, isolated_swarm_dir):
+    """
+    Integration test: Verify --panes flag works end-to-end.
+
+    This test verifies:
+    1. swarm status --panes displays pane snapshots when session exists
+    2. swarm status (without --panes) does not display pane snapshots
+    3. swarm status --panes works gracefully when session doesn't exist
+    """
+    workers = 2
+    session_name = f"swarm-{unique_cluster_id}"
+
+    try:
+        # === STEP 1: swarm up ===
+        result = run_swarm_command(
+            unique_cluster_id,
+            'up',
+            ['--workers', str(workers)],
+            isolated_swarm_dir
+        )
+
+        assert result.returncode == 0, \
+            f"swarm up failed with code {result.returncode}: {result.stderr}"
+        assert session_exists(unique_cluster_id), \
+            f"Session {session_name} not found after swarm up"
+
+        # === STEP 2: swarm status --panes ===
+        result = run_swarm_command(unique_cluster_id, 'status', ['--panes'], isolated_swarm_dir)
+
+        assert result.returncode == 0, \
+            f"swarm status --panes failed with code {result.returncode}: {result.stderr}"
+
+        # Output should contain pane sections
+        assert "=== master" in result.stdout, \
+            f"Pane output missing master window. Got: {result.stdout[:500]}"
+        assert "=== worker-0" in result.stdout, \
+            f"Pane output missing worker-0 window. Got: {result.stdout[:500]}"
+
+        # === STEP 3: swarm status (without --panes) ===
+        result = run_swarm_command(unique_cluster_id, 'status', [], isolated_swarm_dir)
+
+        assert result.returncode == 0, \
+            f"swarm status failed with code {result.returncode}: {result.stderr}"
+
+        # Output should NOT contain pane sections
+        assert "=== master" not in result.stdout, \
+            f"Status without --panes should not show pane output. Got: {result.stdout[:500]}"
+        assert "=== worker-0" not in result.stdout, \
+            f"Status without --panes should not show pane output. Got: {result.stdout[:500]}"
+
+        # === STEP 4: swarm status --panes (no session) ===
+        # First, bring down the session
+        run_swarm_command(unique_cluster_id, 'down', [], isolated_swarm_dir)
+
+        # Now test --panes with no session (should skip panes gracefully)
+        result = run_swarm_command(unique_cluster_id, 'status', ['--panes'], isolated_swarm_dir)
+
+        assert result.returncode == 0, \
+            f"swarm status --panes should return 0 even without session. Got: {result.returncode}"
+
+    finally:
+        # Always cleanup to avoid leaving sessions
+        cleanup_cluster(unique_cluster_id, isolated_swarm_dir)
