@@ -509,7 +509,13 @@ def main():
     )
 
     # status command
-    subparsers.add_parser('status', parents=[parent_parser], help='View swarm status')
+    status_parser = subparsers.add_parser('status', parents=[parent_parser], help='View swarm status')
+    status_parser.add_argument(
+        '--panes',
+        action='store_true',
+        default=False,
+        help='Display tmux window pane snapshots'
+    )
 
     # down command
     subparsers.add_parser('down', parents=[parent_parser], help='Terminate swarm session')
