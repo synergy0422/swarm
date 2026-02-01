@@ -139,8 +139,8 @@ class TestPaneScanner:
         result = scanner.send_enter("test-master-scan", "worker-0")
 
         time.sleep(0.1)
-        # Method returns True if sent, False if not found
-        assert result is True or result is False
+        # Method returns True if window found and sent
+        assert result is True
 
     def test_send_enter_nonexistent_window(self, tmux, temp_session):
         """Verify send_enter returns False for nonexistent window."""

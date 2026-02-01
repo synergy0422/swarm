@@ -18,19 +18,15 @@ import shutil
 
 
 # Module-level marker for integration tests
-pytestmark = pytest.mark.integration
-
-
-def check_tmux_available():
-    """Check if tmux is installed and available."""
-    return shutil.which('tmux') is not None
-
-
-# Skip the entire module if tmux is not available
-pytestmark = pytest.mark.skipif(
-    not check_tmux_available(),
-    reason="tmux not installed - skipping integration test"
-)
+# Combine skipif with integration marker using list
+_tmux_available = shutil.which('tmux') is not None
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        not _tmux_available,
+        reason="tmux not installed - skipping integration test"
+    )
+]
 
 
 @pytest.fixture
@@ -62,6 +58,7 @@ def run_swarm_command(cluster_id, command, args, swarm_dir):
     """
     cmd = [
         sys.executable, '-m', 'swarm.cli',
+        command,
         '--cluster-id', cluster_id
     ] + args
 
