@@ -360,6 +360,50 @@ def parse_status_log(ai_swarm_dir, lines=10):
     return worker_status
 
 
+def format_pane_output(pane_contents: dict) -> str:
+    """
+    Format pane output for display in swarm status.
+
+    Args:
+        pane_contents: Dictionary mapping window names to their pane content.
+
+    Returns:
+        Formatted string with pane snapshots for master, worker-0, worker-1, worker-2.
+    """
+    from typing import Dict
+
+    REQUIRED_WINDOWS = ["master", "worker-0", "worker-1", "worker-2"]
+    MAX_LINES = 20
+
+    output_parts = []
+
+    for window_name in REQUIRED_WINDOWS:
+        content = pane_contents.get(window_name, "")
+
+        # Determine status icon
+        content_lower = content.lower()
+        if "error" in content_lower or "failed" in content_lower:
+            status = "[ERROR]"
+        elif "done" in content_lower or "complete" in content_lower:
+            status = "[DONE]"
+        else:
+            status = "[ ]"
+
+        # Format this window's output
+        output_parts.append(f"=== {window_name} {status} ===")
+
+        if content:
+            lines = content.split('\n')
+            last_lines = lines[-MAX_LINES:] if len(lines) > MAX_LINES else lines
+            output_parts.append('\n'.join(last_lines))
+        else:
+            output_parts.append("(missing)")
+
+        output_parts.append("")  # Empty line between windows
+
+    return '\n'.join(output_parts)
+
+
 def cmd_status(args):
     """
     Display swarm status.
