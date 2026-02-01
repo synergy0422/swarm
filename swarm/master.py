@@ -242,6 +242,47 @@ class WaitDetector:
         return matches
 
 
+class PaneScanner:
+    """Scans tmux pane content using TmuxCollaboration."""
+
+    def __init__(self, tmux_collaboration: Optional['TmuxCollaboration'] = None):
+        """Initialize with optional TmuxCollaboration for testing."""
+        self.tmux = tmux_collaboration
+
+    def scan_all(self, session_name: str) -> Dict[str, str]:
+        """Capture content from all windows.
+
+        Returns:
+            Dict mapping window_name to pane content.
+            Empty dict if tmux unavailable.
+        """
+        if not self.tmux:
+            return {}
+        try:
+            return self.tmux.capture_all_windows(session_name)
+        except Exception:
+            return {}
+
+    def send_enter(self, session_name: str, window_name: str) -> bool:
+        """Send ENTER key to a window by name.
+
+        Returns:
+            True if sent, False if window not found or error.
+        """
+        if not self.tmux:
+            return False
+        try:
+            # Find window index by name
+            windows = self.tmux.list_windows(session_name)
+            for w in windows:
+                if w["name"] == window_name:
+                    self.tmux.send_keys_to_window(session_name, w["index"], "")
+                    return True
+            return False
+        except Exception:
+            return False
+
+
 class Master:
     """
     Main Master node for AI Swarm coordination.
