@@ -455,6 +455,23 @@ def cmd_status(args):
             for lock_file in sorted(lock_files)[:5]:  # Show first 5
                 print(f"  - {lock_file}")
 
+    # Handle --panes flag for window content snapshots
+    if getattr(args, 'panes', False):
+        if not check_tmux_installed():
+            print("\n[WARNING] tmux not available, skipping pane display")
+        else:
+            try:
+                from swarm.tmux_collaboration import TmuxCollaboration
+                tmux_collaboration = TmuxCollaboration()
+                pane_contents = tmux_collaboration.capture_all_windows(f"swarm-{args.cluster_id}")
+                if pane_contents:
+                    pane_output = format_pane_output(pane_contents)
+                    print(f"\n{pane_output}")
+                # If pane_contents is empty, session doesn't exist - skip silently
+            except Exception:
+                # Session doesn't exist or other error - skip panes silently
+                pass
+
     return 0
 
 
