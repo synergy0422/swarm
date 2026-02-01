@@ -48,13 +48,15 @@ pip install requests libtmux
 
 ## Configuration
 
-Set environment variables:
+Set environment variables **before** running swarm commands:
 
 ```bash
-# Required: API key or proxy URL
+# Option 1: Direct Anthropic API
 export ANTHROPIC_API_KEY="sk-ant-..."
-# OR use ccswitch proxy
-export LLM_BASE_URL="https://your-proxy-url"
+
+# Option 2: Local proxy (cc-switch or similar)
+export LLM_BASE_URL="http://127.0.0.1:15721"
+export ANTHROPIC_API_KEY="dummy"  # Optional placeholder
 
 # Optional: Custom swarm directory
 export AI_SWARM_DIR="/path/to/swarm/dir"
@@ -62,6 +64,8 @@ export AI_SWARM_DIR="/path/to/swarm/dir"
 # Optional: Poll interval for master (default: 1.0)
 export AI_SWARM_POLL_INTERVAL="1.0"
 ```
+
+**Note:** LLM_BASE_URL is inherited by tmux worker windows. Make sure to export it in the same shell before running `swarm up`.
 
 ## Commands
 
