@@ -370,8 +370,6 @@ def format_pane_output(pane_contents: dict) -> str:
     Returns:
         Formatted string with pane snapshots for master, worker-0, worker-1, worker-2.
     """
-    from typing import Dict
-
     REQUIRED_WINDOWS = ["master", "worker-0", "worker-1", "worker-2"]
     MAX_LINES = 20
 

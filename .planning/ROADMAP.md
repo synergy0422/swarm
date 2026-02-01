@@ -8,7 +8,32 @@
 - ✅ **v1.0 MVP** — Phases 1-6 (14 plans), shipped 2026-01-31
 - ✅ **v1.1** — UAT & CLI 增强, shipped 2026-02-01
 - ✅ **v1.2** — Claude Code CLI 多窗口, shipped 2026-02-01
-- ⏳ **v1.3** — 通信协议 (待规划)
+- ⏳ **v1.3** — Claude Code 通信协议 (1 phase, 1 plan)
+
+## v1.3 Phases
+
+<details>
+<summary>⏳ v1.3 Claude Code 通信协议 (1 phase, 1 plan)</summary>
+
+**Goal:** 实现 Master 通过 tmux send-keys/capture-pane 向 Claude CLI 窗口发送任务，Worker 返回状态词
+
+**Phase 11:** 通信协议实现
+
+**Requirements:** COMM-01 ~ COMM-15
+
+**Success Criteria:**
+1. TmuxSwarmManager 新增 `send_command()` 和 `capture_output()` 方法
+2. 定义 `[TASK]`, `[DONE]`, `[ERROR]`, `[WAIT]`, `[ACK]` 五个核心标记词
+3. Master 可向指定 worker 发送任务（send_keys + 标记行）
+4. Worker 返回 `[ACK]` 确认收到任务
+5. Master 可从 worker pane 解析状态词（DONE/ERROR/WAIT/HELP）
+6. 实现轮询策略定期扫描各 worker 状态
+7. 通信协议测试通过
+
+**Plan:**
+- [x] 11-01-PLAN.md — 通信协议实现（待创建）
+
+</details>
 
 ## v1.2 Phases (Archived)
 

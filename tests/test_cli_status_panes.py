@@ -2,22 +2,17 @@
 Unit tests for --panes flag in swarm status command.
 
 Tests the format_pane_output() function and --panes flag handling.
+
+Unit tests (TestStatusIconDetection, TestTwentyLineLimit, etc.) run without tmux.
+Integration tests (test_status_panes_flag) require both tmux and libtmux.
 """
 
 import pytest
-import shutil
 from swarm.cli import format_pane_output
 
 
-# Module-level marker for tests that require tmux
-_tmux_available = shutil.which('tmux') is not None
-pytestmark = [
-    pytest.mark.unit,
-    pytest.mark.skipif(
-        not _tmux_available,
-        reason="tmux not installed - skipping integration test"
-    )
-]
+# Unit tests - no tmux dependency
+pytestmark = pytest.mark.unit
 
 
 class TestStatusIconDetection:
@@ -213,11 +208,22 @@ class TestWindowOrder:
         assert "=== worker-2 [ ] ===" in result
 
 
-# Integration tests for --panes flag (require tmux)
+# Integration tests for --panes flag (require tmux and libtmux)
 import sys
 import os
 import uuid
+import shutil
 import subprocess
+
+# Integration tests require tmux and libtmux
+_tmux_available = shutil.which('tmux') is not None
+pytestmark_integration = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        not _tmux_available,
+        reason="tmux not installed"
+    )
+]
 
 
 def run_swarm_command(cluster_id, command, args, swarm_dir):
@@ -298,6 +304,9 @@ def test_status_panes_flag(unique_cluster_id, isolated_swarm_dir):
     2. swarm status (without --panes) does not display pane snapshots
     3. swarm status --panes works gracefully when session doesn't exist
     """
+    # Skip if libtmux is not available
+    pytest.importorskip("libtmux")
+
     workers = 2
     session_name = f"swarm-{unique_cluster_id}"
 

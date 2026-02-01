@@ -1,0 +1,6 @@
+#!/home/user/AAA/swarm/.venv_uat/bin/python3
+import sys
+from swarm.cli import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())

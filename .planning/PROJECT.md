@@ -96,17 +96,24 @@
 
 ---
 
-## Current Milestone: v1.3 通信协议（待规划）
+## Current Milestone: v1.3 Claude Code 4 窗口通信协议
 
-**Goal:** 实现 Master ↔ Worker 消息传递协议
+**Goal:** 实现 Master 通过 tmux send-keys/capture-pane 向 Claude CLI 窗口发送任务，Worker 返回状态词
+
+**Design Decisions:**
+- **通信模式**: Dispatch — Master 主动分配任务给指定 worker
+- **协调方式**: Master decides — Master 控制任务分配逻辑
+- **消息格式**: Minimal — 简单文本标记词（[TASK], [DONE], [ERROR]）
+- **交互方式**: Marker lines — 使用 tmux pane 标记行区分命令与 Claude 输出
 
 **Target features:**
-- **COMM-01**: 消息格式定义 — 简单文本协议（行分隔）
-- **COMM-02**: Master → Worker 指令发送 — 使用 send-keys 发送任务描述
-- **COMM-03**: Worker → Master 状态回报 — 使用 capture-pane 读取输出状态
-- **COMM-04**: 状态标识 — DONE、ERROR、WAIT 等状态词识别
-- **TEST-03**: 通信协议测试
+- **COMM-01**: 消息格式定义 — `[TASK]`, `[DONE]`, `[ERROR]`, `[WAIT]`, `[ACK]` 标记词
+- **COMM-02**: Master → Worker 指令发送 — 使用 send-keys 发送带标记的任务描述
+- **COMM-03**: Worker → Master 状态回报 — 使用 capture-pane 解析状态标记
+- **COMM-04**: 状态标识 — DONE/ERROR/WAIT/HELP 状态词识别与处理
+- **COMM-05**: 任务确认机制 — Worker 发送 `[ACK]` 表示收到任务
+- **TEST-03**: 通信协议测试 — 验证消息发送/接收/状态回报闭环
 
 ---
 
-*Last updated: 2026-02-01 after v1.2 milestone*
+*Last updated: 2026-02-01 after v1.3 milestone definition*

@@ -1,0 +1,25 @@
+=== CLI smoke ===
+[SWARM] No swarm session running: swarm-uat-20260131-205603
+[SWARM] Creating tmux session: swarm-uat-20260131-205603
+
+[SWARM] Swarm session created: swarm-uat-20260131-205603
+[SWARM] Master + 3 workers launched
+
+[SWARM] Attach to session:
+[SWARM]   tmux attach -t swarm-uat-20260131-205603
+
+[SWARM] Check status:
+[SWARM]   python3 -m swarm.cli --cluster-id uat-20260131-205603 status
+
+[SWARM] Stop swarm:
+[SWARM]   python3 -m swarm.cli --cluster-id uat-20260131-205603 down
+[SWARM] Session: swarm-uat-20260131-205603
+
+[SWARM] TMUX Windows:
+  - master
+
+[SWARM] No agent status available yet
+=== tmux ls ===
+swarm-uat-20260131-205603: 1 windows (created Sat Jan 31 20:56:06 2026)
+[SWARM] Swarm session stopped: swarm-uat-20260131-205603
+=== tmux ls after down ===

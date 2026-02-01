@@ -1,0 +1,16 @@
+=== pytest integration ===
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.2, pluggy-1.6.0 -- /home/user/AAA/swarm/.venv_uat/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/user/AAA/swarm
+configfile: pytest.ini
+plugins: libtmux-0.53.0
+collecting ... collected 207 items / 202 deselected / 5 selected
+
+tests/test_e2e_auto_rescue.py::test_press_enter_auto_rescue_mock PASSED  [ 20%]
+tests/test_master_integration_smoke.py::test_master_uses_master_dispatcher PASSED [ 40%]
+tests/test_master_integration_smoke.py::test_master_dispatcher_writes_mailbox_on_assign PASSED [ 60%]
+tests/test_master_integration_smoke.py::test_mailbox_isolation_between_workers PASSED [ 80%]
+tests/test_master_integration_smoke.py::test_master_loop_with_mock_workers PASSED [100%]
+
+====================== 5 passed, 202 deselected in 0.61s =======================

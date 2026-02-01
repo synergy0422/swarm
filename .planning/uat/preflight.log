@@ -1,0 +1,10 @@
+=== Versions ===
+Python 3.12.3
+pip 26.0 from /home/user/AAA/swarm/.venv_uat/lib/python3.12/site-packages/pip (python 3.12)
+pytest 9.0.2
+=== tmux ===
+/usr/bin/tmux
+tmux 3.4
+=== deps ===
+libtmux OK
+requests OK

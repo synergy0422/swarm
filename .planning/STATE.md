@@ -5,29 +5,32 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.2 Shipped — v1.3 通信协议（待规划）
+**Current focus:** v1.3 通信协议 — Master Dispatch 模式 + 标记词协议
 
 ## Phase Status
 
 | # | Phase | Status | Progress |
 |---|-------|--------|----------|
-| 1 | 项目初始化 | Complete | 100% (1/1 plans) |
-| 2 | tmux 集成层 | Complete | 100% (1/1 plans) |
-| 3 | 共享状态系统 | Complete | 100% (1/1 plans) |
-| 4 | Master 实现 | Complete | 100% (3/3 plans) |
-| 5 | CLI 与启动脚本 | Complete | 100% (3/3 plans) |
-| 6 | 集成测试 | Complete | 100% (5/5 plans) |
-| 7 | 协作命令封装 | Complete | 100% (1/1 plans) |
-| 8 | Master tmux 扫描 | Complete | 100% (1/1 plans) |
-| 9 | CLI 状态增强 | Complete | 100% (1/1 plans) |
-| 10 | v1.2 Claude Code CLI | Complete | 100% (1/1 plans) |
+| 1-10 | v1.0-v1.2 | Complete | 100% |
+| 11 | v1.3 通信协议 | Pending | 0/1 plans |
 
 ## Current Position
 
-**v1.2 Shipped** — 2026-02-01
+**v1.3 Started** — 2026-02-01
 
-Status: v1.2 complete, v1.3 pending (通信协议)
-Last activity: 2026-02-01 — v1.2 completed, run_claude_swarm.sh shipped
+Status: Defining requirements and creating roadmap
+Last activity: 2026-02-01 — v1.3 milestone started
+Next action: Create requirements and roadmap
+
+## v1.3 Design
+
+| Aspect | Decision |
+|--------|----------|
+| Communication Mode | Dispatch (Master → One worker) |
+| Coordination | Master decides task assignment |
+| Message Format | Minimal text markers |
+| Markers | [TASK], [DONE], [ERROR], [WAIT], [ACK] |
+| Mechanism | tmux send-keys (command) + capture-pane (status) |
 
 ## Key Decisions
 
@@ -61,11 +64,14 @@ Last activity: 2026-02-01 — v1.2 completed, run_claude_swarm.sh shipped
 | 09-01 | --panes flag with store_true action | Boolean flag for optional pane display | ✅ Validated |
 | 09-01 | Status icon logic: Error/Failed -> [ERROR], DONE/Complete -> [DONE] | Visual status at a glance | ✅ Validated |
 | 09-01 | 20-line content limit per window | Readable output, prevents terminal flood | ✅ Validated |
+| 11-01 | Dispatch mode (Master → One) | Direct task assignment, Master controls | ⏳ New |
+| 11-01 | Minimal text markers protocol | [TASK], [DONE], [ERROR], [WAIT], [ACK] | ⏳ New |
+| 11-01 | Marker line communication | tmux send-keys + capture-pane with markers | ⏳ New |
 
 ## Session Continuity
 
-Last session: 2026-02-01T08:30:00Z
-Resumed: 2026-02-01 — Started v1.2 milestone
+Last session: 2026-02-01
+Resumed: 2026-02-01 — Started v1.3 milestone (communication protocol)
 Next action: Define requirements and create roadmap
 
 ---

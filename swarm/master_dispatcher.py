@@ -218,7 +218,6 @@ class MasterDispatcher:
 
         Idle worker criteria:
         - Status is DONE/SKIP/ERROR AND holds no active lock
-        - OR has no active task
 
         Args:
             worker_status: Worker status from scanner
@@ -230,11 +229,12 @@ class MasterDispatcher:
         if worker_status.state is None:
             return False
 
-        # Workers in START or WAIT state are busy
-        if worker_status.state in ('START', 'WAIT'):
+        # Workers in WAIT state are busy (waiting for human input)
+        if worker_status.state == 'WAIT':
             return False
 
-        # Workers with DONE, SKIP, or ERROR state are potentially idle
+        # Workers with DONE, SKIP, or ERROR state are idle
+        # DONE/SKIP/ERROR: worker completed previous task
         if worker_status.state in ('DONE', 'SKIP', 'ERROR'):
             # Check if worker holds any active lock
             # If worker has a task_id, check if it's locked
