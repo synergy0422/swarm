@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.3 通信协议 — Master Dispatch 模式 + 标记词协议
+**Current focus:** v1.3 通信协议 — 外部脚本控制 + tmux only
 
 ## Phase Status
 
@@ -26,11 +26,11 @@ Next action: Create requirements and roadmap
 
 | Aspect | Decision |
 |--------|----------|
-| Communication Mode | Dispatch (Master → One worker) |
-| Coordination | Master decides task assignment |
-| Message Format | Minimal text markers |
+| Control Mode | External script (not Python module) |
+| Mechanism | tmux send-keys + capture-pane only |
 | Markers | [TASK], [DONE], [ERROR], [WAIT], [ACK] |
-| Mechanism | tmux send-keys (command) + capture-pane (status) |
+| Scripts | claude_comm.sh (send/poll), claude_poll.sh (monitor) |
+| No Changes | swarm/master.py, swarm/tmux_manager.py |
 
 ## Key Decisions
 
@@ -64,9 +64,6 @@ Next action: Create requirements and roadmap
 | 09-01 | --panes flag with store_true action | Boolean flag for optional pane display | ✅ Validated |
 | 09-01 | Status icon logic: Error/Failed -> [ERROR], DONE/Complete -> [DONE] | Visual status at a glance | ✅ Validated |
 | 09-01 | 20-line content limit per window | Readable output, prevents terminal flood | ✅ Validated |
-| 11-01 | Dispatch mode (Master → One) | Direct task assignment, Master controls | ⏳ New |
-| 11-01 | Minimal text markers protocol | [TASK], [DONE], [ERROR], [WAIT], [ACK] | ⏳ New |
-| 11-01 | Marker line communication | tmux send-keys + capture-pane with markers | ⏳ New |
 
 ## Session Continuity
 

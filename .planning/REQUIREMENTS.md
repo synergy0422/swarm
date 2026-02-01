@@ -5,35 +5,31 @@
 
 ## v1.3 Requirements
 
-### 消息格式定义
+### 脚本工具
 
-- [ ] **COMM-01**: 标记词协议 — 定义 `[TASK]`, `[DONE]`, `[ERROR]`, `[WAIT]`, `[ACK]` 五个核心标记词
-- [ ] **COMM-02**: 任务消息格式 — `[TASK] {task_id} {worker_name}\n{description}` 行格式
-- [ ] **COMM-03**: 状态消息格式 — 单行 `[STATUS] {task_id} {state}` 或 `[DONE|ERROR|WAIT|HELP]`
+- [ ] **SCRIPT-01**: `claude_comm.sh` — tmux send-keys / capture-pane 封装脚本
+- [ ] **SCRIPT-02**: `claude_poll.sh` — 轮询脚本，定期扫描各窗口状态
+- [ ] **SCRIPT-03**: `claude_status.sh` — 快速检查各窗口状态
 
-### Master → Worker 指令发送
+### 消息格式
 
-- [ ] **COMM-04**: send-keys 封装 — TmuxSwarmManager 新增 `send_command(window, command)` 方法
-- [ ] **COMM-05**: 标记行插入 — 发送任务前先插入 `[TASK]` 标记行
-- [ ] **COMM-06**: Worker 定位 — 通过窗口名定位 tmux pane (master, worker-0, worker-1, worker-2)
+- [ ] **COMM-01**: 标记词定义 — `[TASK]`, `[DONE]`, `[ERROR]`, `[WAIT]`, `[ACK]`
+- [ ] **COMM-02**: 任务消息格式 — `[TASK] {task_id}\n{description}`
+- [ ] **COMM-03**: 状态消息格式 — `[DONE|ERROR|WAIT|HELP] {task_id}`
 
-### Worker → Master 状态回报
+### 脚本功能
 
-- [ ] **COMM-07**: capture-pane 封装 — TmuxSwarmManager 新增 `capture_output(window)` 方法
-- [ ] **COMM-08**: 标记词解析 — 从 pane 内容中提取 `[DONE]`, `[ERROR]`, `[WAIT]`, `[HELP]` 状态
-- [ ] **COMM-09**: 任务 ID 关联 — 状态回报需包含对应的 task_id
+- [ ] **SEND-01**: `send <window> <task_id> "<description>"` — 发送任务到指定窗口
+- [ ] **SEND-02**: 发送前插入 `[TASK]` 标记行
+- [ ] **POLL-01**: `poll <window> [--timeout N]` — 捕获窗口输出，解析状态标记
+- [ ] **POLL-02**: 识别 `[DONE]`, `[ERROR]`, `[WAIT]`, `[HELP]`, `[ACK]`
+- [ ] **POLL-03**: 超时参数支持
 
-### 任务确认机制
+### 验收测试
 
-- [ ] **COMM-10**: ACK 响应 — Worker 收到任务后需发送 `[ACK] {task_id}` 确认
-- [ ] **COMM-11**: 超时处理 — Master 等待 ACK，超时则重试或标记失败
-- [ ] **COMM-12**: 轮询策略 — Master 定期扫描各 worker pane 获取状态
-
-### 错误处理
-
-- [ ] **COMM-13**: 状态词识别 — DONE/ERROR/WAIT/HELP/FAILED 的正则匹配
-- [ ] **COMM-14**: 空输出处理 — capture-pane 返回空时的处理逻辑
-- [ ] **COMM-15**: tmux 不可用 — tmux 不可用时的优雅降级
+- [ ] **TEST-01**: 手动验收 — 发送任务到 worker-0，验证返回 [ACK] + [DONE]
+- [ ] **TEST-02**: 错误场景 — 发送无效任务，验证返回 [ERROR]
+- [ ] **TEST-03**: 并发测试 — 向多个 worker 同时发送任务
 
 ## v1.2 Requirements (Validated)
 
@@ -50,38 +46,37 @@
 
 | Feature | Reason |
 |---------|--------|
+| Python 通信模块 | v1.3 只做外部脚本，不改 core 代码 |
+| Master 集成 | 不修改 swarm/master.py |
 | Pipeline 模式 | 任务链式依赖，v1.4+ |
 | P2P 对等模式 | Worker 间直接通信，v1.4+ |
 | Web 状态面板 | 图形界面，超出 tmux 范围 |
 | SSH 跨机扩展 | 分布式协作，未来版本 |
-| 危险命令自动执行 | 保持保守策略 |
-| 后台 Python 任务队列 | 不引入额外进程通信 |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| SCRIPT-01 | Phase 11 | Pending |
+| SCRIPT-02 | Phase 11 | Pending |
+| SCRIPT-03 | Phase 11 | Pending |
 | COMM-01 | Phase 11 | Pending |
 | COMM-02 | Phase 11 | Pending |
 | COMM-03 | Phase 11 | Pending |
-| COMM-04 | Phase 11 | Pending |
-| COMM-05 | Phase 11 | Pending |
-| COMM-06 | Phase 11 | Pending |
-| COMM-07 | Phase 11 | Pending |
-| COMM-08 | Phase 11 | Pending |
-| COMM-09 | Phase 11 | Pending |
-| COMM-10 | Phase 11 | Pending |
-| COMM-11 | Phase 11 | Pending |
-| COMM-12 | Phase 11 | Pending |
-| COMM-13 | Phase 11 | Pending |
-| COMM-14 | Phase 11 | Pending |
-| COMM-15 | Phase 11 | Pending |
+| SEND-01 | Phase 11 | Pending |
+| SEND-02 | Phase 11 | Pending |
+| POLL-01 | Phase 11 | Pending |
+| POLL-02 | Phase 11 | Pending |
+| POLL-03 | Phase 11 | Pending |
+| TEST-01 | Phase 11 | Pending |
+| TEST-02 | Phase 11 | Pending |
+| TEST-03 | Phase 11 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 15 total (COMM-01 ~ COMM-15)
-- Phase 11 mapped: 15/15
+- v1.3 requirements: 14 total
+- Phase 11 mapped: 14/14
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after v1.3 milestone definition*
+*Last updated: 2026-02-01 after constraint correction*

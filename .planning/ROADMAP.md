@@ -15,23 +15,26 @@
 <details>
 <summary>⏳ v1.3 Claude Code 通信协议 (1 phase, 1 plan)</summary>
 
-**Goal:** 实现 Master 通过 tmux send-keys/capture-pane 向 Claude CLI 窗口发送任务，Worker 返回状态词
+**Goal:** 实现外部脚本通过 tmux send-keys/capture-pane 与 Claude CLI 窗口通信
 
-**Phase 11:** 通信协议实现
+**约束：**
+- 仅用 tmux send-keys / capture-pane
+- 不修改 swarm/master.py, swarm/tmux_manager.py
+- 新增外部脚本，不改 core 代码
 
-**Requirements:** COMM-01 ~ COMM-15
+**Phase 11:** 通信脚本实现
+
+**Requirements:** SCRIPT-01~03, COMM-01~03, SEND-01~02, POLL-01~03
 
 **Success Criteria:**
-1. TmuxSwarmManager 新增 `send_command()` 和 `capture_output()` 方法
-2. 定义 `[TASK]`, `[DONE]`, `[ERROR]`, `[WAIT]`, `[ACK]` 五个核心标记词
-3. Master 可向指定 worker 发送任务（send_keys + 标记行）
-4. Worker 返回 `[ACK]` 确认收到任务
-5. Master 可从 worker pane 解析状态词（DONE/ERROR/WAIT/HELP）
-6. 实现轮询策略定期扫描各 worker 状态
-7. 通信协议测试通过
+1. `claude_comm.sh send <window> <task_id> "<desc>"` 可发送任务
+2. `claude_comm.sh poll <window>` 可解析 `[ACK]/[DONE]/[ERROR]`
+3. `claude_poll.sh` 可定期轮询各窗口状态
+4. 手动验收：发送任务 → 收到 ACK → 收到 DONE/ERROR
+5. 不修改任何 swarm/*.py 文件
 
 **Plan:**
-- [x] 11-01-PLAN.md — 通信协议实现（待创建）
+- [x] 11-01-PLAN.md — 通信脚本实现（待创建）
 
 </details>
 
