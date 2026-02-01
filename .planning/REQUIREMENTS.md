@@ -17,18 +17,20 @@
 - [x] **CLAI-02**: Master 启动配置 — master 窗口启动 Claude CLI
 - [x] **CLAI-03**: 启动顺序控制 — 先创建窗口，再依次启动各进程
 
-### 简单通信协议
-
-- [ ] **COMM-01**: 消息格式定义 — 简单文本协议（行分隔）
-- [ ] **COMM-02**: Master → Worker 指令发送 — 使用 send-keys 发送任务描述
-- [ ] **COMM-03**: Worker → Master 状态回报 — 使用 capture-pane 读取输出状态
-- [ ] **COMM-04**: 状态标识 — DONE、ERROR、WAIT 等状态词识别
-
 ### 验证与测试
 
 - [x] **TEST-01**: 窗口可见性验证 — 进入 tmux 可看到 4 个 Claude CLI 交互窗口
 - [x] **TEST-02**: 启动脚本测试 — 脚本执行后正确创建 4 窗口
-- [ ] **TEST-03**: 通信协议测试 — 简单的消息发送/接收测试
+
+## v1.3 Requirements (通信协议)
+
+### 简单通信协议
+
+- **COMM-01**: 消息格式定义 — 简单文本协议（行分隔）
+- **COMM-02**: Master → Worker 指令发送 — 使用 send-keys 发送任务描述
+- **COMM-03**: Worker → Master 状态回报 — 使用 capture-pane 读取输出状态
+- **COMM-04**: 状态标识 — DONE、ERROR、WAIT 等状态词识别
+- **TEST-03**: 通信协议测试 — 简单的消息发送/接收测试
 
 ## v1.1 Requirements (Validated)
 
@@ -40,9 +42,10 @@
 
 | Feature | Reason |
 |---------|--------|
-| Pipeline 模式 | v1.2 聚焦 4 窗口启动 |
-| P2P 对等模式 | v1.2 聚焦 4 窗口启动 |
-| Web 状态面板 | v1.2 聚焦 4 窗口启动 |
+| 通信协议 (COMM-01~04) | v1.3 - 独立里程碑 |
+| Pipeline 模式 | v1.3 或更新 - 4 窗口启动后 |
+| P2P 对等模式 | v1.3 或更新 - 4 窗口启动后 |
+| Web 状态面板 | v1.3 或更新 - 4 窗口启动后 |
 | SSH 跨机扩展 | 保留接口，未来版本 |
 | 危险命令自动执行 | 保持 v1.1 保守策略 |
 
@@ -56,19 +59,16 @@
 | CLAI-01 | Phase 10 | Complete |
 | CLAI-02 | Phase 10 | Complete |
 | CLAI-03 | Phase 10 | Complete |
-| COMM-01 | Phase 11+ | Pending |
-| COMM-02 | Phase 11+ | Pending |
-| COMM-03 | Phase 11+ | Pending |
-| COMM-04 | Phase 11+ | Pending |
 | TEST-01 | Phase 10 | Complete |
 | TEST-02 | Phase 10 | Complete |
-| TEST-03 | Phase 11+ | Pending |
 
-**Coverage:**
-- v1.2 requirements: 13 total
-- v1.2 Phase 10 completed: 8 requirements (TMUX-*, CLAI-*, TEST-01, TEST-02)
-- Remaining: 5 requirements (COMM-*, TEST-03) → Phase 11+
+**v1.2 Coverage:**
+- v1.2 requirements: 8 total (TMUX-*, CLAI-*, TEST-01, TEST-02)
+- v1.2 completed: 8/8 ✓
+
+**v1.3 Requirements (通信协议):**
+- COMM-01 ~ COMM-04, TEST-03 → 独立里程碑
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after Phase 10 completion*
+*Last updated: 2026-02-01 after v1.2 completion*

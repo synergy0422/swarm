@@ -34,14 +34,21 @@
 - [x] **CLI-02**: 状态图标 — [ERROR], [DONE], [ ] 状态可视化
 - [x] **CLI-03**: UAT 验收测试 — 8/8 测试通过
 
+**v1.2 - Claude Code CLI 多窗口 (Shipped 2026-02-01)**
+
+- [x] **TMUX-01**: tmux 窗口自动创建脚本 — 启动时创建 4 个独立窗口
+- [x] **TMUX-02**: Claude CLI 启动命令 — 每个窗口启动 claude CLI
+- [x] **TMUX-03**: 窗口命名规范 — master, worker-0, worker-1, worker-2
+- [x] **CLAI-01**: Worker 启动配置 — 每个 worker 窗口启动 claude CLI
+- [x] **CLAI-02**: Master 启动配置 — master 窗口也启动 Claude CLI
+- [x] **CLAI-03**: 启动顺序控制 — 先创建窗口，再依次启动
+
 ### Active
 
-**v1.2 - Claude Code CLI 多窗口（执行中）**
+**v1.3 - 通信协议（待规划）**
 
-- [ ] **TMUX-01**: tmux 窗口自动创建脚本 — 启动时创建 4 个独立窗口
-- [ ] **TMUX-02**: Claude CLI 启动命令 — 每个窗口启动 claude CLI
-- [ ] **TMUX-03**: 窗口命名规范 — master, worker-1, worker-2, worker-3
-- [ ] **TMUX-04**: 简单通信协议 — 使用 send-keys / capture-pane 进行消息传递
+- Master ↔ Worker 消息传递协议
+- COMM-01 ~ COMM-04, TEST-03
 
 ### Out of Scope
 
@@ -52,14 +59,15 @@
 
 ## Current State
 
-**v1.1 Shipped** — 2026-02-01
+**v1.2 Shipped** — 2026-02-01
 
 - **Codebase:** 4,315 LOC Python, 14 source files, 17 test files
 - **Tests:** 207 tests passing (v1.0) + 15 new tests (v1.1)
 - **Tech Stack:** Python 3.12+, tmux 3.4, libtmux 0.53.0, requests 2.32.5
 - **CLI Commands:** swarm init, up, master, worker, status, status --panes, down
 - **Master Coordination:** Scanning, auto-rescue, task dispatch with locks
-- **v1.2 Status:** Phase 10 (准备启动)
+- **New:** run_claude_swarm.sh — 4 Claude CLI 窗口启动脚本
+- **v1.3 Status:** 待规划（通信协议）
 
 ## Context
 
@@ -88,21 +96,17 @@
 
 ---
 
-## Current Milestone: v1.2 Claude Code CLI 多窗口
+## Current Milestone: v1.3 通信协议（待规划）
 
-**Goal:** 在 tmux 会话中启动 4 个 Claude Code CLI 交互窗口（1 Master 主脑 + 3 Worker）
+**Goal:** 实现 Master ↔ Worker 消息传递协议
 
 **Target features:**
-- **TMUX-01**: tmux 窗口自动创建脚本 — 启动时创建 4 个独立窗口
-- **TMUX-02**: Claude CLI 启动命令 — 每个窗口启动 claude CLI
-- **TMUX-03**: 窗口命名规范 — master, worker-1, worker-2, worker-3
-- **TMUX-04**: 简单通信协议 — 使用 send-keys / capture-pane 进行消息传递
-
-**约束条件:**
-- 只做 4 窗口 Claude CLI 启动，其他功能全部不做
-- 不破坏现有 v1.1 Python 后台模式
-- 通信方式：tmux send-keys / capture-pane（不用共享文件）
+- **COMM-01**: 消息格式定义 — 简单文本协议（行分隔）
+- **COMM-02**: Master → Worker 指令发送 — 使用 send-keys 发送任务描述
+- **COMM-03**: Worker → Master 状态回报 — 使用 capture-pane 读取输出状态
+- **COMM-04**: 状态标识 — DONE、ERROR、WAIT 等状态词识别
+- **TEST-03**: 通信协议测试
 
 ---
 
-*Last updated: 2026-02-01 after v1.1 milestone*
+*Last updated: 2026-02-01 after v1.2 milestone*

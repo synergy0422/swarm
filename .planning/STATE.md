@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-01)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** Phase 10 - v1.2 Claude Code CLI 多窗口
+**Current focus:** v1.2 Shipped — v1.3 通信协议（待规划）
 
 ## Phase Status
 
@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 
 ## Current Position
 
-**Phase 10: v1.2 Claude Code CLI 多窗口**
+**v1.2 Shipped** — 2026-02-01
 
-Status: Complete
-Last activity: 2026-02-01 — Phase 10 completed, run_claude_swarm.sh created
+Status: v1.2 complete, v1.3 pending (通信协议)
+Last activity: 2026-02-01 — v1.2 completed, run_claude_swarm.sh shipped
 
 ## Key Decisions
 

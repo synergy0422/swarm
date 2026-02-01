@@ -6,18 +6,33 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-6 (14 plans), shipped 2026-01-31
-- ✅ **v1.1** — 执行中 (增强协作模式) - SHIPPED 2026-02-01
-- ⏳ **v1.2** — Claude Code CLI 多窗口 (进行中)
+- ✅ **v1.1** — UAT & CLI 增强, shipped 2026-02-01
+- ✅ **v1.2** — Claude Code CLI 多窗口, shipped 2026-02-01
+- ⏳ **v1.3** — 通信协议 (待规划)
 
-## v1.2 Phases
+## v1.2 Phases (Archived)
 
 <details>
-<summary>⏳ v1.2 Claude Code CLI 多窗口 (1 phase, 1 plan)</summary>
+<summary>✅ v1.2 Claude Code CLI 多窗口 (1 phase, 1 plan) — SHIPPED 2026-02-01</summary>
 
 - [x] Phase 10: 4 窗口 Claude CLI 启动 (1/1 plan) — 2026-02-01
 
 Plans:
 - [x] 10-01-PLAN.md — 创建 4 窗口启动脚本，验证 tmux 中可见 Claude CLI
+
+</details>
+
+## v1.3 Phases (待规划)
+
+<details>
+<summary>⏳ v1.3 通信协议 (待规划)</summary>
+
+**范围:** Master ↔ Worker 消息传递协议
+- COMM-01: 消息格式定义
+- COMM-02: Master → Worker 指令发送
+- COMM-03: Worker → Master 状态回报
+- COMM-04: 状态标识
+- TEST-03: 通信协议测试
 
 </details>
 
