@@ -149,9 +149,25 @@ def cmd_master(args):
     """
     try:
         from swarm.master import Master
+        from swarm.tmux_collaboration import TmuxCollaboration
+
         print(f"[SWARM] Starting master for cluster: {args.cluster_id}")
         print("[SWARM] Press Ctrl+C to stop")
-        master = Master()
+
+        # Create TmuxCollaboration if tmux is available
+        tmux_collaboration = None
+        try:
+            tmux_collaboration = TmuxCollaboration()
+            # Verify tmux is actually working by listing windows
+            tmux_collaboration.list_windows(f"swarm-{args.cluster_id}")
+        except Exception:
+            # tmux not available, continue without it
+            pass
+
+        master = Master(
+            cluster_id=args.cluster_id,
+            tmux_collaboration=tmux_collaboration
+        )
         master.run()
         return 0
     except KeyboardInterrupt:
@@ -201,81 +217,102 @@ def get_session(cluster_id):
         import libtmux
         server = libtmux.Server()
         session_name = f"swarm-{cluster_id}"
-        return server.find_session(session_name)
+        # Find session by name using attribute access
+        for s in server.sessions:
+            if s.session_name == session_name:
+                return s
+        return None
     except ImportError:
         return None
     except Exception:
         return None
 
 
+def tmux_has_session(cluster_id):
+    """
+    Check if a tmux session exists (without libtmux).
+    """
+    import subprocess
+    session_name = f"swarm-{cluster_id}"
+    result = subprocess.run(
+        ['tmux', 'has-session', '-t', session_name],
+        capture_output=True
+    )
+    return result.returncode == 0
+
+
 def cmd_up(args):
     """
     Launch tmux session with master + N workers.
 
-    Creates tmux session and spawns master and worker panes.
+    Uses subprocess to call tmux directly, avoiding libtmux API issues.
     """
+    import subprocess
+
+    cluster_id = args.cluster_id
+    workers = args.workers
+    session_name = f"swarm-{cluster_id}"
+
     # Preflight checks
     if not check_tmux_installed():
         print("[ERROR] tmux not installed", file=sys.stderr)
         return 1
 
-    if not check_libtmux_available():
-        print("[ERROR] libtmux not installed", file=sys.stderr)
-        print("Install: pip install libtmux", file=sys.stderr)
-        return 1
-
-    try:
-        import libtmux
-    except ImportError:
-        print("[ERROR] libtmux not installed", file=sys.stderr)
-        return 1
-
-    session_name = f"swarm-{args.cluster_id}"
-
     # Check if session already exists
-    server = libtmux.Server()
-    existing_session = server.find_session(session_name)
-
-    if existing_session:
+    if tmux_has_session(cluster_id):
         print(f"[ERROR] Swarm session already exists: {session_name}", file=sys.stderr)
-        print(f"[ERROR] Run 'swarm down --cluster-id {args.cluster_id}' first", file=sys.stderr)
+        print(f"[ERROR] Run 'swarm down --cluster-id {cluster_id}' first", file=sys.stderr)
         return 1
 
-    # Create new session
+    # Ensure directory exists
+    ai_swarm_dir = os.environ.get('AI_SWARM_DIR', '/tmp/ai_swarm')
+    os.makedirs(ai_swarm_dir, exist_ok=True)
+
     print(f"[SWARM] Creating tmux session: {session_name}")
 
+    # Prepare env without TMUX variable (causes issues with detached sessions)
+    env = os.environ.copy()
+    env.pop('TMUX', None)
+    env.pop('TMUX_PANE', None)
+
     try:
-        session = server.new_session(session_name)
+        # Create master window with master command
+        master_cmd = f'python3 -m swarm.cli --cluster-id {cluster_id} master'
+        subprocess.run([
+            'tmux', 'new-session', '-d', '-s', session_name,
+            '-n', 'master', '-x', '80', '-y', '24',
+            master_cmd
+        ], check=True, env=env)
 
-        # Create master pane
-        print("[SWARM] Starting master pane...")
-        master_window = session.new_window("master")
-        master_pane = master_window.attached_pane
-        master_pane.send_keys(f"python3 -m swarm.cli --cluster-id {args.cluster_id} master")
-
-        # Create worker panes
-        for i in range(args.workers):
-            print(f"[SWARM] Starting worker-{i} pane...")
-            worker_window = session.new_window(f"worker-{i}")
-            worker_pane = worker_window.attached_pane
-            worker_pane.send_keys(f"python3 -m swarm.cli --cluster-id {args.cluster_id} worker --id {i}")
+        # Create worker windows
+        for i in range(workers):
+            worker_cmd = f'python3 -m swarm.cli --cluster-id {cluster_id} worker --id {i}'
+            subprocess.run([
+                'tmux', 'new-window', '-t', session_name,
+                '-n', f'worker-{i}', worker_cmd
+            ], check=True, env=env)
 
         print(f"\n[SWARM] Swarm session created: {session_name}")
-        print(f"[SWARM] Master + {args.workers} workers launched")
+        print(f"[SWARM] Master + {workers} workers launched")
         print(f"\n[SWARM] Attach to session:")
         print(f"[SWARM]   tmux attach -t {session_name}")
         print(f"\n[SWARM] Check status:")
-        print(f"[SWARM]   python3 -m swarm.cli --cluster-id {args.cluster_id} status")
+        print(f"[SWARM]   python3 -m swarm.cli --cluster-id {cluster_id} status")
         print(f"\n[SWARM] Stop swarm:")
-        print(f"[SWARM]   python3 -m swarm.cli --cluster-id {args.cluster_id} down")
+        print(f"[SWARM]   python3 -m swarm.cli --cluster-id {cluster_id} down")
 
         return 0
 
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Failed to create tmux session: {e}", file=sys.stderr)
+        print("[SWARM] Attempting cleanup...")
+        cmd_down(args)
+        return 1
     except Exception as e:
         print(f"[ERROR] Failed to create session: {e}", file=sys.stderr)
         print("[SWARM] Attempting cleanup...")
-        # Try to cleanup
         cmd_down(args)
+        return 1
         return 1
 
 
@@ -334,18 +371,20 @@ def cmd_status(args):
 
     # Check tmux session
     session = get_session(args.cluster_id)
-
     if not session:
-        print(f"[SWARM] No swarm session running: {session_name}")
-        print(f"[SWARM] Run 'swarm up --cluster-id {args.cluster_id}' to start")
-        return 0
+        if not tmux_has_session(args.cluster_id):
+            print(f"[SWARM] No swarm session running: {session_name}")
+            print(f"[SWARM] Run 'swarm up --cluster-id {args.cluster_id}' to start")
+            return 0
+        print(f"[SWARM] Session: {session_name}")
+        print("[SWARM] TMUX Windows: (libtmux not available)")
+    else:
+        print(f"[SWARM] Session: {session_name}")
 
-    print(f"[SWARM] Session: {session_name}")
-
-    # List windows/panes
-    print(f"\n[SWARM] TMUX Windows:")
-    for window in session.windows:
-        print(f"  - {window.name}")
+        # List windows/panes
+        print(f"\n[SWARM] TMUX Windows:")
+        for window in session.windows:
+            print(f"  - {window.name}")
 
     # Parse status.log
     worker_status = parse_status_log(ai_swarm_dir, lines=20)
@@ -383,17 +422,22 @@ def cmd_down(args):
     """
     session_name = f"swarm-{args.cluster_id}"
 
-    # Check if session exists
-    session = get_session(args.cluster_id)
-
-    if not session:
-        print(f"[SWARM] No swarm session running: {session_name}")
-        return 0
-
     try:
-        # Kill session
-        session.kill_session()
-        print(f"[SWARM] Swarm session stopped: {session_name}")
+        # Kill session (libtmux preferred, tmux fallback)
+        session = get_session(args.cluster_id)
+        if session:
+            session.kill()
+            print(f"[SWARM] Swarm session stopped: {session_name}")
+            return 0
+        if tmux_has_session(args.cluster_id):
+            import subprocess
+            subprocess.run(
+                ['tmux', 'kill-session', '-t', session_name],
+                check=False
+            )
+            print(f"[SWARM] Swarm session stopped: {session_name}")
+            return 0
+        print(f"[SWARM] No swarm session running: {session_name}")
         return 0
     except Exception as e:
         print(f"[ERROR] Failed to stop session: {e}", file=sys.stderr)
@@ -402,11 +446,33 @@ def cmd_down(args):
 
 def main():
     """Main CLI entry point"""
+    # Pre-parse --cluster-id to allow it before subcommand
+    cluster_id = DEFAULT_CLUSTER_ID
+    argv_copy = sys.argv[1:]
+
+    # Look for --cluster-id and extract its value
+    i = 0
+    while i < len(argv_copy):
+        if argv_copy[i].startswith('--cluster-id='):
+            cluster_id = argv_copy[i].split('=', 1)[1]
+            argv_copy = argv_copy[:i] + argv_copy[i + 1:]
+            continue
+        if argv_copy[i] == '--cluster-id':
+            if i + 1 < len(argv_copy):
+                cluster_id = argv_copy[i + 1]
+                # Remove --cluster-id and its value from argv
+                argv_copy = argv_copy[:i] + argv_copy[i + 2:]
+            else:
+                print("[ERROR] --cluster-id requires a value", file=sys.stderr)
+                return 1
+        else:
+            i += 1
+
     # Parent parser for common arguments (shared across subcommands)
     parent_parser = argparse.ArgumentParser(add_help=False)
     parent_parser.add_argument(
         '--cluster-id',
-        default=DEFAULT_CLUSTER_ID,
+        default=cluster_id,
         help=f'Cluster identifier (default: {DEFAULT_CLUSTER_ID})'
     )
 
@@ -448,8 +514,8 @@ def main():
     # down command
     subparsers.add_parser('down', parents=[parent_parser], help='Terminate swarm session')
 
-    # Parse args
-    args = parser.parse_args()
+    # Parse args with modified argv (--cluster-id already extracted)
+    args = parser.parse_args(argv_copy)
 
     # Route to command handler
     if args.command == 'init':
