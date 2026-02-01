@@ -53,7 +53,39 @@
 **Git range:** `feat(09-01)` → `docs(10-01)`
 
 **What's next:**
-- v1.2: Pipeline 模式, P2P 对等模式, Web 状态面板
+- v1.2: 4 Claude Code CLI 窗口
+
+---
+
+## v1.2 Claude Code CLI 多窗口 (Shipped: 2026-02-01)
+
+**Delivered:** 4 tmux windows with Claude CLI running (master + worker-0/1/2), one executable script.
+
+**Phases completed:** 10 (1 plan total)
+
+**Key accomplishments:**
+
+1. 4 窗口启动脚本 — Created `run_claude_swarm.sh` with:
+   - Session: `swarm-claude-default`
+   - 4 windows: master, worker-0, worker-1, worker-2
+   - Each window runs `cd $WORKDIR && claude`
+   - `--attach`/`--no-attach` flags (default attach)
+   - `--workdir`/`-d` flag for directory override
+   - Claude CLI availability check
+
+2. Human verification checkpoint passed — Confirmed 4 Claude CLI windows visible in tmux
+
+**Stats:**
+
+- 1 file created: run_claude_swarm.sh (132 lines)
+- 1 phase, 1 plan, 5 commits
+- 1 day from start to ship (2026-02-01)
+- 8/8 v1.2 requirements complete
+
+**Git range:** `docs(v1.2): start milestone` → `docs(v1.2): scope correction`
+
+**What's next:**
+- v1.3: 通信协议 (Master ↔ Worker 消息传递)
 
 ---
 
