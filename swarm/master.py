@@ -300,21 +300,35 @@ class Master:
     - Use locks to prevent duplicate assignment
     """
 
-    def __init__(self, poll_interval: Optional[float] = None, cluster_id: str = 'default'):
+    def __init__(
+        self,
+        poll_interval: Optional[float] = None,
+        cluster_id: str = 'default',
+        tmux_collaboration: Optional['TmuxCollaboration'] = None,
+        pane_poll_interval: float = 3.0
+    ):
         """
         Initialize Master.
 
         Args:
             poll_interval: Scan interval in seconds (default from env or 1.0)
-            cluster_id: Cluster identifier for dispatcher
+            cluster_id: Cluster identifier for dispatcher and tmux session name
+            tmux_collaboration: Optional TmuxCollaboration instance for pane scanning
+            pane_poll_interval: Interval for pane scanning in seconds (default 3.0)
         """
         self.poll_interval = poll_interval or get_poll_interval()
         self.running = True
+        self.cluster_id = cluster_id
+        self.pane_poll_interval = pane_poll_interval
 
         self.scanner = MasterScanner()
         self.wait_detector = WaitDetector()
+        self.pane_scanner = PaneScanner(tmux_collaboration)
         self.dispatcher = MasterDispatcher(cluster_id=cluster_id)
         self.broadcaster = StatusBroadcaster(worker_id='master')
+
+        # Cooldown tracking for auto-ENTER (30 seconds per window)
+        self._last_auto_enter: Dict[str, float] = {}
 
         # Register signal handlers
         signal.signal(signal.SIGINT, self._shutdown)
@@ -324,6 +338,26 @@ class Master:
         """Handle shutdown signals"""
         print(f"\n[Master] Received signal {signum}, shutting down...")
         self.running = False
+
+    def _handle_pane_wait_states(self) -> None:
+        """Scan all panes and auto-send ENTER for detected patterns."""
+        session_name = f"swarm-{self.cluster_id}"
+        pane_contents = self.pane_scanner.scan_all(session_name)
+
+        now = time.time()
+        for window_name, content in pane_contents.items():
+            patterns = self.wait_detector.detect_in_pane(content)
+
+            if patterns:
+                # Check cooldown (30 seconds)
+                last_enter = self._last_auto_enter.get(window_name, 0)
+                if now - last_enter < 30:
+                    continue  # Still in cooldown
+
+                # Send ENTER
+                if self.pane_scanner.send_enter(session_name, window_name):
+                    self._last_auto_enter[window_name] = now
+                    print(f"[Master] Auto-ENTER for {window_name}")
 
     def handle_wait_states(self, workers: Dict[str, dict]) -> None:
         """
@@ -364,12 +398,17 @@ class Master:
         1. Scan worker status
         2. Handle WAIT states
         3. Dispatch tasks to idle workers (via MasterDispatcher with mailbox)
+        3.5. Scan panes and auto-ENTER (on pane_poll_interval timing)
         4. Sleep for poll_interval
         """
         print(f"[Master] Starting Master loop (poll_interval={self.poll_interval}s)")
 
+        last_pane_scan_time = 0.0
+
         while self.running:
             try:
+                now = time.time()
+
                 # 1. Scan worker status
                 workers_dict = self.scanner.scan_workers()
 
@@ -395,6 +434,11 @@ class Master:
                     for result in results:
                         if result.success:
                             print(f"[Master] Assigned {result.task_id} to {result.worker_id}")
+
+                # 3.5. Scan panes and auto-ENTER (independent interval)
+                if now - last_pane_scan_time >= self.pane_poll_interval:
+                    self._handle_pane_wait_states()
+                    last_pane_scan_time = now
 
                 # 4. Sleep before next scan
                 time.sleep(self.poll_interval)
