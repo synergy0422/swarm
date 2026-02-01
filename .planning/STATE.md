@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-01-31)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** Phase 9 - 待规划 (CLI 状态增强)
+**Current focus:** Phase 9 - CLI 状态增强 (plan 01 complete)
 
 ## Phase Status
 
@@ -19,28 +19,28 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 | 6 | 集成测试 | Complete | 100% (5/5 plans) |
 | 7 | 协作命令封装 | Complete | 100% (1/1 plans) |
 | 8 | Master tmux 扫描 | Complete | 100% (1/1 plans) |
+| 9 | CLI 状态增强 | Complete | 100% (1/1 plans) |
 
 ## Current Position
 
-**Phase 8: Master tmux 扫描 (Master tmux scan)**
+**Phase 9: CLI 状态增强 (CLI Status Enhancement)**
 
-Plan 08-01 completed:
-- Added WaitDetector.detect_in_pane() method with 5 ENTER patterns
-- Added PaneScanner class with scan_all() and send_enter() methods
-- Integrated TmuxCollaboration into Master with 3s pane polling interval
-- Added 30s cooldown per window for auto-ENTER
-- Created 25 integration tests (all passing)
+Plan 09-01 completed:
+- Added `--panes` argument to status subparser (store_true, default False)
+- Created `format_pane_output()` function for 4-window snapshot display
+- Status icons: [ERROR], [DONE], [ ] based on content detection
+- Modified `cmd_status()` to handle `--panes` flag with tmux integration
+- Created 15 unit + integration tests (all passing)
+- Graceful tmux unavailability handling with warning message
 
 Progress: ████████████████████████████████████ 100% (1/1 plans)
 
 ## Recent Changes
 
-- 2026-02-01: Completed Phase 8 Plan 1 (Master tmux scan integration)
-- 2026-02-01: Added detect_in_pane() method for ENTER pattern detection
-- 2026-02-01: Added PaneScanner class for tmux pane operations
-- 2026-02-01: Integrated pane scanning in Master run() loop
-- 2026-02-01: Updated CLI to inject TmuxCollaboration into Master
-- 2026-02-01: Created 25 integration tests (333 lines)
+- 2026-02-01: Completed Phase 9 Plan 1 (--panes flag for status command)
+- 2026-02-01: Added format_pane_output() with status icon detection
+- 2026-02-01: Added test_cli_status_panes.py with 15 tests
+- 2026-02-01: All tests passing (41 tests total across test suites)
 
 ## Key Decisions
 
@@ -66,17 +66,21 @@ Progress: ███████████████████████�
 | 05-02 | argparse parents pattern for --cluster-id | Flag after subcommands | ✅ Validated |
 | 05-03 | Removed eager cli import from __init__.py | Prevents RuntimeWarning | ✅ Validated |
 | 07-01 | Updated to libtmux 0.53.0 modern API | Server.sessions.get() instead of find_where() | ✅ Validated |
-| 08-01 | Pane poll interval: 3 seconds | Independent from poll_interval, configurable via constructor | ✅ Just added |
-| 08-01 | ENTER patterns: 5 total | press enter, press return, hit enter, 回车继续, 按回车 | ✅ Just added |
-| 08-01 | Cooldown: 30 seconds per window | Prevents repeated ENTERs | ✅ Just added |
-| 08-01 | Minimal logging for auto-ENTER | `[Master] Auto-ENTER for {window_name}` | ✅ Just added |
-| 08-01 | tmux unavailable: silently skip | No errors raised | ✅ Just added |
+| 08-01 | Pane poll interval: 3 seconds | Independent from poll_interval, configurable via constructor | ✅ Validated |
+| 08-01 | ENTER patterns: 5 total | press enter, press return, hit enter, 回车继续, 按回车 | ✅ Validated |
+| 08-01 | Cooldown: 30 seconds per window | Prevents repeated ENTERs | ✅ Validated |
+| 08-01 | Minimal logging for auto-ENTER | `[Master] Auto-ENTER for {window_name}` | ✅ Validated |
+| 08-01 | tmux unavailable: silently skip | No errors raised | ✅ Validated |
+| 09-01 | --panes flag with store_true action | Boolean flag for optional pane display | ✅ Just completed |
+| 09-01 | Status icon logic: Error/Failed -> [ERROR], DONE/Complete -> [DONE] | Visual status at a glance | ✅ Just completed |
+| 09-01 | 20-line content limit per window | Readable output, prevents terminal flood | ✅ Just completed |
 
 ## Session Continuity
 
-Last session: 2026-02-01T08:00:00Z
-Stopped at: Phase 8 complete, ready for Phase 9
+Last session: 2026-02-01T08:15:58Z
+Stopped at: Phase 9 Plan 1 complete - --panes flag implementation done
 Resume file: None
+Next action: Ready for Phase 9 additional plans (if any) or Phase 10
 
 ---
-*State updated: 2026-02-01T08:00:00Z*
+*State updated: 2026-02-01T08:21:27Z*
