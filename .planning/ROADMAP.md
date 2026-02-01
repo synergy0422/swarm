@@ -6,21 +6,32 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1-6 (14 plans), shipped 2026-01-31
-- ⏳ **v1.1** — 执行中 (增强协作模式)
+- ✅ **v1.1** — 执行中 (增强协作模式) - SHIPPED 2026-02-01
+- ⏳ **v1.2** — Claude Code CLI 多窗口 (进行中)
 
-## v1.1 Phases
+## v1.2 Phases
 
 <details>
-<summary>⏳ v1.1 增强协作模式 (4 phases, 8 plans)</summary>
+<summary>⏳ v1.2 Claude Code CLI 多窗口 (1 phase, 1 plan)</summary>
 
-- [x] Phase 7: 协作命令封装 (1/1 plan) — 2026-02-01
-- [x] Phase 8: Master 集成扫描 (1/1 plan) — 2026-02-01
-- [ ] Phase 9: CLI 状态增强 (1/1 plan) — 2026-02-01
-- [ ] Phase 10: 验收测试 (待规划)
+- [ ] Phase 10: 4 窗口 Claude CLI 启动 (1/1 plan) — 2026-02-01
 
 Plans:
-- [x] 08-01-PLAN.md — Master 集成 tmux 实时扫描 (WaitDetector.detect_in_pane, PaneScanner, 30s cooldown)
-- [ ] 09-01-PLAN.md — Add --panes parameter to swarm status command (6 tasks)
+- [ ] 10-01-PLAN.md — 创建 4 窗口启动脚本，验证 tmux 中可见 Claude CLI
+
+</details>
+
+## v1.1 Phases (Archived)
+
+<details>
+<summary>✅ v1.1 UAT & CLI 增强 (2 phases, 2 plans) — SHIPPED 2026-02-01</summary>
+
+- [x] Phase 9: CLI 状态增强 (1/1 plan) — 2026-02-01
+- [x] Phase 10: 验收测试 (1/1 plan) — 2026-02-01
+
+Plans:
+- [x] 09-01-PLAN.md — Add --panes parameter to swarm status command
+- [x] 10-01-PLAN.md — UAT 验收测试
 
 </details>
 
@@ -51,5 +62,5 @@ Multi-agent collaboration system with tmux integration, shared state management,
 
 ---
 
-*Roadmap archived: 2026-01-31*
-*For full v1.0 details, see `.planning/milestones/v1.0-ROADMAP.md`*
+*Roadmap updated: 2026-02-01*
+*For full v1.1 details, see `.planning/milestones/v1.1-ROADMAP.md`*

@@ -1,99 +1,74 @@
-# Requirements: AI Swarm
+# Requirements: AI Swarm v1.2 Claude Code CLI 多窗口
 
-**Defined:** 2026-01-31
+**Defined:** 2026-02-01
 **Core Value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
 
-## v1 Requirements
+## v1.2 Requirements
 
-### tmux 集成层 (CORE)
+### tmux 窗口管理
 
-- [ ] **CORE-01**: tmux 资源发现 — `tmux list-sessions/windows/panes` 封装
-- [ ] **CORE-02**: 能力封装 — `capture/read` (capture-pane)、`send/control` (send-keys)
+- [ ] **TMUX-01**: tmux 窗口自动创建脚本 — 启动时创建 4 个独立窗口（master, worker-1, worker-2, worker-3）
+- [ ] **TMUX-02**: 窗口布局配置 — master 在主窗口，3 个 worker 在水平或垂直布局
+- [ ] **TMUX-03**: 会话命名规范 — swarm-claude-{timestamp} 或可配置
 
-### 共享状态管理 (CORE)
+### Claude CLI 启动
 
-- [ ] **CORE-03**: 共享目录结构 — `/tmp/ai_swarm/{status.log, tasks.json, locks/, results/}`
-- [ ] **CORE-04**: 状态广播 — START/DONE/WAIT/ERROR/HELP/SKIP 协议
-- [ ] **CORE-05**: 任务锁 — 文件锁机制避免冲突
+- [ ] **CLAI-01**: Worker 启动命令 — 每个 worker 窗口启动 claude CLI（使用 claude command）
+- [ ] **CLAI-02**: Master 启动配置 — master 窗口启动 Master 协调进程
+- [ ] **CLAI-03**: 启动顺序控制 — 先创建窗口，再依次启动各进程
 
-### Master-Worker 协作 (CORE)
+### 简单通信协议
 
-- [x] **CORE-06**: Master 扫描 — 定期 scan 其他终端输出
-- [x] **CORE-07**: 自动救援 — 检测 `[y/n]`、`[Y/n]`、`确认` 等等待模式
-- [x] **CORE-08**: 错误检测 — 检测 `Error`、`Failed`、`Exception` 等错误模式
+- [ ] **COMM-01**: 消息格式定义 — 简单文本协议（行分隔）
+- [ ] **COMM-02**: Master → Worker 指令发送 — 使用 send-keys 发送任务描述
+- [ ] **COMM-03**: Worker → Master 状态回报 — 使用 capture-pane 读取输出状态
+- [ ] **COMM-04**: 状态标识 — DONE、ERROR、WAIT 等状态词识别
 
-### CLI 与交付 (CORE)
+### 验证与测试
 
-- [x] **CORE-09**: CLI 工具 — `swarm init/run/master/worker` 命令
-- [x] **CORE-10**: 启动脚本 — 一键 tmux 会话初始化 + Master + N Workers
+- [ ] **TEST-01**: 窗口可见性验证 — 进入 tmux 可看到 4 个 Claude CLI 交互窗口
+- [ ] **TEST-02**: 启动脚本测试 — 脚本执行后正确创建 4 窗口
+- [ ] **TEST-03**: 通信协议测试 — 简单的消息发送/接收测试
 
-### 现有代码复用 (CORE)
+## v1.1 Requirements (Validated)
 
-- [x] **CORE-11**: 复制 Phase 2 实现 — config.py、task_queue.py、worker_smart.py
-- [x] **CORE-12**: 适配新目录 — 修改路径为 /tmp/ai_swarm/
-- [x] **CORE-13**: 集成测试 — 验证完整工作流
-
-## v2 Requirements
-
-### 增强协作模式
-
-- **PIPE-01**: Pipeline 模式 — 任务串行流转（分析→设计→实现→测试）
-- **P2P-01**: P2P 对等模式 — 去中心化协作
-- **HYBRID-01**: 混合模式 — 分组协作 + 统一调度
-
-### Web 监控
-
-- **WEB-01**: Flask API — 状态端点
-- **WEB-02**: 实时面板 — WebSocket/轮询监控
-- **WEB-03**: 任务管理 — 增删改查界面
-
-### 调度优化
-
-- **SCHED-01**: 基于负载的任务分配
-- **SCHED-02**: 能力感知调度（Worker 擅长领域）
-- **SCHED-03**: 成本优化调度
-
-### 扩展能力
-
-- **SSH-01**: SSH 跨机扩展 — tmux over SSH（预留接口）
+- [x] **CLI-01**: CLI 状态增强 — `swarm status --panes` 查看 tmux 窗口快照
+- [x] **CLI-02**: 状态图标 — [ERROR], [DONE], [ ] 状态可视化
+- [x] **CLI-03**: UAT 验收测试 — 8/8 测试通过
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| 危险命令自动执行 | rm -rf、DROP TABLE 等需人工确认 |
-| 跨网络分布式协作 | 暂不支持，Phase 2 预留接口 |
-| 图形界面 | 纯终端工具 |
-| 实时交互场景 | 需要人工实时响应 |
+| Pipeline 模式 | v1.2 聚焦 4 窗口启动 |
+| P2P 对等模式 | v1.2 聚焦 4 窗口启动 |
+| Web 状态面板 | v1.2 聚焦 4 窗口启动 |
+| SSH 跨机扩展 | 保留接口，未来版本 |
+| 危险命令自动执行 | 保持 v1.1 保守策略 |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | Phase 2 | Complete |
-| CORE-02 | Phase 2 | Complete |
-| CORE-03 | Phase 3 | Complete |
-| CORE-04 | Phase 3 | Complete |
-| CORE-05 | Phase 3 | Complete |
-| CORE-06 | Phase 4 | Complete |
-| CORE-07 | Phase 4 | Complete |
-| CORE-08 | Phase 4 | Complete |
-| CORE-09 | Phase 5 | Complete |
-| CORE-10 | Phase 5 | Complete |
-| CORE-11 | Phase 1 | Complete |
-| CORE-12 | Phase 1 | Complete |
-| CORE-13 | Phase 6 | Complete |
-| PIPE-01 | Phase 2 | Pending |
-| P2P-01 | Phase 2 | Pending |
-| WEB-01 | Phase 2 | Pending |
-| ... | ... | ... |
+| TMUX-01 | Phase 10 | Pending |
+| TMUX-02 | Phase 10 | Pending |
+| TMUX-03 | Phase 10 | Pending |
+| CLAI-01 | Phase 10 | Pending |
+| CLAI-02 | Phase 10 | Pending |
+| CLAI-03 | Phase 10 | Pending |
+| COMM-01 | Phase 10 | Pending |
+| COMM-02 | Phase 10 | Pending |
+| COMM-03 | Phase 10 | Pending |
+| COMM-04 | Phase 10 | Pending |
+| TEST-01 | Phase 10 | Pending |
+| TEST-02 | Phase 10 | Pending |
+| TEST-03 | Phase 10 | Pending |
 
 **Coverage:**
-- v1 requirements: 13 total
-- v2 requirements: 9 total
-- Mapped to phases: 13 (Phase 1)
+- v1.2 requirements: 13 total
+- Mapped to phases: 13
 - Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-01-31*
-*Last updated: 2026-01-31 after Phase 5 completion*
+*Requirements defined: 2026-02-01*
+*Last updated: 2026-02-01 after v1.2 milestone start*
