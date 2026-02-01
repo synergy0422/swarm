@@ -7,7 +7,10 @@ and skip when tmux is not installed.
 
 import pytest
 import shutil
-import libtmux
+
+# Use importorskip to handle missing libtmux gracefully (pytest will skip, not error)
+libtmux = pytest.importorskip("libtmux")
+
 from swarm.tmux_collaboration import TmuxCollaboration
 
 
@@ -125,13 +128,18 @@ class TestCaptureAllWindows:
         assert isinstance(outputs, dict)
 
     def test_capture_all_windows_includes_first_window(self, collaboration, temp_session):
-        """Verify first window (bash) is included in output."""
+        """Verify first window is included in output."""
         outputs = collaboration.capture_all_windows("test-swarm-collab")
-        # Default window name is "bash" in tmux
-        assert "bash" in outputs
+        # Get the actual window name from the session
+        first_window_name = temp_session.active_window.window_name
+        # Assert the first window is included (use actual name from session)
+        assert first_window_name in outputs
 
     def test_capture_all_windows_with_workers(self, collaboration, temp_session):
         """Verify all worker windows are captured."""
+        # Get the first window's actual name
+        first_window_name = temp_session.active_window.window_name
+
         # Create 3 worker windows with unique content
         for i in range(3):
             w = temp_session.new_window(window_name=f"worker-{i}")
@@ -142,8 +150,8 @@ class TestCaptureAllWindows:
 
         outputs = collaboration.capture_all_windows("test-swarm-collab")
 
-        # Default window name is "bash"
-        assert "bash" in outputs
+        # Use actual first window name
+        assert first_window_name in outputs
         assert "worker-0" in outputs
         assert "worker-1" in outputs
         assert "worker-2" in outputs
