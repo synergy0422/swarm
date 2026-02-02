@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Phase 21 ready to start)
+**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Phase 21 complete)
 
 ## Phase Status
 
@@ -17,16 +17,16 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
 | 15-17 | v1.5 维护性改进 | Complete | 3/3 plans |
-| 18-21 | v1.6 长期可维护性 + 流程闭环 | In Progress | 3/4 plans |
+| 18-21 | v1.6 长期可维护性 + 流程闭环 | Complete | 4/4 plans |
 
 ## Current Position
 
-**v1.6 In Progress** — 2026-02-02
+**v1.6 Complete** — 2026-02-02
 
 - **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-21)
 - **Focus:** 统一配置入口、任务流程闭环、自检与文档、维护文档
-- **Status:** Phase 20-01 complete, ready for Phase 21 (maintenance docs)
-- **Next action:** Plan or execute Phase 21-maintenance-docs
+- **Status:** All 4 phases complete (18-01, 19-01, 20-01, 21-01)
+- **Next action:** v1.6 ready for release
 
 ## v1.6 Summary
 
@@ -35,9 +35,9 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | Phases | 4 (18, 19, 20, 21) |
 | Requirements | 10 (CFGN-01~02, WRAP-01~02, CHK-01, DOCS-03~06) |
 | Focus | 维护性 + 流程闭环 |
-| Completed | 3/4 phases (18-01, 19-01, 20-01) |
+| Completed | 4/4 phases (18-01, 19-01, 20-01, 21-01) |
 
-Progress: ███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 75%
+Progress: ████████████████████████████████████ 100%
 
 ## Key Decisions
 
@@ -99,21 +99,22 @@ Progress: ███░░░░░░░░░░░░░░░░░░░░�
 | 20-01 | Local SCRIPT_DIR definition | _common.sh unsets SCRIPT_DIR, so define it locally | ✅ Validated |
 | 20-01 | print_fail always shown | Critical failures never suppressed, even in quiet mode | ✅ Validated |
 | 20-01 | Exit code 0/1 for success/failure | Enables CI/CD pipelines to fail on health check | ✅ Validated |
+| 21-01 | 5-step emergency procedure format | 备份 -> 优雅停 -> 强杀 -> 清锁 -> 复验 | ✅ Documented |
+| 21-01 | Chinese section headings for maintainer accessibility | All maintenance docs in Chinese | ✅ Documented |
 
 ## Session Continuity
 
 Last session: 2026-02-02
-Completed: Phase 20-01 (System Self-Check Script)
-- scripts/swarm_selfcheck.sh created with 280 lines
-- Four check functions: tmux, scripts, config, state_dir
-- Output control: print_pass/print_fail/print_info
-- Command-line options: -v (verbose), -q (quiet), -h (help)
-- Exit codes: 0 on success, 1 on failure
-- All checks functional with clear pass/fail reporting
+Completed: Phase 21-01 (Maintenance Documentation)
+- docs/MAINTENANCE.md created with 5-step emergency recovery procedure
+- docs/SCRIPTS.md created with 11 scripts, 22+ code examples
+- CHANGELOG.md created with v1.0-v1.6 version history
+- README.md updated with navigation and command mapping
 
-Current: v1.6 milestone in progress (3/4 phases complete)
-Next action: Plan or execute 21-maintenance-docs
+Current: v1.6 milestone COMPLETE (4/4 phases)
+- All v1.6 deliverables finished
+- Ready for v1.6 release
 
 ---
 
-*State updated: 2026-02-02 after Phase 20-01 completion*
+*State updated: 2026-02-02 after Phase 21-01 completion*
