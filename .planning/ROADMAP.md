@@ -14,7 +14,7 @@
 ## v1.4 Phases
 
 <details>
-<summary>⏳ v1.4 共享状态与任务锁 (3 phases, 1/3 complete)</summary>
+<summary>⏳ v1.4 共享状态与任务锁 (3 phases, 2/3 complete)</summary>
 
 **Goal:** 实现外部脚本可读写共享状态文件与任务锁
 
@@ -35,12 +35,12 @@
 2. `swarm_status_log.sh tail 10` 返回最近 10 条状态记录
 3. `swarm_status_log.sh query task-001` 返回任务状态变更
 
-**Phase 13:** 任务锁脚本
+**Phase 13:** 任务锁脚本 ✓ COMPLETE
 
 **Requirements:** LOCK-01, LOCK-02, LOCK-03
 
 **Plan:**
-- [ ] 13-01-PLAN.md — 创建 swarm_lock.sh
+- [x] 13-01-PLAN.md — 创建 swarm_lock.sh
 
 **Success Criteria:**
 1. `swarm_lock.sh acquire task-001 worker-0` 返回锁内容
