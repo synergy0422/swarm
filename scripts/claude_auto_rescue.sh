@@ -14,6 +14,7 @@ LAST_ACTION_FILE="${SWARM_STATE_DIR}/.auto_rescue_last_action"
 
 # Pattern categories (in order of priority)
 # Note: done/ready/ok removed - too broad, causes false positives
+# Note: yes uses regex \byes\b for whole-word matching only
 PATTERNS=(
     "[y/n]"                    # Standard yes/no prompt
     "[Y/n]"                    # Yes/No with capital Y
@@ -23,10 +24,10 @@ PATTERNS=(
     "hit enter"
     "回车继续"                 # Chinese: press enter to continue
     "按回车"                   # Chinese: press enter
-    "confirm"                  # Confirmation words (require word boundary)
+    "confirm"                  # Confirmation words
     "continue"
     "proceed"
-    "yes"                      # Standalone yes (with space/punctuation)
+    "\\byes\\b"                # Regex: whole word only (matches [yes] or yes/no, not "yesterday")
 )
 
 # Dangerous commands (block auto-rescue)
@@ -129,11 +130,12 @@ detect_dangerous() {
 }
 
 # Detect confirmation prompts in pane content
+# Uses regex matching (-E) for word boundary patterns like \byes\b
 detect_prompt() {
     local pane_content="$1"
 
     for pattern in "${PATTERNS[@]}"; do
-        if echo "$pane_content" | grep -qiF "$pattern"; then
+        if echo "$pane_content" | grep -qiE "$pattern"; then
             echo "$pattern"
             return 0  # Pattern found
         fi
