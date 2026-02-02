@@ -3,13 +3,42 @@ set -euo pipefail
 
 # Claude Swarm Communication Script
 # Provides send, poll, and status commands for tmux window communication
+#
+# Usage:
+#   ./claude_comm.sh send <window> <task_id> "<description>"
+#   ./claude_comm.sh poll <window> [timeout] [task_id]
+#   ./claude_comm.sh status <window>
+#
+# Environment:
+#   CLAUDE_SESSION - Override default session name (default: swarm-claude-default)
+#
+# Examples:
+#   CLAUDE_SESSION=custom-session ./scripts/claude_comm.sh send worker-0 task-001 "创建文件 hello.py"
+#   ./scripts/claude_comm.sh --session custom-session send worker-0 task-001 "创建文件 hello.py"
+#   ./scripts/claude_comm.sh poll worker-0 30 task-001  # timeout: 30s (default)
+#   ./scripts/claude_comm.sh status worker-0
 
-SESSION="swarm-claude-default"
+SESSION="${CLAUDE_SESSION:-swarm-claude-default}"
 
-# Usage examples:
-#   claude_comm.sh send worker-0 task-001 "创建文件 hello.py"
-#   claude_comm.sh poll worker-0 30 task-001
-#   claude_comm.sh status worker-0
+# Parse --session flag early
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --session)
+                if [[ -n "${2:-}" ]]; then
+                    SESSION="$2"
+                    shift 2
+                else
+                    echo "Error: --session requires a value" >&2
+                    exit 1
+                fi
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+}
 
 # Send a task to a specific window
 # Usage: send <window> <task_id> "<description>"
@@ -79,6 +108,25 @@ status() {
 
 # Main entry point
 main() {
+    parse_args "$@"
+    shift $?
+
+    if [[ $# -lt 1 ]]; then
+        echo "Usage: $0 <send|poll|status> [options]"
+        echo ""
+        echo "Commands:"
+        echo "  send <window> <task_id> \"<description>\"  - Send task to window"
+        echo "  poll <window> [timeout] [task_id]         - Poll for marker response (default timeout: 30s)"
+        echo "  status <window>                           - Get window status"
+        echo ""
+        echo "Options:"
+        echo "  --session <name>  Override default session (default: swarm-claude-default)"
+        echo ""
+        echo "Environment:"
+        echo "  CLAUDE_SESSION  Override default session name"
+        exit 1
+    fi
+
     local subcommand="$1"
     shift
 
@@ -101,12 +149,9 @@ main() {
             status "$1"
             ;;
         *)
-            echo "Usage: $0 <send|poll|status> [args]" >&2
+            echo "Unknown command: $subcommand" >&2
             echo "" >&2
-            echo "Commands:" >&2
-            echo "  send <window> <task_id> \"<description>\"  - Send task to window" >&2
-            echo "  poll <window> [timeout] [task_id]    - Poll for marker response" >&2
-            echo "  status <window>                       - Get window status" >&2
+            echo "Available commands: send, poll, status" >&2
             exit 1
             ;;
     esac
@@ -115,7 +160,12 @@ main() {
 # Run main if called directly (not sourced)
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     if [[ $# -lt 1 ]]; then
-        echo "Usage: $0 <send|poll|status> [args]" >&2
+        echo "Usage: $0 <send|poll|status> [options]" >&2
+        echo "" >&2
+        echo "Options:" >&2
+        echo "  --session <name>  Override default session" >&2
+        echo "" >&2
+        echo "Run '$0 help' for full usage" >&2
         exit 1
     fi
     main "$@"
