@@ -79,14 +79,17 @@ cmd_append() {
     local timestamp
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-    # Ensure state directory exists
-    mkdir -p "$STATE_DIR"
+    # Ensure state directory and locks subdirectory exist
+    mkdir -p "$STATE_DIR/locks"
 
     # Build JSON object
     local json
     if [[ -n "$reason" ]]; then
-        # Escape quotes in reason if present
-        reason_escaped="${reason//\"/\\\"}"
+        # Escape backslashes first, then newlines, then quotes for valid JSON
+        local reason_escaped
+        reason_escaped="${reason//\\/\\\\}"
+        reason_escaped="${reason_escaped//$'\n'/\\n}"
+        reason_escaped="${reason_escaped//\"/\\\"}"
         json="{\"timestamp\":\"$timestamp\",\"type\":\"$type\",\"worker\":\"$worker\",\"task_id\":\"$task_id\",\"reason\":\"$reason_escaped\"}"
     else
         json="{\"timestamp\":\"$timestamp\",\"type\":\"$type\",\"worker\":\"$worker\",\"task_id\":\"$task_id\"}"
@@ -144,12 +147,12 @@ cmd_query() {
         return 0
     fi
 
-    # Grep for lines containing task_id
+    # Grep for lines containing exact task_id field match
     local found=0
     while IFS= read -r line; do
         echo "$line"
         found=1
-    done < <(grep "$task_id" "$STATUS_LOG" 2>/dev/null || true)
+    done < <(grep -E "\"task_id\":\"${task_id}\"" "$STATUS_LOG" 2>/dev/null || true)
 
     if [[ $found -eq 0 ]]; then
         echo "No records found for task_id: $task_id"
