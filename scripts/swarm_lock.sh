@@ -231,7 +231,67 @@ else:
 PY
         ;;
     list)
-        # Placeholder
+        # List all locks
+        if [ ! -d "$LOCK_DIR" ]; then
+            echo "No locks"
+            exit 0
+        fi
+
+        # Use Python to list all .lock files
+        python3 - "$LOCK_DIR" << 'PY'
+import sys
+import os
+import json
+import datetime
+from pathlib import Path
+
+lock_dir = Path(sys.argv[1])
+locks = []
+
+if not lock_dir.exists():
+    print("No locks")
+    sys.exit(0)
+
+for lock_file in lock_dir.glob("*.lock"):
+    try:
+        with open(lock_file, 'r') as f:
+            lock_data = json.load(f)
+
+        task_id = lock_data.get('task_id', lock_file.stem)
+        worker = lock_data.get('worker', 'unknown')
+        acquired_at = lock_data.get('acquired_at', 'unknown')
+        expires_at = lock_data.get('expires_at')
+
+        # Determine status
+        status = "Active"
+        if expires_at:
+            try:
+                expires_at_dt = datetime.datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                if expires_at_dt <= datetime.datetime.now(datetime.timezone.utc):
+                    status = "Expired"
+            except (ValueError, TypeError):
+                pass
+
+        locks.append({
+            'task_id': task_id,
+            'status': status,
+            'worker': worker,
+            'acquired_at': acquired_at,
+            'expires_at': expires_at
+        })
+    except (json.JSONDecodeError, Exception):
+        # Skip corrupted files
+        pass
+
+if not locks:
+    print("No locks")
+else:
+    # Sort by task_id
+    locks.sort(key=lambda x: x['task_id'])
+    for lock in locks:
+        expires_str = f", expires: {lock['expires_at']}" if lock['expires_at'] else ", expires: never"
+        print(f"{lock['task_id']}: {lock['status']} (worker: {lock['worker']}, acquired: {lock['acquired_at']}{expires_str})")
+PY
         ;;
     *)
         echo "Error: Unknown command '$COMMAND'" >&2
