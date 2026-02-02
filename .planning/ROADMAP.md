@@ -72,6 +72,10 @@
 
 **Requirements:** CHK-01
 
+**Plans:** 1 plan
+
+  - [ ] 20-01-PLAN.md -- 创建 swarm_selfcheck.sh 实现系统健康检查 (tmux/脚本/配置/状态目录)
+
 **Success Criteria:**
 
 1. `scripts/swarm_selfcheck.sh` 存在且可执行
