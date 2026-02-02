@@ -70,27 +70,6 @@ detect_worker() {
 }
 
 # =============================================================================
-# Cleanup functions for trap callbacks
-# =============================================================================
-cleanup_on_error() {
-    local exit_code=$1
-    if [[ "$LOCK_ACQUIRED" -eq 1 ]]; then
-        log_warn "Cleaning up after error for $LOCK_TASK_ID"
-        # Write ERROR status - but don't call exit since we're already exiting
-        [[ "$SKIP_STATUS" -eq 0 ]] && "$SCRIPT_DIR/swarm_status_log.sh" append ERROR "$LOCK_WORKER" "$LOCK_TASK_ID" "Error during execution: exit $exit_code" 2>/dev/null || true
-        # Note: Lock release is handled by cleanup_done via EXIT trap
-        # This prevents double-release and ensures consistent cleanup
-    fi
-}
-
-cleanup_done() {
-    if [[ "$LOCK_ACQUIRED" -eq 1 ]]; then
-        "$SCRIPT_DIR/swarm_lock.sh" release "$LOCK_TASK_ID" "$LOCK_WORKER" 2>/dev/null || true
-        LOCK_ACQUIRED=0  # Prevent double-release
-    fi
-}
-
-# =============================================================================
 # Command: acquire-only - Acquire lock and write START status
 # =============================================================================
 cmd_acquire_only() {
@@ -237,6 +216,14 @@ main() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --ttl)
+                if [[ -z "${2:-}" ]]; then
+                    log_error "--ttl requires a value (e.g., --ttl 3600)"
+                    exit 1
+                fi
+                if ! [[ "$2" =~ ^[0-9]+$ ]]; then
+                    log_error "--ttl value must be a positive number (got: $2)"
+                    exit 1
+                fi
                 TTL_SECONDS="$2"
                 shift 2
                 ;;
