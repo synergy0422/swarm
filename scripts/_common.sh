@@ -15,11 +15,12 @@
 # To skip loading _config.sh (for testing defaults), set:
 #   SWARM_NO_CONFIG=1
 # =============================================================================
-_CONFIG_SCRIPT="$(dirname "${BASH_SOURCE[0]}")/_config.sh"
-if [[ "${SWARM_NO_CONFIG:-0}" != "1" ]] && [[ -f "$_CONFIG_SCRIPT" ]]; then
-    source "$_CONFIG_SCRIPT"
+# Determine the directory where this script resides (handles bash -c sourcing)
+_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+if [[ "${SWARM_NO_CONFIG:-0}" != "1" ]] && [[ -f "$_SCRIPT_DIR/_config.sh" ]]; then
+    source "$_SCRIPT_DIR/_config.sh"
 fi
-unset _CONFIG_SCRIPT
+unset _SCRIPT_DIR
 
 # =============================================================================
 # Fallback defaults if _config.sh is missing
