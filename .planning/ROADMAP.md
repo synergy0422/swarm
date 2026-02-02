@@ -6,7 +6,7 @@
 ## Milestones
 
 - ✅ **v1.5** — 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17, shipped 2026-02-02)
-- 🚧 **v1.6** — 长期可维护性 + 流程闭环 (Phases 18-20) ← Current
+- 🚧 **v1.6** — 长期可维护性 + 流程闭环 (Phases 18-21) ← Current
 - 📋 **v1.7+** — UI 面板、P2P/流水线模式 (待规划)
 
 ## v1.6 Phases
@@ -62,19 +62,36 @@
 
 ### Phase 20: 自检与文档
 
-**Goal:** 一键自检脚本 + 更新维护文档
+**Goal:** 一键自检脚本
 
-**Dependencies:** Phase 18 (配置入口), Phase 19 (流程脚本)
+**Dependencies:** Phase 18 (配置入口)
 
-**Requirements:** CHK-01, DOCS-03, DOCS-04
+**Requirements:** CHK-01
 
 **Success Criteria:**
 
 1. `scripts/swarm_selfcheck.sh` 存在且可执行
 2. 自检覆盖: tmux 可用性, 脚本可执行性, 配置可读性
 3. 自检输出清晰: 通过/失败项, 修复建议
-4. README 更新: 脚本总表, 常见问题, 恢复流程
-5. CONTRIBUTING 更新: 恢复流程, 维护指南
+
+---
+
+### Phase 21: 维护与扩展
+
+**Goal:** 完善维护文档结构，支持新人快速上手
+
+**Dependencies:** None (可与 Phase 20 并行或后续执行)
+
+**Requirements:** DOCS-03, DOCS-04, DOCS-05, DOCS-06
+
+**Success Criteria:**
+
+1. README.md 提供清晰导航 (链接到 MAINTENANCE.md, SCRIPTS.md, CHANGELOG.md)
+2. docs/MAINTENANCE.md 包含: 环境恢复、故障排查、紧急流程、维护清单
+3. docs/SCRIPTS.md 包含: 所有脚本索引 (用途/参数/示例)
+4. CHANGELOG.md 包含: v1.0-v1.6 变更摘要
+5. 维护清单包含: tmux 清理、状态目录清理、重建流程
+6. 所有文档结构化、可搜索、可扩展
 
 ---
 

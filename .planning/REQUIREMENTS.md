@@ -19,10 +19,12 @@
 
 - [ ] **CHK-01**: 一键自检脚本 — 新增 `scripts/swarm_selfcheck.sh`，检查 tmux 可用性、脚本可执行性、配置可读性
 
-### 文档更新 (DOCS)
+### 维护与扩展 (DOCS)
 
-- [ ] **DOCS-03**: 更新 README — 脚本总表、常见问题、恢复流程
-- [ ] **DOCS-04**: 更新 CONTRIBUTING — 恢复流程、维护指南
+- [ ] **DOCS-03**: 更新 README — 精简入口，导航链接到 MAINTENANCE.md / SCRIPTS.md / CHANGELOG.md
+- [ ] **DOCS-04**: 创建 docs/MAINTENANCE.md — 环境恢复、故障排查、紧急流程、维护清单
+- [ ] **DOCS-05**: 创建 docs/SCRIPTS.md — 完整脚本索引 (用途/参数/示例)
+- [ ] **DOCS-06**: 创建 CHANGELOG.md — v1.0-v1.6 变更摘要
 
 ## v2 Requirements
 
@@ -66,12 +68,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WRAP-01 | Phase 19 | Pending |
 | WRAP-02 | Phase 19 | Pending |
 | CHK-01 | Phase 20 | Pending |
-| DOCS-03 | Phase 20 | Pending |
-| DOCS-04 | Phase 20 | Pending |
+| DOCS-03 | Phase 21 | Pending |
+| DOCS-04 | Phase 21 | Pending |
+| DOCS-05 | Phase 21 | Pending |
+| DOCS-06 | Phase 21 | Pending |
 
 **Coverage:**
-- v1.6 requirements: 7 total
-- Mapped to phases: 7
+- v1.6 requirements: 10 total
+- Mapped to phases: 10
 - Unmapped: 0 ✓
 
 ---

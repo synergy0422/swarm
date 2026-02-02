@@ -17,14 +17,14 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
 | 15-17 | v1.5 维护性改进 | Complete | 3/3 plans |
-| 18-20 | v1.6 长期可维护性 + 流程闭环 | Planning | 0/3 phases |
+| 18-21 | v1.6 长期可维护性 + 流程闭环 | Planning | 0/4 phases |
 
 ## Current Position
 
 **v1.6 Started** — 2026-02-02
 
-- **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-20)
-- **Focus:** 统一配置入口、任务流程闭环、自检与文档
+- **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-21)
+- **Focus:** 统一配置入口、任务流程闭环、自检与文档、维护文档
 - **Status:** Defining requirements
 - **Next action:** `/gsd:plan-phase 18` after roadmap creation
 
@@ -32,8 +32,8 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 
 | Aspect | Value |
 |--------|-------|
-| Phases | 3 (18, 19, 20) |
-| Requirements | 7 (CFGN-01~02, WRAP-01~02, CHK-01, DOCS-03~04) |
+| Phases | 4 (18, 19, 20, 21) |
+| Requirements | 10 (CFGN-01~02, WRAP-01~02, CHK-01, DOCS-03~06) |
 | Focus | 维护性 + 流程闭环 |
 
 ## Key Decisions
