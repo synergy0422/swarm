@@ -13,17 +13,17 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 |---|-------|--------|----------|
 | 1-10 | v1.0-v1.2 | Complete | 100% |
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
-| 12 | v1.4 状态记录脚本 | Pending | 0/1 plans |
+| 12 | v1.4 状态记录脚本 | Complete | 1/1 plans |
 | 13 | v1.4 任务锁脚本 | Pending | 0/1 plans |
 | 14 | v1.4 集成验证 | Pending | 0/1 plans |
 
 ## Current Position
 
-**v1.4 Started** — 2026-02-02
+**v1.4 In Progress** — 2026-02-02
 
-Status: Plan created, ready for Phase 12
-Last activity: 2026-02-02 — v1.4 milestone started
-Next action: Ready for Phase 12 (状态记录脚本)
+Status: Phase 12 complete, ready for Phase 13
+Last activity: 2026-02-02 — Phase 12 (状态记录脚本) completed
+Next action: Ready for Phase 13 (任务锁脚本)
 
 ## v1.4 Design
 
@@ -67,12 +67,13 @@ Next action: Ready for Phase 12 (状态记录脚本)
 | 09-01 | 20-line content limit per window | Readable output, prevents terminal flood | ✅ Validated |
 | 11-01 | Single-line task delivery via tmux send-keys | Prevents Claude from processing partial messages | ✅ Validated |
 | 11-01 | send-raw subcommand for protocol setup | Protocol messages without [TASK] prefix | ✅ Validated |
+| 12-01 | Shell script for status.log operations | append/tail/query with JSON Lines format | ✅ Validated |
 
 ## Session Continuity
 
 Last session: 2026-02-02
-Resumed: 2026-02-02 — v1.4 milestone started
-Next action: Ready for Phase 12 (状态记录脚本)
+Resumed: 2026-02-02 — Phase 12 completed, v1.4 in progress
+Next action: Ready for Phase 13 (任务锁脚本)
 
 ---
 *State updated: 2026-02-02*

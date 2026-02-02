@@ -14,7 +14,7 @@
 ## v1.4 Phases
 
 <details>
-<summary>⏳ v1.4 共享状态与任务锁 (3 phases, 3 plans)</summary>
+<summary>⏳ v1.4 共享状态与任务锁 (3 phases, 1/3 complete)</summary>
 
 **Goal:** 实现外部脚本可读写共享状态文件与任务锁
 
@@ -23,12 +23,12 @@
 - 仅围绕"共享状态 + 任务锁"展开
 - 不做自动救援、UI/面板、P2P/流水线
 
-**Phase 12:** 状态记录脚本
+**Phase 12:** 状态记录脚本 ✓ COMPLETE
 
 **Requirements:** STATUS-01, STATUS-02
 
 **Plan:**
-- [ ] 12-01-PLAN.md — 创建 swarm_status_log.sh
+- [x] 12-01-PLAN.md — 创建 swarm_status_log.sh
 
 **Success Criteria:**
 1. `swarm_status_log.sh append START worker-0 task-001` 追加有效 JSON 到 status.log
