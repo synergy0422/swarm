@@ -8,12 +8,12 @@
 - ✅ **v1.0 MVP** — Phases 1-6 (14 plans), shipped 2026-01-31
 - ✅ **v1.1** — UAT & CLI 增强, shipped 2026-02-01
 - ✅ **v1.2** — Claude Code CLI 多窗口, shipped 2026-02-01
-- ⏳ **v1.3** — Claude Code 通信协议 (1 phase, 1 plan)
+- ✅ **v1.3** — Claude Code 通信协议 (1 phase, 1 plan), shipped 2026-02-02
 
 ## v1.3 Phases
 
 <details>
-<summary>⏳ v1.3 Claude Code 通信协议 (1 phase, 1 plan)</summary>
+<summary>✅ v1.3 Claude Code 通信协议 (1 phase, 1 plan) — SHIPPED 2026-02-02</summary>
 
 **Goal:** 实现外部脚本通过 tmux send-keys/capture-pane 与 Claude CLI 窗口通信
 
@@ -34,7 +34,7 @@
 5. 不修改任何 swarm/*.py 文件
 
 **Plan:**
-- [x] 11-01-PLAN.md — 通信脚本实现 (4 tasks, Wave 1, 1 checkpoint)
+- [x] 11-01-PLAN.md — 通信脚本实现 (4 tasks, Wave 1, 1 checkpoint) — SHIPPED 2026-02-02
 
 </details>
 

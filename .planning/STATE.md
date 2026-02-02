@@ -12,15 +12,15 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 | # | Phase | Status | Progress |
 |---|-------|--------|----------|
 | 1-10 | v1.0-v1.2 | Complete | 100% |
-| 11 | v1.3 通信协议 | In Progress | 1/1 plans |
+| 11 | v1.3 通信协议 | Complete | 1/1 plans |
 
 ## Current Position
 
-**v1.3 In Progress** — 2026-02-02
+**v1.3 Shipped** — 2026-02-02
 
-Status: Plan 11-01 complete, communication scripts implemented
-Last activity: 2026-02-02 — Completed 11-01-SUMMARY.md
-Next action: Ready for Plan 11-02
+Status: Phase 11 complete, communication scripts implemented and verified
+Last activity: 2026-02-02 — Phase 11 verified, send → ACK → DONE flow validated
+Next action: Ready for v1.4 milestone
 
 ## v1.3 Design
 
@@ -70,8 +70,8 @@ Next action: Ready for Plan 11-02
 ## Session Continuity
 
 Last session: 2026-02-02
-Resumed: 2026-02-02 — Completed Plan 11-01 verification, user approved
-Next action: Ready for Plan 11-02
+Resumed: 2026-02-02 — Completed Phase 11 verification, user approved
+Next action: Ready for v1.4 milestone
 
 ---
 *State updated: 2026-02-02*
