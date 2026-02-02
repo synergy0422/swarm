@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Configuration
-STATE_DIR="${SWARM_STATE_DIR:-/tmp/ai_swarm}"
-STATUS_LOG="$STATE_DIR/status.log"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
+# Use SWARM_STATE_DIR from _common.sh
+STATUS_LOG="$SWARM_STATE_DIR/status.log"
 
 # Valid status types
 VALID_TYPES=("START" "DONE" "ERROR" "WAIT" "HELP" "SKIP")
@@ -53,7 +55,7 @@ validate_type() {
             return 0
         fi
     done
-    echo "Error: Invalid type '$type'. Valid types: ${VALID_TYPES[*]}" >&2
+    log_error "Invalid type '$type'. Valid types: ${VALID_TYPES[*]}"
     return 1
 }
 
@@ -80,7 +82,7 @@ cmd_append() {
     timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
     # Ensure state directory and locks subdirectory exist
-    mkdir -p "$STATE_DIR/locks"
+    mkdir -p "$SWARM_STATE_DIR/locks"
 
     # Build JSON object
     local json
@@ -98,7 +100,7 @@ cmd_append() {
     # Append to log file
     echo "$json" >> "$STATUS_LOG"
 
-    # Print success message
+    # Print success message (data output)
     echo "Appended: $json"
 }
 
