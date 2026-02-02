@@ -25,12 +25,15 @@ source "$SCRIPT_DIR/_common.sh"
 SESSION="${SESSION_NAME}"
 
 # Parse --session flag early
+# Returns the number of arguments consumed (for shift in caller)
 parse_args() {
+    local consumed=0
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --session)
                 if [[ -n "${2:-}" ]]; then
                     SESSION="$2"
+                    consumed=$((consumed + 2))
                     shift 2
                 else
                     log_error "Error: --session requires a value"
@@ -42,6 +45,7 @@ parse_args() {
                 ;;
         esac
     done
+    echo "$consumed"
 }
 
 # Send a task to a specific window
@@ -124,8 +128,9 @@ status() {
 
 # Main entry point
 main() {
-    parse_args "$@"
-    shift $?
+    local consumed
+    consumed=$(parse_args "$@")
+    shift "$consumed"
 
     if [[ $# -lt 1 ]]; then
         echo "Usage: $0 <send|send-raw|poll|status> [options]"

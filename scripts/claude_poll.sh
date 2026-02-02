@@ -55,15 +55,12 @@ while true; do
     log_info "=== $(date '+%Y-%m-%d %H:%M:%S') ==="
 
     for window in $WINDOWS; do
-        local pane_content
         pane_content=$(tmux capture-pane -t "$SESSION:$window" -p | tail -200)
 
         # Check for DONE markers
-        local done_count
         done_count=$(echo "$pane_content" | grep -c '\[DONE\]' || true)
 
         # Check for ERROR markers
-        local error_count
         error_count=$(echo "$pane_content" | grep -c '\[ERROR\]' || true)
 
         # Show status line for this window
