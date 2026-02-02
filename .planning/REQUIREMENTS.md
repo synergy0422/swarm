@@ -17,7 +17,7 @@
 
 ### 自检与文档 (CHK)
 
-- [ ] **CHK-01**: 一键自检脚本 — 新增 `scripts/swarm_selfcheck.sh`，检查 tmux 可用性、脚本可执行性、配置可读性
+- [x] **CHK-01**: 一键自检脚本 — 新增 `scripts/swarm_selfcheck.sh`，检查 tmux 可用性、脚本可执行性、配置可读性
 
 ### 维护与扩展 (DOCS)
 
@@ -67,7 +67,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CFGN-02 | Phase 18 | Complete | |
 | WRAP-01 | Phase 19 | Complete | |
 | WRAP-02 | Phase 19 | Complete | |
-| CHK-01 | Phase 20 | Pending |
+| CHK-01 | Phase 20 | Complete |
 | DOCS-03 | Phase 21 | Pending |
 | DOCS-04 | Phase 21 | Pending |
 | DOCS-05 | Phase 21 | Pending |

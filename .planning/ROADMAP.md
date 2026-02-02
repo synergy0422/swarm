@@ -74,7 +74,7 @@
 
 **Plans:** 1 plan
 
-  - [ ] 20-01-PLAN.md -- 创建 swarm_selfcheck.sh 实现系统健康检查 (tmux/脚本/配置/状态目录)
+  - [x] 20-01-PLAN.md -- 创建 swarm_selfcheck.sh 实现系统健康检查 (tmux/脚本/配置/状态目录) (done)
 
 **Success Criteria:**
 

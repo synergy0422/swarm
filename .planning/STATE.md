@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Phase 20 in progress)
+**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Phase 21 ready to start)
 
 ## Phase Status
 
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 
 - **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-21)
 - **Focus:** 统一配置入口、任务流程闭环、自检与文档、维护文档
-- **Status:** Phase 20-01 complete, ready for 20-02 (if exists) or 21
-- **Next action:** Plan remaining phases (21-maintenance-docs) or continue 20
+- **Status:** Phase 20-01 complete, ready for Phase 21 (maintenance docs)
+- **Next action:** Plan or execute Phase 21-maintenance-docs
 
 ## v1.6 Summary
 
