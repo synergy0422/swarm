@@ -4,12 +4,16 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
 # Use temp directory for complete isolation (no pollution of real data)
+# NOTE: This LOCAL variable takes precedence over SWARM_STATE_DIR from _common.sh
+# e2e tests use isolated temp directory intentionally
 STATE_DIR="$(mktemp -d)"
 export SWARM_STATE_DIR="$STATE_DIR"
 STATUS_LOG="$STATE_DIR/status.log"
 LOCK_DIR="$STATE_DIR/locks"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATUS_SCRIPT="$SCRIPT_DIR/swarm_status_log.sh"
 LOCK_SCRIPT="$SCRIPT_DIR/swarm_lock.sh"
 
@@ -52,19 +56,19 @@ assert_contains() {
     grep -F "$expected" "$file" > /dev/null 2>&1
 }
 
-echo "========================================"
-echo "E2E Integration Test: status.log + locks"
-echo "========================================"
+log_info "========================================"
+log_info "E2E Integration Test: status.log + locks"
+log_info "========================================"
 echo ""
-echo "State directory: $STATE_DIR"
-echo "Test task ID: $TEST_TASK_ID"
+log_info "State directory: $STATE_DIR"
+log_info "Test task ID: $TEST_TASK_ID"
 echo ""
 
 # Check dependencies are executable
-[ -x "$LOCK_SCRIPT" ] || { echo "ERROR: $LOCK_SCRIPT not found or not executable"; exit 1; }
-[ -x "$STATUS_SCRIPT" ] || { echo "ERROR: $STATUS_SCRIPT not found or not executable"; exit 1; }
+[ -x "$LOCK_SCRIPT" ] || { log_error "ERROR: $LOCK_SCRIPT not found or not executable"; exit 1; }
+[ -x "$STATUS_SCRIPT" ] || { log_error "ERROR: $STATUS_SCRIPT not found or not executable"; exit 1; }
 
-echo "Dependencies verified"
+log_info "Dependencies verified"
 echo ""
 
 # Test 1: Acquire lock for unique task_id
