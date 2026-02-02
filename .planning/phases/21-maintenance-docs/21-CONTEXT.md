@@ -22,13 +22,19 @@ Create maintenance documentation to support new contributors and operational sus
 - **Content scope:** Brief - essentials (What is, Core Value, Quick Start, Common Commands, Links to docs)
 - **Quick start:** 5-7 steps detailed (prerequisites: tmux/python, directory setup, environment variables, basic commands, verification)
 - **Commands listed:** 6-8 commands (swarm init, swarm status, swarm selfcheck, swarm master, swarm worker, swarm task-wrap, swarm lock)
+  - **IMPORTANT:** Commands listed as `swarm <verb>-<noun>` format map to scripts `swarm_<verb>_<noun>.sh` (e.g., "task-wrap" → `swarm_task_wrap.sh`)
 - **Sections kept:** Standard set (What, Core Value, Quick Start, Commands, Architecture Overview, Requirements, Troubleshooting Highlights, Links to docs/MAINTENANCE.md, docs/SCRIPTS.md, CHANGELOG.md)
 
 ### docs/MAINTENANCE.md Content
 
 - **Recovery procedures:** Standard recovery (reset state directory, restart tmux, clear locks, handle stuck workers, recover corrupted state, session reset)
 - **Troubleshooting scenarios:** 8-10 common scenarios (tmux issues, script permissions, config errors, state directory problems, lock conflicts, permission errors)
-- **Emergency procedures:** Standard emergency (data backup before emergency, graceful shutdown sequence, kill tmux session, force release locks, stop all workers)
+- **Emergency procedures:** Standard emergency with explicit step order:
+  1. 备份 (Backup) - Copy state directory before any destructive action
+  2. 优雅停 (Graceful Stop) - Send SIGTERM, allow clean shutdown
+  3. 强杀 (Force Kill) - SIGKILL if workers don't stop gracefully
+  4. 清锁 (Clear Locks) - Remove all lock files from state directory
+  5. 复验 (Verify) - Confirm system is in safe state before restart
 - **Maintenance checklist:** Scheduled maintenance (daily/weekly/monthly tasks with time estimates, selfcheck, log review, cleanup)
 
 ### docs/SCRIPTS.md Organization
