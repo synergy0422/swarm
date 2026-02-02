@@ -21,10 +21,10 @@
 
 ### 维护与扩展 (DOCS)
 
-- [ ] **DOCS-03**: 更新 README — 精简入口，导航链接到 MAINTENANCE.md / SCRIPTS.md / CHANGELOG.md
-- [ ] **DOCS-04**: 创建 docs/MAINTENANCE.md — 环境恢复、故障排查、紧急流程、维护清单
-- [ ] **DOCS-05**: 创建 docs/SCRIPTS.md — 完整脚本索引 (用途/参数/示例)
-- [ ] **DOCS-06**: 创建 CHANGELOG.md — v1.0-v1.6 变更摘要
+- [x] **DOCS-03**: 更新 README — 精简入口，导航链接到 MAINTENANCE.md / SCRIPTS.md / CHANGELOG.md
+- [x] **DOCS-04**: 创建 docs/MAINTENANCE.md — 环境恢复、故障排查、紧急流程、维护清单
+- [x] **DOCS-05**: 创建 docs/SCRIPTS.md — 完整脚本索引 (用途/参数/示例)
+- [x] **DOCS-06**: 创建 CHANGELOG.md — v1.0-v1.6 变更摘要
 
 ## v2 Requirements
 
@@ -62,16 +62,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| **v1.6 Active** | | |
+| **v1.6 Complete** | | |
 | CFGN-01 | Phase 18 | Complete | |
 | CFGN-02 | Phase 18 | Complete | |
 | WRAP-01 | Phase 19 | Complete | |
 | WRAP-02 | Phase 19 | Complete | |
 | CHK-01 | Phase 20 | Complete |
-| DOCS-03 | Phase 21 | Pending |
-| DOCS-04 | Phase 21 | Pending |
-| DOCS-05 | Phase 21 | Pending |
-| DOCS-06 | Phase 21 | Pending |
+| DOCS-03 | Phase 21 | Complete |
+| DOCS-04 | Phase 21 | Complete |
+| DOCS-05 | Phase 21 | Complete |
+| DOCS-06 | Phase 21 | Complete |
 
 **Coverage:**
 - v1.6 requirements: 10 total

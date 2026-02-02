@@ -6,7 +6,7 @@
 ## Milestones
 
 - ✅ **v1.5** — 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17, shipped 2026-02-02)
-- 🚧 **v1.6** — 长期可维护性 + 流程闭环 (Phases 18-21) ← Current
+- ✅ **v1.6** — 长期可维护性 + 流程闭环 (Phases 18-21, shipped 2026-02-03) ← Complete
 - 📋 **v1.7+** — UI 面板、P2P/流水线模式 (待规划)
 
 ## v1.6 Phases
@@ -91,6 +91,10 @@
 **Dependencies:** None (可与 Phase 20 并行或后续执行)
 
 **Requirements:** DOCS-03, DOCS-04, DOCS-05, DOCS-06
+
+**Plans:** 1 plan
+
+  - [x] 21-01-PLAN.md -- 创建 MAINTENANCE.md、SCRIPTS.md、CHANGELOG.md，更新 README.md (done)
 
 **Success Criteria:**
 
