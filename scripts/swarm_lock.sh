@@ -173,8 +173,65 @@ PY
             exit $RESULT
         fi
         ;;
-    check|list)
-        # Placeholders
+    check)
+        # check <task_id>
+        if [ $# -lt 1 ]; then
+            echo "Error: 'check' requires <task_id>" >&2
+            echo "Usage: $0 check <task_id>" >&2
+            exit 1
+        fi
+
+        TASK_ID="$1"
+        LOCK_FILE="${LOCK_DIR}/${TASK_ID}.lock"
+
+        if [ ! -f "$LOCK_FILE" ]; then
+            echo "No lock for '$TASK_ID'"
+            exit 0
+        fi
+
+        # Read and check lock status
+        python3 - "$LOCK_FILE" << 'PY'
+import sys
+import json
+import datetime
+
+lock_file = sys.argv[1]
+
+try:
+    with open(lock_file, 'r') as f:
+        lock_data = json.load(f)
+except (json.JSONDecodeError, FileNotFoundError) as e:
+    print(f"Error: Cannot read lock file", file=sys.stderr)
+    sys.exit(1)
+
+# Determine status
+task_id = lock_data.get('task_id', 'unknown')
+worker = lock_data.get('worker', 'unknown')
+acquired_at = lock_data.get('acquired_at', 'unknown')
+expires_at = lock_data.get('expires_at')
+
+# Check if expired
+status = "Active"
+if expires_at:
+    try:
+        expires_at_dt = datetime.datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        if expires_at_dt <= datetime.datetime.now(datetime.timezone.utc):
+            status = "Expired"
+    except (ValueError, TypeError):
+        pass
+
+# Output
+print(f"Lock for '{task_id}': {status}")
+print(f"  Worker: {worker}")
+print(f"  Acquired: {acquired_at}")
+if expires_at:
+    print(f"  Expires: {expires_at}")
+else:
+    print(f"  Expires: never")
+PY
+        ;;
+    list)
+        # Placeholder
         ;;
     *)
         echo "Error: Unknown command '$COMMAND'" >&2
