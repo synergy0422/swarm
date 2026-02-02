@@ -30,13 +30,42 @@
 
 **Requirements:** DOCS-01
 
+**Design Specs:**
+
+1. **Source Guard** (prevent direct execution):
+   ```bash
+   # In _common.sh
+   [[ "${BASH_SOURCE[0]}" != "${0}" ]] || exit 1
+   ```
+   ```bash
+   # In each script
+   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+   source "$SCRIPT_DIR/_common.sh"
+   ```
+
+2. **Unified Logging Functions**:
+   ```bash
+   log_info() { echo "[$(date +%H:%M:%S)][INFO] $*" >&2; }
+   log_warn() { echo "[$(date +%H:%M:%S)][WARN] $*" >&2; }
+   log_error() { echo "[$(date +%H:%M:%S)][ERROR] $*" >&2; }
+   ```
+   - Format: `[HH:MM:SS][LEVEL] message`
+   - All scripts use these functions (no raw echo for status)
+
+3. **Environment Variable Compatibility**:
+   ```bash
+   SWARM_STATE_DIR="${SWARM_STATE_DIR:-/tmp/ai_swarm}"
+   SESSION_NAME="${CLAUDE_SESSION:-${SESSION_NAME:-swarm-claude-default}}"
+   export SWARM_STATE_DIR SESSION_NAME
+   ```
+
 **Success Criteria:**
 
-1. `scripts/_common.sh` exists and is executable
-2. All other scripts source `scripts/_common.sh` at startup (v1.3/v1.4 scripts explicitly included)
+1. `scripts/_common.sh` exists and is executable (with source guard)
+2. All 6 existing scripts source `scripts/_common.sh` at startup
 3. `SWARM_STATE_DIR` is exported and used by all scripts that need it
-4. `SESSION_NAME` is exported and used by all scripts that need it
-5. Output format is consistent across all scripts (timestamp, level prefixes)
+4. `SESSION_NAME` is exported (with CLAUDE_SESSION fallback for v1.3 compat)
+5. Output format is consistent via log_info/log_warn/log_error functions
 6. **Existing scripts modified**: claude_comm.sh, claude_poll.sh, claude_status.sh, swarm_status_log.sh, swarm_lock.sh, swarm_e2e_test.sh
 
 ---
