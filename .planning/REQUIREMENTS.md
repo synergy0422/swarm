@@ -68,25 +68,25 @@
 
 ### Active
 
-**v1.5 - 状态广播闭环 + 自动救援 + 维护性改进**
+**v1.5 - 状态广播闭环 + 自动救援 + 维护性改进 (Shipped 2026-02-02)**
 
 #### 状态广播 (AUTO)
 
-- [ ] **AUTO-01**: Worker 状态广播脚本 — START/DONE/ERROR/WAIT 自动记录
-- [ ] **AUTO-02**: 状态记录格式 — JSON Lines (task_id, status, worker, timestamp)
-- [ ] **AUTO-03**: 自动触发机制 — Worker 收到任务/完成任务/遇到错误时自动记录
+- [x] **AUTO-01**: Worker 状态广播脚本 — START/DONE/ERROR/WAIT 自动记录
+- [x] **AUTO-02**: 状态记录格式 — JSON Lines (task_id, status, worker, timestamp)
+- [x] **AUTO-03**: 自动触发机制 — Worker 收到任务/完成任务/遇到错误时自动记录
 
 #### 自动救援 (RESC)
 
-- [ ] **RESC-01**: 自动救援脚本 — 检测 [y/n]/Press Enter → 自动 send-keys Enter
-- [ ] **RESC-02**: 模式检测 — 识别 confirm, continue, proceed 等确认提示
-- [ ] **RESC-03**: 30s 冷却机制 — 同一窗口 30s 内不重复确认
-- [ ] **RESC-04**: 危险命令黑名单 — 检测 rm -rf, DROP 等立即告警不自动确认
+- [x] **RESC-01**: 自动救援脚本 — 检测 [y/n]/Press Enter → 自动 send-keys Enter
+- [x] **RESC-02**: 模式检测 — 识别 confirm, continue, proceed 等确认提示
+- [x] **RESC-03**: 30s 冷却机制 — 同一窗口 30s 内不重复确认
+- [x] **RESC-04**: 危险命令黑名单 — 检测 rm -rf, DROP 等立即告警不自动确认
 
 #### 维护性 (DOCS)
 
 - [x] **DOCS-01**: `scripts/_common.sh` — 统一 SWARM_STATE_DIR / SESSION / 输出格式
-- [ ] **DOCS-02**: `docs/CONTRIBUTING.md` — 脚本规范、测试规范
+- [x] **DOCS-02**: `CONTRIBUTING.md` — 脚本规范、测试规范
 
 ### Out of Scope
 
@@ -97,27 +97,25 @@
 
 ## Current State
 
-**v1.5 In Progress** — 2026-02-02
+**v1.5 Complete** — 2026-02-02
 
-- **Milestone:** 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17)
-- **Focus:** Roadmap created, ready for planning
-- **Status:** 3 phases, 9 requirements mapped
+- **Milestone:** 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17) ✓
+- **Status:** 9/9 requirements delivered
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| **v1.5 Active** | | |
+| **v1.5 Complete** | | |
 | DOCS-01 | Phase 15 | ✅ Done |
-| RESC-01 | Phase 16 | Pending |
-| RESC-02 | Phase 16 | Pending |
-| RESC-03 | Phase 16 | Pending |
-| RESC-04 | Phase 16 | Pending |
-| AUTO-01 | Phase 17 | Pending |
-| AUTO-02 | Phase 17 | Pending |
-| AUTO-03 | Phase 17 | Pending |
-| DOCS-02 | Phase 17 | Pending |
-| **v1.4 Complete** | | |
+| RESC-01 | Phase 16 | ✅ Done |
+| RESC-02 | Phase 16 | ✅ Done |
+| RESC-03 | Phase 16 | ✅ Done |
+| RESC-04 | Phase 16 | ✅ Done |
+| AUTO-01 | Phase 17 | ✅ Done |
+| AUTO-02 | Phase 17 | ✅ Done |
+| AUTO-03 | Phase 17 | ✅ Done |
+| DOCS-02 | Phase 17 | ✅ Done |
 | STATUS-01 | Phase 12 | ✅ Done |
 | STATUS-02 | Phase 12 | ✅ Done |
 | LOCK-01 | Phase 13 | ✅ Done |
