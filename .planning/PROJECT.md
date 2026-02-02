@@ -43,12 +43,29 @@
 - [x] **CLAI-02**: Master 启动配置 — master 窗口也启动 Claude CLI
 - [x] **CLAI-03**: 启动顺序控制 — 先创建窗口，再依次启动
 
+**v1.3 - Claude Code 通信协议 (Shipped 2026-02-02)**
+
+- [x] **SCRIPT-01**: `claude_comm.sh` — tmux send-keys / capture-pane 封装脚本
+- [x] **SCRIPT-02**: `claude_poll.sh` — 轮询脚本，定期扫描各窗口状态
+- [x] **SCRIPT-03**: `claude_status.sh` — 快速检查各窗口状态
+- [x] **COMM-01**: 标记词定义 — `[TASK]`, `[DONE]`, `[ERROR]`, `[WAIT]`, `[ACK]`
+- [x] **COMM-02**: 任务消息格式 — `[TASK] {task_id} {description}` (单行)
+- [x] **COMM-03**: 状态消息格式 — `[DONE|ERROR|WAIT|HELP] {task_id}`
+- [x] **SEND-01**: `send <window> <task_id> "<description>"` — 发送任务
+- [x] **SEND-02**: 发送前插入 `[TASK]` 标记行
+- [x] **POLL-01**: `poll <window> [--timeout N]` — 捕获窗口输出
+- [x] **POLL-02**: 识别 `[DONE]`, `[ERROR]`, `[WAIT]`, `[HELP]`, `[ACK]`
+- [x] **POLL-03**: 超时参数支持 (默认 30 秒)
+- [x] **TEST-01**: 手动验收 — send → ACK → DONE 验证通过
+
 ### Active
 
-**v1.3 - 通信协议（待规划）**
+**v1.4 - 待规划**
 
-- Master ↔ Worker 消息传递协议
-- COMM-01 ~ COMM-04, TEST-03
+- Pipeline 模式（任务链式依赖）
+- P2P 对等模式（Worker 间直接通信）
+- 错误场景处理（[ERROR] 响应）
+- 并发测试验证
 
 ### Out of Scope
 
@@ -59,15 +76,13 @@
 
 ## Current State
 
-**v1.2 Shipped** — 2026-02-01
+**v1.3 Shipped** — 2026-02-02
 
-- **Codebase:** 4,315 LOC Python, 14 source files, 17 test files
-- **Tests:** 207 tests passing (v1.0) + 15 new tests (v1.1)
-- **Tech Stack:** Python 3.12+, tmux 3.4, libtmux 0.53.0, requests 2.32.5
-- **CLI Commands:** swarm init, up, master, worker, status, status --panes, down
-- **Master Coordination:** Scanning, auto-rescue, task dispatch with locks
-- **New:** run_claude_swarm.sh — 4 Claude CLI 窗口启动脚本
-- **v1.3 Status:** 待规划（通信协议）
+- **Codebase:** 4,315 LOC Python + 317 LOC Shell
+- **Scripts:** claude_comm.sh, claude_poll.sh, claude_status.sh
+- **Features:** 外部脚本可通过 tmux 控制 Claude CLI
+- **Protocol:** [TASK]/[ACK]/[DONE]/[ERROR]/[WAIT]/[HELP] 标记
+- **v1.4 Status:** Ready to plan
 
 ## Context
 
@@ -93,26 +108,10 @@
 | 状态广播协议 | JSON Lines 格式，易于解析 | ✅ Validated |
 | Master-Worker 优先 | 最常用模式，MVP 阶段最实用 | ✅ Validated |
 | 危险命令保守 | 防止 AI 误操作导致数据丢失 | ✅ Validated |
+| 单行任务发送 | 防止 Claude 误解多行消息 | ✅ Validated |
+| send-raw 子命令 | 协议设置消息不加 [TASK] 前缀 | ✅ Validated |
+| 行首 marker 匹配 | 避免描述中的 marker 误匹配 | ✅ Validated |
 
 ---
 
-## Current Milestone: v1.3 Claude Code 4 窗口通信协议
-
-**Goal:** 实现外部脚本通过 tmux send-keys/capture-pane 与 Claude CLI 窗口通信
-
-**设计原则（v1.3 约束）：**
-- **仅用 tmux send-keys / capture-pane** — 不新增 Python 通信模块
-- **不改 core 代码** — 不修改 swarm/master.py, swarm/tmux_manager.py
-- **外部脚本控制** — 新增辅助脚本（bash 或 Python 轻量工具）
-- **保持 4 窗口架构** — master + worker-0/1/2 运行 Claude CLI
-
-**Target features:**
-- **COMM-01**: 脚本 `claude_comm.sh` — send-keys + capture-pane 封装
-- **COMM-02**: 标记词协议 — `[TASK]`, `[DONE]`, `[ERROR]`, `[WAIT]`, `[ACK]`
-- **COMM-03**: 任务发送 — `claude_comm.sh send <window> <task_id> "<description>"`
-- **COMM-04**: 状态读取 — `claude_comm.sh poll <window> [--timeout 30]`
-- **COMM-05**: 轮询脚本 — `claude_poll.sh` 定期扫描各窗口状态
-
----
-
-*Last updated: 2026-02-01 after v1.3 constraint correction*
+*Last updated: 2026-02-02 after v1.3 milestone completion*

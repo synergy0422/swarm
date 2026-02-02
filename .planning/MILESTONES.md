@@ -89,4 +89,47 @@
 
 ---
 
-*Milestone completed: 2026-02-01*
+## v1.3 Claude Code 通信协议 (Shipped: 2026-02-02)
+
+**Delivered:** External scripts that control Claude CLI via tmux send-keys/capture-pane, with [TASK]/[ACK]/[DONE] protocol markers.
+
+**Phases completed:** 11 (1 plan total)
+
+**Key accomplishments:**
+
+1. 通信脚本套件 — Created 3 executable bash scripts:
+   - `claude_comm.sh`: send / send-raw / poll / status commands
+   - `claude_poll.sh`: continuous monitoring of worker-0/1/2
+   - `claude_status.sh`: quick status check for all 4 windows
+
+2. 协议实现 — Implemented marker-based communication:
+   - `[TASK]` for task delivery
+   - `[ACK]` for task acknowledgment
+   - `[DONE]` for completion
+   - `[ERROR]`, `[WAIT]`, `[HELP]` for status reporting
+
+3. Bug 修复 — During execution, fixed critical issues:
+   - Multi-line send → single-line (prevents Claude misinterpretation)
+   - Added `send-raw` for protocol setup messages
+   - Line-start marker matching with `tail -1` for latest status
+
+4. 用户验收 — Manual verification passed:
+   - send → ACK: ✓ (poll returns `[ACK] task-001`)
+   - ACK → DONE: ✓ (poll returns `[DONE] task-001`)
+   - No swarm/*.py files modified
+
+**Stats:**
+
+- 3 shell scripts created: 317 lines total
+- 1 phase, 1 plan, ~10 commits
+- 1 day from start to ship (2026-02-02)
+- 11/14 v1.3 requirements complete (2 deferred: error/concurrency tests)
+
+**Git range:** `feat(11-01): create claude_comm.sh` → `docs(phase-11): complete v1.3`
+
+**What's next:**
+- v1.4: Pipeline 模式, P2P 对等模式, 错误场景处理
+
+---
+
+*Milestone completed: 2026-02-02*

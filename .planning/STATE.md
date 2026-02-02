@@ -2,10 +2,10 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-01)
+See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.3 通信协议 — 外部脚本控制 + tmux only
+**Current focus:** v1.4 待规划
 
 ## Phase Status
 
@@ -19,7 +19,7 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 **v1.3 Shipped** — 2026-02-02
 
 Status: Phase 11 complete, communication scripts implemented and verified
-Last activity: 2026-02-02 — Phase 11 verified, send → ACK → DONE flow validated
+Last activity: 2026-02-02 — v1.3 milestone completed
 Next action: Ready for v1.4 milestone
 
 ## v1.3 Design
@@ -70,7 +70,7 @@ Next action: Ready for v1.4 milestone
 ## Session Continuity
 
 Last session: 2026-02-02
-Resumed: 2026-02-02 — Completed Phase 11 verification, user approved
+Resumed: 2026-02-02 — v1.3 milestone completed
 Next action: Ready for v1.4 milestone
 
 ---
