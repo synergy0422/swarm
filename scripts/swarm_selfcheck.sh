@@ -84,15 +84,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Define script lists
-CORE_SCRIPTS=(
-    "$SCRIPT_DIR/swarm_lock.sh"
-    "$SCRIPT_DIR/swarm_status_log.sh"
-    "$SCRIPT_DIR/swarm_task_wrap.sh"
-    "$SCRIPT_DIR/sworm-start.sh"
-    "$SCRIPT_DIR/sworm-stop.sh"
-    "$SCRIPT_DIR/worker.sh"
-)
+# Dynamically discover core scripts (exclude config files and self)
+SCRIPTS_DIR="$SCRIPT_DIR"
+mapfile -t CORE_SCRIPTS < <(find "$SCRIPTS_DIR" -maxdepth 1 -name "*.sh" -type f | grep -v -E "(_config\.sh|_common\.sh|swarm_selfcheck\.sh)" | sort)
 
 CONFIG_FILES=(
     "$SCRIPT_DIR/_config.sh"
@@ -181,7 +175,7 @@ check_config() {
     return $failed
 }
 
-# Check state directory structure
+# Check state directory structure (read-only checks)
 check_state_dir() {
     print_info "Checking state directory structure..."
 
@@ -192,48 +186,54 @@ check_state_dir() {
 
     local failed=0
 
-    # Check if we can create locks directory
+    # Check if state directory exists
+    if [[ -d "$SWARM_STATE_DIR" ]]; then
+        print_pass "State directory exists ($SWARM_STATE_DIR)"
+    else
+        print_fail "State directory does not exist: $SWARM_STATE_DIR"
+        print_info "Create it with: mkdir -p $SWARM_STATE_DIR"
+        failed=1
+    fi
+
+    # Check if state directory is writable (without modifying)
+    if [[ -d "$SWARM_STATE_DIR" ]]; then
+        if [[ -w "$SWARM_STATE_DIR" ]]; then
+            print_pass "State directory is writable ($SWARM_STATE_DIR)"
+        else
+            print_fail "State directory is not writable: $SWARM_STATE_DIR"
+            print_info "Fix permissions: chmod u+w $SWARM_STATE_DIR"
+            failed=1
+        fi
+    fi
+
+    # Check if locks directory exists and is writable
     local lock_dir="$SWARM_STATE_DIR/locks"
     if [[ -d "$lock_dir" ]]; then
         if [[ -w "$lock_dir" ]]; then
-            print_pass "Locks directory is writable ($lock_dir)"
+            print_pass "Locks directory exists and is writable ($lock_dir)"
         else
             print_fail "Locks directory exists but is not writable: $lock_dir"
             print_info "Fix permissions: chmod u+w $lock_dir"
             failed=1
         fi
     else
-        # Try to create it
-        if mkdir -p "$lock_dir" 2>/dev/null; then
-            print_pass "Locks directory created ($lock_dir)"
-        else
-            print_fail "Cannot create locks directory: $lock_dir"
-            print_info "Check parent directory permissions"
-            failed=1
-        fi
+        print_info "Locks directory does not exist ($lock_dir)"
+        print_info "It will be created when needed"
     fi
 
-    # Check if we can write to status.log
+    # Check if status.log is writable (if it exists)
     local status_file="$SWARM_STATE_DIR/status.log"
     if [[ -f "$status_file" ]]; then
         if [[ -w "$status_file" ]]; then
-            print_pass "Status log is writable ($status_file)"
+            print_pass "Status log exists and is writable ($status_file)"
         else
             print_fail "Status log exists but is not writable: $status_file"
             print_info "Fix permissions: chmod u+w $status_file"
             failed=1
         fi
     else
-        # Try to create it
-        if touch "$status_file" 2>/dev/null; then
-            print_pass "Status log created ($status_file)"
-            # Clean up the empty file we just created
-            rm -f "$status_file" 2>/dev/null || true
-        else
-            print_fail "Cannot create status log: $status_file"
-            print_info "Check directory permissions"
-            failed=1
-        fi
+        print_info "Status log does not exist ($status_file)"
+        print_info "It will be created when needed"
     fi
 
     return $failed
