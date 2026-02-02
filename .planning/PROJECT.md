@@ -80,7 +80,15 @@
 
 ### Active
 
-None — use `/gsd:new-milestone` to define next milestone
+**v1.6 - 长期可维护性 + 流程闭环 (Planning)**
+
+- [ ] **CFGN-01**: 统一配置入口 (SESSION_NAME, SWARM_STATE_DIR, WORKERS, LOG_LEVEL)
+- [ ] **CFGN-02**: 所有脚本统一读取配置
+- [ ] **WRAP-01**: 任务流程包装脚本 (lock → START → execute → DONE/ERROR → release)
+- [ ] **WRAP-02**: 失败场景处理 (SKIP/WAIT 状态)
+- [ ] **CHK-01**: 一键自检脚本 (tmux, 脚本, 配置)
+- [ ] **DOCS-03**: 更新 README (脚本总表, 常见问题)
+- [ ] **DOCS-04**: 更新 CONTRIBUTING (恢复流程)
 
 ### Out of Scope
 
@@ -91,22 +99,38 @@ None — use `/gsd:new-milestone` to define next milestone
 
 ## Current State
 
-**v1.5 Complete** — 2026-02-02
+**v1.6 Started** — 2026-02-02
 
-- **Milestone:** 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17)
-- **Delivered:**
-  - `_common.sh` — unified configuration and logging
-  - `claude_auto_rescue.sh` — auto-confirmation for prompts
-  - `swarm_broadcast.sh` — status broadcasting wrapper
-  - `CONTRIBUTING.md` — script conventions documentation
-- **Scripts:** 10 shell scripts (1400+ LOC total)
-- **Verification:** All components passed code review
+- **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-20)
+- **Focus:** 统一配置入口、任务流程闭环、自检与文档
+- **Scripts:** 10 existing scripts (1400+ LOC), 3 new scripts planned
+- **Status:** Requirements definition in progress
 
-## Next Milestone
+## Current Milestone: v1.6 长期可维护性 + 流程闭环
 
-Starting Phase 18 — 待定义
+**Goal:** 提升系统可维护性，闭环任务流程，完善自检与文档
 
-Run `/gsd:new-milestone` to begin the next milestone planning cycle.
+**Target features:**
+
+1. **统一配置入口**
+   - 新增 `scripts/_config.sh` 或 `swarm.env`
+   - 所有脚本统一读取: SESSION_NAME, SWARM_STATE_DIR, WORKERS 列表, LOG_LEVEL
+
+2. **任务流程闭环**
+   - 新增 `scripts/swarm_task_wrap.sh`
+   - 流程: acquire lock → write START → execute → write DONE/ERROR → release
+   - 失败场景: acquire 失败 → write SKIP/WAIT
+
+3. **一键自检与维护文档**
+   - 新增 `scripts/swarm_selfcheck.sh`
+   - 检查: tmux 可用性, 脚本可执行性, 配置可读性
+   - 更新 README/CONTRIBUTING: 脚本总表, 常见问题, 恢复流程
+
+**Strict scope:**
+- 只做维护性与流程闭环
+- 不做 UI/布局 (留到 v1.7)
+- 不做 P2P/流水线/Web
+- 不改 swarm/*.py (若必须改, 需说明理由)
 
 ## Context
 
@@ -141,4 +165,4 @@ Run `/gsd:new-milestone` to begin the next milestone planning cycle.
 
 ---
 
-*Last updated: 2026-02-02 after v1.5 milestone*
+*Last updated: 2026-02-02 after v1.5 milestone, v1.6 started*

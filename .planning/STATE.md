@@ -2,10 +2,10 @@
 
 ## Project Reference
 
-See: .planning/REQUIREMENTS.md (updated 2026-02-02)
+See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.5 - Phase 16 complete, Status Broadcast next (17)
+**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Defining requirements)
 
 ## Phase Status
 
@@ -16,25 +16,25 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 | 9-10 | v1.2 | Complete | 2/2 plans |
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
-| 15 | v1.5 _common.sh | Complete | 1/1 plans |
-| 16 | v1.5 Auto-Rescue | Complete | 1/1 plan |
-| 17 | v1.5 Status Broadcast | Complete | 1/1 plan |
+| 15-17 | v1.5 维护性改进 | Complete | 3/3 plans |
+| 18-20 | v1.6 长期可维护性 + 流程闭环 | Planning | 0/3 phases |
 
 ## Current Position
 
-**v1.5 Complete** — 2026-02-02
+**v1.6 Started** — 2026-02-02
 
-- **Milestone:** Phase 17-01 complete, Status Broadcast script delivered
-- **Focus:** v1.5 milestone is now complete (3/3 phases: _common.sh, Auto-Rescue, Status Broadcast)
-- **Status:** 10 scripts now share common configuration and logging
+- **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-20)
+- **Focus:** 统一配置入口、任务流程闭环、自检与文档
+- **Status:** Defining requirements
+- **Next action:** `/gsd:plan-phase 18` after roadmap creation
 
-## v1.5 Summary
+## v1.6 Summary
 
 | Aspect | Value |
 |--------|-------|
-| Phases | 3 (15, 16, 17) |
-| Requirements | 9 (AUTO-01~03, RESC-01~04, DOCS-01~02) |
-| Depth | Standard |
+| Phases | 3 (18, 19, 20) |
+| Requirements | 7 (CFGN-01~02, WRAP-01~02, CHK-01, DOCS-03~04) |
+| Focus | 维护性 + 流程闭环 |
 
 ## Key Decisions
 
@@ -89,10 +89,10 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 ## Session Continuity
 
 Last session: 2026-02-02
-Completed: Phase 17-01 (swarm_broadcast.sh and CONTRIBUTING.md delivered)
-Current: v1.5 milestone complete (3/3 phases)
-Next action: `/gsd:plan-phase 18` for next feature phase
+Completed: v1.5 milestone (3/3 phases: _common.sh, Auto-Rescue, Status Broadcast)
+Current: v1.6 milestone started (Defining requirements)
+Next action: Create requirements → roadmap → plan phases
 
 ---
 
-*State updated: 2026-02-02*
+*State updated: 2026-02-02 after v1.5 milestone completion*
