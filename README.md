@@ -123,6 +123,42 @@ pytest --cov=swarm --cov-report=html
 flake8 swarm/
 ```
 
+## Maintenance Guide
+
+Complete maintenance documentation available at [docs/MAINTENANCE.md](docs/MAINTENANCE.md):
+
+- Environment recovery procedures
+- Troubleshooting guide
+- Emergency procedures (5-step recovery)
+- Maintenance checklist
+
+## Script Index
+
+All script documentation available at [docs/SCRIPTS.md](docs/SCRIPTS.md):
+
+- Configuration scripts (_config.sh, _common.sh)
+- Communication scripts (claude_comm.sh, claude_poll.sh, claude_status.sh, claude_auto_rescue.sh)
+- Task management scripts (swarm_task_wrap.sh, swarm_lock.sh, swarm_broadcast.sh)
+- System tools (swarm_selfcheck.sh)
+- Utility scripts (swarm_status_log.sh)
+
+## Command Mapping
+
+Note: `claude status` is a Claude CLI command, not a swarm command. Swarm commands use `swarm <verb>` format.
+
+| Command | Script File | Description |
+|---------|-------------|-------------|
+| `claude status` | `claude_status.sh` | Quick status check for all windows |
+| `swarm task-wrap` | `swarm_task_wrap.sh` | Task lifecycle wrapper |
+| `swarm selfcheck` | `swarm_selfcheck.sh` | System health check |
+| `swarm lock` | `swarm_lock.sh` | Task lock operations |
+| `swarm broadcast` | `swarm_broadcast.sh` | Status broadcasting |
+| `swarm rescue` | `claude_auto_rescue.sh` | Auto-confirm prompts |
+
+## Changelog
+
+Version history available at [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
 MIT License - See LICENSE file for details.
