@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.4 待规划
+**Current focus:** v1.4 共享状态与任务锁
 
 ## Phase Status
 
@@ -13,24 +13,25 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 |---|-------|--------|----------|
 | 1-10 | v1.0-v1.2 | Complete | 100% |
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
+| 12 | v1.4 状态记录脚本 | Pending | 0/1 plans |
+| 13 | v1.4 任务锁脚本 | Pending | 0/1 plans |
+| 14 | v1.4 集成验证 | Pending | 0/1 plans |
 
 ## Current Position
 
-**v1.3 Shipped** — 2026-02-02
+**v1.4 Started** — 2026-02-02
 
-Status: Phase 11 complete, communication scripts implemented and verified
-Last activity: 2026-02-02 — v1.3 milestone completed
-Next action: Ready for v1.4 milestone
+Status: Plan created, ready for Phase 12
+Last activity: 2026-02-02 — v1.4 milestone started
+Next action: Ready for Phase 12 (状态记录脚本)
 
-## v1.3 Design
+## v1.4 Design
 
 | Aspect | Decision |
 |--------|----------|
-| Control Mode | External script (not Python module) |
-| Mechanism | tmux send-keys + capture-pane only |
-| Markers | [TASK], [DONE], [ERROR], [WAIT], [ACK] |
-| Scripts | claude_comm.sh (send/poll), claude_poll.sh (monitor) |
-| No Changes | swarm/master.py, swarm/tmux_manager.py |
+| Approach | 脚本化实现（不改 swarm/*.py） |
+| Focus | status.log + locks/ |
+| Plan | docs/plans/2026-02-02-v1.4-status-locks.md |
 
 ## Key Decisions
 
@@ -70,8 +71,8 @@ Next action: Ready for v1.4 milestone
 ## Session Continuity
 
 Last session: 2026-02-02
-Resumed: 2026-02-02 — v1.3 milestone completed
-Next action: Ready for v1.4 milestone
+Resumed: 2026-02-02 — v1.4 milestone started
+Next action: Ready for Phase 12 (状态记录脚本)
 
 ---
 *State updated: 2026-02-02*

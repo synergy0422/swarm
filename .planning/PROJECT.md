@@ -60,12 +60,13 @@
 
 ### Active
 
-**v1.4 - 待规划**
+**v1.4 - 共享状态与任务锁**
 
-- Pipeline 模式（任务链式依赖）
-- P2P 对等模式（Worker 间直接通信）
-- 错误场景处理（[ERROR] 响应）
-- 并发测试验证
+- STATUS-01: 状态记录脚本 (`swarm_status_log.sh append/tail/query`)
+- STATUS-02: status.log 格式规范（JSON Lines）
+- LOCK-01: 任务锁脚本 (`swarm_lock.sh acquire/release/check/list`)
+- LOCK-02: 锁原子获取机制
+- LOCK-03: 锁释放与验证
 
 ### Out of Scope
 
@@ -76,13 +77,28 @@
 
 ## Current State
 
-**v1.3 Shipped** — 2026-02-02
+**v1.4 Started** — 2026-02-02
 
-- **Codebase:** 4,315 LOC Python + 317 LOC Shell
-- **Scripts:** claude_comm.sh, claude_poll.sh, claude_status.sh
-- **Features:** 外部脚本可通过 tmux 控制 Claude CLI
-- **Protocol:** [TASK]/[ACK]/[DONE]/[ERROR]/[WAIT]/[HELP] 标记
-- **v1.4 Status:** Ready to plan
+- **Focus:** 共享状态文件 (status.log) + 任务锁机制 (locks/)
+- **Scripts:** swarm_status_log.sh, swarm_lock.sh
+- **Plan:** docs/plans/2026-02-02-v1.4-status-locks.md
+- **v1.4 Status:** Ready to plan phases
+
+## Current Milestone: v1.4 共享状态与任务锁
+
+**Goal:** 实现外部脚本可读写共享状态文件与任务锁
+
+**Target features:**
+- **STATUS-01**: `swarm_status_log.sh` — append/tail/query status.log
+- **STATUS-02**: status.log JSON Lines 格式
+- **LOCK-01**: `swarm_lock.sh` — acquire/release/check/list
+- **LOCK-02**: 原子锁获取（O_CREAT|O_EXCL）
+- **LOCK-03**: 锁验证与释放
+
+**约束：**
+- 优先脚本化实现，尽量不改 swarm/*.py
+- 仅围绕"共享状态 + 任务锁"展开
+- 不做自动救援、UI/面板、P2P/流水线
 
 ## Context
 
@@ -114,4 +130,4 @@
 
 ---
 
-*Last updated: 2026-02-02 after v1.3 milestone completion*
+*Last updated: 2026-02-02 after v1.4 milestone start*
