@@ -1,12 +1,41 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 # Claude Swarm Continuous Monitor
 # Continuously monitors worker windows for [DONE] and [ERROR] markers
 # Press Ctrl+C to stop
+#
+# Environment:
+#   CLAUDE_SESSION - Override default session name (default: swarm-claude-default)
+#
+# Usage:
+#   CLAUDE_SESSION=custom-session ./claude_poll.sh
+#   ./claude_poll.sh --session custom-session
 
-SESSION="swarm-claude-default"
+# Default session name
+SESSION="${CLAUDE_SESSION:-swarm-claude-default}"
 WINDOWS="worker-0 worker-1 worker-2"
 POLL_INTERVAL=5
+
+# Parse --session flag
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --session)
+            if [[ -n "${2:-}" ]]; then
+                SESSION="$2"
+                shift 2
+            else
+                echo "Error: --session requires a value" >&2
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            echo "Usage: $0 [--session <name>]" >&2
+            exit 1
+            ;;
+    esac
+done
 
 echo "Starting Claude Swarm monitor..."
 echo "Session: $SESSION"
