@@ -78,17 +78,24 @@
 - [x] **LOCK-02**: 锁原子获取机制（O_CREAT|O_EXCL）
 - [x] **LOCK-03**: 锁释放与验证（严格 owner 验证）
 
+**v1.6 - 长期可维护性 + 流程闭环 (Shipped 2026-02-03)**
+
+- [x] **CFGN-01**: 统一配置入口 — _config.sh 管理 SESSION_NAME/SWARM_STATE_DIR/WORKERS/LOG_LEVEL
+- [x] **CFGN-02**: 所有脚本统一读取配置 — _common.sh source _config.sh
+- [x] **WRAP-01**: 任务流程包装脚本 — lock → START → execute → DONE/ERROR → release
+- [x] **WRAP-02**: 失败场景处理 — SKIP/WAIT 状态，锁释放机制
+- [x] **CHK-01**: 一键自检脚本 — tmux/脚本/配置/状态目录检查
+- [x] **DOCS-03**: 更新 README — 导航链接到 MAINTENANCE.md/SCRIPTS.md/CHANGELOG.md
+- [x] **DOCS-04**: 创建 docs/MAINTENANCE.md — 环境恢复、故障排查、紧急流程、维护清单
+- [x] **DOCS-05**: 创建 docs/SCRIPTS.md — 完整脚本索引 (用途/参数/示例)
+- [x] **DOCS-06**: 创建 CHANGELOG.md — v1.0-v1.6 变更摘要
+
 ### Active
 
-**v1.6 - 长期可维护性 + 流程闭环 (Planning)**
+**v1.7+ - 待规划 (UI 面板、P2P/流水线模式)**
 
-- [ ] **CFGN-01**: 统一配置入口 (SESSION_NAME, SWARM_STATE_DIR, WORKERS, LOG_LEVEL)
-- [ ] **CFGN-02**: 所有脚本统一读取配置
-- [ ] **WRAP-01**: 任务流程包装脚本 (lock → START → execute → DONE/ERROR → release)
-- [ ] **WRAP-02**: 失败场景处理 (SKIP/WAIT 状态)
-- [ ] **CHK-01**: 一键自检脚本 (tmux, 脚本, 配置)
-- [ ] **DOCS-03**: 更新 README (脚本总表, 常见问题)
-- [ ] **DOCS-04**: 更新 CONTRIBUTING (恢复流程)
+- [ ] **UI-01**: Web 状态面板 — 实时显示所有 Worker 状态
+- [ ] **UI-02**: 可视化任务流程 — 展示任务流转状态
 
 ### Out of Scope
 
@@ -99,38 +106,20 @@
 
 ## Current State
 
-**v1.6 Started** — 2026-02-02
+**v1.6 Shipped** — 2026-02-03
 
-- **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-20)
-- **Focus:** 统一配置入口、任务流程闭环、自检与文档
-- **Scripts:** 10 existing scripts (1400+ LOC), 3 new scripts planned
-- **Status:** Requirements definition in progress
+- **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-21)
+- **Focus:** 所有 v1.6 交付物已完成
+- **Scripts:** 11 executable scripts (1400+ LOC total)
+- **Status:** Ready for v1.7 planning
 
-## Current Milestone: v1.6 长期可维护性 + 流程闭环
+## Next Milestone: v1.7+
 
-**Goal:** 提升系统可维护性，闭环任务流程，完善自检与文档
+**Goal:** UI 面板、P2P/流水线模式 (待规划)
 
-**Target features:**
-
-1. **统一配置入口**
-   - 新增 `scripts/_config.sh` 或 `swarm.env`
-   - 所有脚本统一读取: SESSION_NAME, SWARM_STATE_DIR, WORKERS 列表, LOG_LEVEL
-
-2. **任务流程闭环**
-   - 新增 `scripts/swarm_task_wrap.sh`
-   - 流程: acquire lock → write START → execute → write DONE/ERROR → release
-   - 失败场景: acquire 失败 → write SKIP/WAIT
-
-3. **一键自检与维护文档**
-   - 新增 `scripts/swarm_selfcheck.sh`
-   - 检查: tmux 可用性, 脚本可执行性, 配置可读性
-   - 更新 README/CONTRIBUTING: 脚本总表, 常见问题, 恢复流程
-
-**Strict scope:**
-- 只做维护性与流程闭环
-- 不做 UI/布局 (留到 v1.7)
-- 不做 P2P/流水线/Web
-- 不改 swarm/*.py (若必须改, 需说明理由)
+**Initial ideas:**
+- Web 状态面板 — 实时显示所有 Worker 状态
+- 可视化任务流程 — 展示任务流转状态
 
 ## Context
 
@@ -162,7 +151,12 @@
 | _common.sh 优先 | Foundational config needed by all scripts | ✅ Validated |
 | Auto-Rescue 后执行 | Uses shared config for logging | ✅ Validated |
 | Worker-only 自动救援 | Master window excluded from auto-confirm | ✅ Validated |
+| _config.sh 统一配置 | Single source of truth for configuration | ✅ Validated |
+| SWARM_NO_CONFIG=1 | Graceful degradation for testing | ✅ Validated |
+| log_debug conditional | Debug logging without performance impact | ✅ Validated |
+| task_wrap 原子锁 | Prevents duplicate task execution | ✅ Validated |
+| 5-step emergency procedure | 备份 → 优雅停 → 强杀 → 清锁 → 复验 | ✅ Documented |
 
 ---
 
-*Last updated: 2026-02-02 after v1.5 milestone, v1.6 started*
+*Last updated: 2026-02-03 after v1.6 milestone shipped*

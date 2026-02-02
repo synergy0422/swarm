@@ -132,4 +132,32 @@
 
 ---
 
-*Milestone completed: 2026-02-02*
+## v1.6 长期可维护性 + 流程闭环 (Shipped: 2026-02-03)
+
+**Delivered:** Unified configuration entry point, task lifecycle management, system self-check script, and comprehensive maintenance documentation.
+
+**Phases completed:** 18-21 (4 plans total)
+
+**Key accomplishments:**
+
+1. 统一配置入口 — Created `_config.sh` with 4 config vars, `_common.sh` sources it with graceful degradation
+2. 任务流程闭环 — Created `swarm_task_wrap.sh` (289 lines) with atomic lock + status lifecycle
+3. 一键自检 — Created `swarm_selfcheck.sh` (280 lines) checking tmux/scripts/config/state_dir
+4. 维护文档 — Created MAINTENANCE.md (314 lines), SCRIPTS.md (587 lines), CHANGELOG.md (136 lines), updated README.md
+
+**Stats:**
+
+- 4 shell scripts created: 651 lines total
+- 4 documentation files created/modified: 1,201 lines total
+- 4 phases, 4 plans, ~25 commits
+- 1 day from start to ship (2026-02-03)
+- 9/9 v1.6 requirements complete
+
+**Git range:** `feat(18-01): create _config.sh` → `docs(21): complete maintenance documentation phase`
+
+**What's next:**
+- v1.7: UI 面板, P2P/流水线模式
+
+---
+
+*Milestone completed: 2026-02-03*
