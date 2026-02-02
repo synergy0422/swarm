@@ -85,7 +85,7 @@
 
 #### 维护性 (DOCS)
 
-- [ ] **DOCS-01**: `scripts/_common.sh` — 统一 SWARM_STATE_DIR / SESSION / 输出格式
+- [x] **DOCS-01**: `scripts/_common.sh` — 统一 SWARM_STATE_DIR / SESSION / 输出格式
 - [ ] **DOCS-02**: `docs/CONTRIBUTING.md` — 脚本规范、测试规范
 
 ### Out of Scope
@@ -108,7 +108,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | **v1.5 Active** | | |
-| DOCS-01 | Phase 15 | Pending |
+| DOCS-01 | Phase 15 | ✅ Done |
 | RESC-01 | Phase 16 | Pending |
 | RESC-02 | Phase 16 | Pending |
 | RESC-03 | Phase 16 | Pending |

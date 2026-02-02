@@ -22,13 +22,19 @@
 2. **Auto-Rescue 危险命令黑名单**：优先检测 + 仅对 Worker 窗口（worker-0/1/2）生效
 3. **Status Broadcast 自动写入范围**：只在脚本任务流中触发，避免与手工 append 冲突
 
-### Phase 15: _common.sh
+### Phase 15: _common.sh ✓ COMPLETE
 
 **Goal:** Create unified configuration script with shared variables and output formatting
 
 **Dependencies:** None (foundational phase)
 
 **Requirements:** DOCS-01
+
+**Delivered:**
+- `scripts/_common.sh` (19 lines) - source guard, exports, logging functions
+- All 6 scripts updated to source _common.sh
+
+**Status:** ✓ Verified 2026-02-02
 
 **Design Specs:**
 
