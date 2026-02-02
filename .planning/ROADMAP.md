@@ -49,6 +49,10 @@
 
 **Requirements:** WRAP-01, WRAP-02
 
+**Plans:** 1 plan
+
+  - [x] 19-01-PLAN.md -- 创建 swarm_task_wrap.sh 实现完整生命周期包装 (done)
+
 **Success Criteria:**
 
 1. `scripts/swarm_task_wrap.sh` 存在且可执行
