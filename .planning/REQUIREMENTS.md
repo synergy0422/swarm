@@ -63,8 +63,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | **v1.6 Active** | | |
-| CFGN-01 | Phase 18 | Pending |
-| CFGN-02 | Phase 18 | Pending |
+| CFGN-01 | Phase 18 | Complete | |
+| CFGN-02 | Phase 18 | Complete | |
 | WRAP-01 | Phase 19 | Pending |
 | WRAP-02 | Phase 19 | Pending |
 | CHK-01 | Phase 20 | Pending |
