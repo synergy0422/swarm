@@ -4,8 +4,10 @@
 
 set -euo pipefail
 
-# Path configuration
-SWARM_STATE_DIR="${SWARM_STATE_DIR:-/tmp/ai_swarm}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
+# Use SWARM_STATE_DIR from _common.sh
 LOCK_DIR="${SWARM_STATE_DIR}/locks"
 
 # Ensure lock directory exists
@@ -51,7 +53,7 @@ case "$COMMAND" in
     acquire)
         # acquire <task_id> <worker> [ttl_seconds]
         if [ $# -lt 2 ]; then
-            echo "Error: 'acquire' requires <task_id> and <worker>" >&2
+            log_error "Error: 'acquire' requires <task_id> and <worker>"
             echo "Usage: $0 acquire <task_id> <worker> [ttl_seconds]" >&2
             exit 1
         fi
@@ -127,7 +129,7 @@ PY
     release)
         # release <task_id> <worker>
         if [ $# -lt 2 ]; then
-            echo "Error: 'release' requires <task_id> and <worker>" >&2
+            log_error "Error: 'release' requires <task_id> and <worker>"
             echo "Usage: $0 release <task_id> <worker>" >&2
             exit 1
         fi
@@ -137,7 +139,7 @@ PY
         LOCK_FILE="${LOCK_DIR}/${TASK_ID}.lock"
 
         if [ ! -f "$LOCK_FILE" ]; then
-            echo "Error: No lock found for '$TASK_ID'" >&2
+            log_error "Error: No lock found for '$TASK_ID'"
             exit 1
         fi
 
@@ -176,7 +178,7 @@ PY
     check)
         # check <task_id>
         if [ $# -lt 1 ]; then
-            echo "Error: 'check' requires <task_id>" >&2
+            log_error "Error: 'check' requires <task_id>"
             echo "Usage: $0 check <task_id>" >&2
             exit 1
         fi
@@ -294,7 +296,7 @@ else:
 PY
         ;;
     *)
-        echo "Error: Unknown command '$COMMAND'" >&2
+        log_error "Error: Unknown command '$COMMAND'"
         usage
         exit 1
         ;;
