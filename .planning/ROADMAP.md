@@ -14,7 +14,7 @@
 ## v1.4 Phases
 
 <details>
-<summary>⏳ v1.4 共享状态与任务锁 (3 phases, 2/3 complete)</summary>
+<summary>✅ v1.4 共享状态与任务锁 (3 phases, 3/3 complete) — SHIPPED 2026-02-02</summary>
 
 **Goal:** 实现外部脚本可读写共享状态文件与任务锁
 
@@ -48,10 +48,10 @@
 3. `swarm_lock.sh release task-001 worker-0` 成功删除锁
 4. release 后可重新 acquire 同一任务
 
-**Phase 14:** 集成验证
+**Phase 14:** 集成验证 ✓ COMPLETE
 
 **Plan:**
-- [ ] 14-01-PLAN.md — 端到端验证脚本
+- [x] 14-01-PLAN.md — 端到端验证脚本
 
 **Success Criteria:**
 1. 端到端测试脚本通过
