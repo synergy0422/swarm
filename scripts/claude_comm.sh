@@ -24,30 +24,6 @@ source "$SCRIPT_DIR/_common.sh"
 # Backward compatibility: SESSION variable for scripts expecting it
 SESSION="${SESSION_NAME}"
 
-# Parse --session flag early
-# Returns the number of arguments consumed (for shift in caller)
-parse_args() {
-    local consumed=0
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --session)
-                if [[ -n "${2:-}" ]]; then
-                    SESSION="$2"
-                    consumed=$((consumed + 2))
-                    shift 2
-                else
-                    log_error "Error: --session requires a value"
-                    exit 1
-                fi
-                ;;
-            *)
-                break
-                ;;
-        esac
-    done
-    echo "$consumed"
-}
-
 # Send a task to a specific window
 # Usage: send <window> <task_id> "<description>"
 send() {
@@ -128,9 +104,14 @@ status() {
 
 # Main entry point
 main() {
-    local consumed
-    consumed=$(parse_args "$@")
-    shift "$consumed"
+    # Handle --session flag first (must be first argument)
+    if [[ "${1:-}" == "--session" ]] && [[ -n "${2:-}" ]]; then
+        SESSION="$2"
+        shift 2
+    elif [[ "${1:-}" == "--session" ]]; then
+        log_error "Error: --session requires a value"
+        exit 1
+    fi
 
     if [[ $# -lt 1 ]]; then
         echo "Usage: $0 <send|send-raw|poll|status> [options]"
