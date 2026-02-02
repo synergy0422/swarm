@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Phase 18 in progress)
+**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Phase 19 in progress)
 
 ## Phase Status
 
@@ -17,7 +17,7 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
 | 15-17 | v1.5 维护性改进 | Complete | 3/3 plans |
-| 18-21 | v1.6 长期可维护性 + 流程闭环 | In Progress | 1/4 plans |
+| 18-21 | v1.6 长期可维护性 + 流程闭环 | In Progress | 2/4 plans |
 
 ## Current Position
 
@@ -25,8 +25,8 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 
 - **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-21)
 - **Focus:** 统一配置入口、任务流程闭环、自检与文档、维护文档
-- **Status:** Phase 18-01 complete, ready for 18-02
-- **Next action:** Execute 18-02 (or plan remaining phases)
+- **Status:** Phase 19-01 complete, ready for 19-02
+- **Next action:** Execute 19-02 (or plan remaining phases)
 
 ## v1.6 Summary
 
@@ -35,7 +35,9 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | Phases | 4 (18, 19, 20, 21) |
 | Requirements | 10 (CFGN-01~02, WRAP-01~02, CHK-01, DOCS-03~06) |
 | Focus | 维护性 + 流程闭环 |
-| Completed | 1/4 phases (18-01) |
+| Completed | 2/4 phases (18-01, 19-01) |
+
+Progress: █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 50%
 
 ## Key Decisions
 
@@ -90,19 +92,24 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | 18-01 | BASH_SOURCE[0] + cd/pwd for path resolution | Handles bash -c sourcing edge case | ✅ Validated |
 | 18-01 | SWARM_NO_CONFIG=1 for graceful degradation | Testing defaults without _config.sh | ✅ Validated |
 | 18-01 | log_debug conditional on LOG_LEVEL=DEBUG | Debug logging without performance impact | ✅ Validated |
+| 19-01 | Subshell for command execution | Captures exit code without affecting main script error handling | ✅ Validated |
+| 19-01 | Manual lock release in cmd_run | Clearer control flow than EXIT trap | ✅ Validated |
+| 19-01 | Worker pattern detection in skip/wait | Correctly parses worker-* vs reason arguments | ✅ Validated |
 
 ## Session Continuity
 
 Last session: 2026-02-02
-Completed: Phase 18-01 (Unified Configuration Entry Point)
-- scripts/_config.sh created with centralized defaults
-- scripts/_common.sh updated to source _config.sh with graceful degradation
-- log_debug function added for conditional debug output
-- All integration tests pass (swarm_status_log.sh, swarm_lock.sh, swarm_broadcast.sh)
+Completed: Phase 19-01 (Task Flow Wrapper)
+- scripts/swarm_task_wrap.sh created with 289 lines
+- Commands: run, acquire-only, release-only, skip, wait
+- Options: --ttl, --no-status
+- Full lifecycle: acquire → START → execute → DONE/ERROR → release
+- All 15 integration tests pass
+- Lock ownership validation working
 
-Current: v1.6 milestone in progress (1/4 phases complete)
-Next action: Execute 18-02 or plan remaining phases (19-21)
+Current: v1.6 milestone in progress (2/4 phases complete)
+Next action: Execute 19-02 (Task Flow Validation)
 
 ---
 
-*State updated: 2026-02-02 after Phase 18-01 completion*
+*State updated: 2026-02-02 after Phase 19-01 completion*
