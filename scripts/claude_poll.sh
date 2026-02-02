@@ -12,8 +12,12 @@ set -euo pipefail
 #   CLAUDE_SESSION=custom-session ./claude_poll.sh
 #   ./claude_poll.sh --session custom-session
 
-# Default session name
-SESSION="${CLAUDE_SESSION:-swarm-claude-default}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
+# Backward compatibility: SESSION variable for scripts expecting it
+SESSION="${SESSION_NAME}"
+
 WINDOWS="worker-0 worker-1 worker-2"
 POLL_INTERVAL=5
 
@@ -25,7 +29,7 @@ while [[ $# -gt 0 ]]; do
                 SESSION="$2"
                 shift 2
             else
-                echo "Error: --session requires a value" >&2
+                log_error "Error: --session requires a value"
                 exit 1
             fi
             ;;
@@ -37,18 +41,18 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "Starting Claude Swarm monitor..."
-echo "Session: $SESSION"
-echo "Windows: ${WINDOWS}"
-echo "Poll interval: ${POLL_INTERVAL}s"
-echo "Press Ctrl+C to stop"
+log_info "Starting Claude Swarm monitor..."
+log_info "Session: $SESSION"
+log_info "Windows: ${WINDOWS}"
+log_info "Poll interval: ${POLL_INTERVAL}s"
+log_info "Press Ctrl+C to stop"
 echo ""
 
 # Cleanup handler for Ctrl+C
 trap 'echo "Stopping monitor..."; exit 0' INT
 
 while true; do
-    echo "=== $(date '+%Y-%m-%d %H:%M:%S') ==="
+    log_info "=== $(date '+%Y-%m-%d %H:%M:%S') ==="
 
     for window in $WINDOWS; do
         local pane_content
@@ -64,11 +68,11 @@ while true; do
 
         # Show status line for this window
         if [[ "$done_count" -gt 0 ]]; then
-            echo "[$window] DONE: $done_count tasks completed"
+            log_info "[$window] DONE: $done_count tasks completed"
         elif [[ "$error_count" -gt 0 ]]; then
-            echo "[$window] ERROR: $error_count failures detected"
+            log_info "[$window] ERROR: $error_count failures detected"
         else
-            echo "[$window] Running..."
+            log_info "[$window] Running..."
         fi
     done
 
