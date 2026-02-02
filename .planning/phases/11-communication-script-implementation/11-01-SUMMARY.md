@@ -114,5 +114,8 @@ No authentication gates required - all scripts use local tmux session.
 - 93b16b2: feat(11-01): create claude_poll.sh continuous monitoring script
 - 39e3b33: feat(11-01): create claude_status.sh status check script
 - 1b83237: fix(11-01): fix multi-line send issue in claude_comm.sh
+- 622cf7c: fix(11-01): match markers only at line start in poll
+- faaeb92: fix(11-01): use tail -1 to get latest marker in poll
 - 8621c04: docs(11-01): update verification steps to use send-raw
-- 2f3a1b5: docs(11-01): complete 通信脚本实现 plan
+- 323953f: docs(11-01): complete 通信脚本实现 plan
+- e785808: docs(phase-11): update STATE.md with plan completion
