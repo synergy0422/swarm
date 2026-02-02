@@ -5,7 +5,7 @@
 See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.4 complete - ready for next milestone
+**Current focus:** v1.5 - Roadmap created (status broadcast + auto-rescue)
 
 ## Phase Status
 
@@ -16,33 +16,34 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 | 9-10 | v1.2 | Complete | 2/2 plans |
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
+| 15 | v1.5 _common.sh | Pending | 0/1 plan |
+| 16 | v1.5 Auto-Rescue | Pending | 0/1 plan |
+| 17 | v1.5 Status Broadcast | Pending | 0/1 plan |
 
 ## Current Position
 
-**v1.4 Completed** — 2026-02-02
+**v1.5 In Progress** — 2026-02-02
 
-- **Milestone:** 共享状态与任务锁 (Phases 12-14)
-- **Delivered:**
-  - scripts/swarm_status_log.sh (193 lines) - append/tail/query status.log
-  - scripts/swarm_lock.sh (301 lines) - atomic task lock management
-  - scripts/swarm_e2e_test.sh (107 lines) - integration tests (8/8 pass)
-- **Status:** All tests passing, no swarm/*.py modified
-- **Next action:** Run `/gsd:new-milestone` to start next milestone
+- **Milestone:** 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17)
+- **Focus:** Roadmap created
+- **Plan:** Ready for `/gsd:plan-phase 15`
+- **Status:** 3 phases defined, 9 requirements mapped
 
-## v1.4 Summary
+## v1.5 Summary
 
 | Aspect | Value |
 |--------|-------|
-| Phases | 3 (12, 13, 14) |
-| Plans | 3 |
-| Scripts | 3 (601 lines total) |
-| Tests | All passing |
-| Constraint | No swarm/*.py modified ✅ |
+| Phases | 3 (15, 16, 17) |
+| Requirements | 9 (AUTO-01~03, RESC-01~04, DOCS-01~02) |
+| Depth | Standard |
 
 ## Key Decisions
 
-| Phase | Decision | Rationale | Outcome |
-|-------|----------|-----------|---------|
+| Phase | Decision | Rationale | Status |
+|-------|----------|-----------|--------|
+| 15 | _common.sh before other phases | Foundational configuration needed by all scripts | Active |
+| 16 | Auto-Rescue after _common.sh | Uses shared config for output formatting | Pending |
+| 17 | Status Broadcast after _common.sh | Uses shared config for consistent logging | Pending |
 | 01 | Path config uses AI_SWARM_DIR env var with /tmp/ai_swarm/ default | Flexible override, auto-create | ✅ Validated |
 | 01 | API key only from environment variables | Security - no .env loading in code | ✅ Validated |
 | 01 | Tests use pytest monkeypatch fixture for isolation | Repeatable tests, no pollution | ✅ Validated |
@@ -84,7 +85,9 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 
 Last session: 2026-02-02
 Completed: v1.4 milestone (3 phases, 3 scripts, 601 lines, all tests pass)
-Next action: `/gsd:new-milestone` to start next milestone cycle
+Current: v1.5 milestone (roadmap created, phases 15-17 defined)
+Next action: `/gsd:plan-phase 15`
 
 ---
+
 *State updated: 2026-02-02*

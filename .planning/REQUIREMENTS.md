@@ -68,7 +68,25 @@
 
 ### Active
 
-**(下一个里程碑待规划)**
+**v1.5 - 状态广播闭环 + 自动救援 + 维护性改进**
+
+#### 状态广播 (AUTO)
+
+- [ ] **AUTO-01**: Worker 状态广播脚本 — START/DONE/ERROR/WAIT 自动记录
+- [ ] **AUTO-02**: 状态记录格式 — JSON Lines (task_id, status, worker, timestamp)
+- [ ] **AUTO-03**: 自动触发机制 — Worker 收到任务/完成任务/遇到错误时自动记录
+
+#### 自动救援 (RESC)
+
+- [ ] **RESC-01**: 自动救援脚本 — 检测 [y/n]/Press Enter → 自动 send-keys Enter
+- [ ] **RESC-02**: 模式检测 — 识别 confirm, continue, proceed 等确认提示
+- [ ] **RESC-03**: 30s 冷却机制 — 同一窗口 30s 内不重复确认
+- [ ] **RESC-04**: 危险命令黑名单 — 检测 rm -rf, DROP 等立即告警不自动确认
+
+#### 维护性 (DOCS)
+
+- [ ] **DOCS-01**: `scripts/_common.sh` — 统一 SWARM_STATE_DIR / SESSION / 输出格式
+- [ ] **DOCS-02**: `docs/CONTRIBUTING.md` — 脚本规范、测试规范
 
 ### Out of Scope
 
@@ -79,15 +97,77 @@
 
 ## Current State
 
-**v1.4 Completed** — 2026-02-02
+**v1.5 In Progress** — 2026-02-02
 
-- **Milestone:** 共享状态与任务锁 (Phases 12-14)
-- **Delivered:** swarm_status_log.sh, swarm_lock.sh, swarm_e2e_test.sh
-- **Status:** 全部测试通过，等待下一个里程碑
+- **Milestone:** 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17)
+- **Focus:** Roadmap created, ready for planning
+- **Status:** 3 phases, 9 requirements mapped
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| **v1.5 Active** | | |
+| DOCS-01 | Phase 15 | Pending |
+| RESC-01 | Phase 16 | Pending |
+| RESC-02 | Phase 16 | Pending |
+| RESC-03 | Phase 16 | Pending |
+| RESC-04 | Phase 16 | Pending |
+| AUTO-01 | Phase 17 | Pending |
+| AUTO-02 | Phase 17 | Pending |
+| AUTO-03 | Phase 17 | Pending |
+| DOCS-02 | Phase 17 | Pending |
+| **v1.4 Complete** | | |
+| STATUS-01 | Phase 12 | ✅ Done |
+| STATUS-02 | Phase 12 | ✅ Done |
+| LOCK-01 | Phase 13 | ✅ Done |
+| LOCK-02 | Phase 13 | ✅ Done |
+| LOCK-03 | Phase 13 | ✅ Done |
+| **v1.3 Complete** | | |
+| SCRIPT-01 | Phase 11 | ✅ Done |
+| SCRIPT-02 | Phase 11 | ✅ Done |
+| SCRIPT-03 | Phase 11 | ✅ Done |
+| COMM-01 | Phase 11 | ✅ Done |
+| COMM-02 | Phase 11 | ✅ Done |
+| COMM-03 | Phase 11 | ✅ Done |
+| SEND-01 | Phase 11 | ✅ Done |
+| SEND-02 | Phase 11 | ✅ Done |
+| POLL-01 | Phase 11 | ✅ Done |
+| POLL-02 | Phase 11 | ✅ Done |
+| POLL-03 | Phase 11 | ✅ Done |
+| TEST-01 | Phase 11 | ✅ Done |
+| **v1.2 Complete** | | |
+| TMUX-01 | Phase 10 | ✅ Done |
+| TMUX-02 | Phase 10 | ✅ Done |
+| TMUX-03 | Phase 10 | ✅ Done |
+| CLAI-01 | Phase 10 | ✅ Done |
+| CLAI-02 | Phase 10 | ✅ Done |
+| CLAI-03 | Phase 10 | ✅ Done |
+| **v1.1 Complete** | | |
+| CLI-01 | Phase 9 | ✅ Done |
+| CLI-02 | Phase 9 | ✅ Done |
+| CLI-03 | Phase 9 | ✅ Done |
+| **v1.0 Complete** | | |
+| CORE-01 | Phase 1-2 | ✅ Done |
+| CORE-02 | Phase 2 | ✅ Done |
+| CORE-03 | Phase 3 | ✅ Done |
+| CORE-04 | Phase 3 | ✅ Done |
+| CORE-05 | Phase 4 | ✅ Done |
+| CORE-06 | Phase 4 | ✅ Done |
+| CORE-07 | Phase 4 | ✅ Done |
+| CORE-08 | Phase 5 | ✅ Done |
+| CORE-09 | Phase 5 | ✅ Done |
+| CORE-10 | Phase 5 | ✅ Done |
+| CORE-11 | Phase 5 | ✅ Done |
+| CORE-12 | Phase 5 | ✅ Done |
+| CORE-13 | Phase 6 | ✅ Done |
 
 ## Next Milestone
 
-待规划。使用 `/gsd:new-milestone` 开始下一个里程碑周期。
+**v1.5 - 状态广播闭环 + 自动救援 + 维护性改进**
+
+- 3 phases, 9 requirements
+- Next action: `/gsd:plan-phase 15`
 
 ## Context
 
@@ -122,4 +202,6 @@
 
 ---
 
-*Last updated: 2026-02-02 after v1.4 milestone completion*
+*Requirements defined: 2026-02-02*
+*Roadmap created: 2026-02-02*
+*Last updated: 2026-02-02 after v1.5 roadmap creation*

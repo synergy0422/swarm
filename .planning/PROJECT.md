@@ -60,13 +60,13 @@
 
 ### Active
 
-**v1.4 - 共享状态与任务锁**
+**v1.5 - 状态广播闭环 + 自动救援 + 维护性改进**
 
-- STATUS-01: 状态记录脚本 (`swarm_status_log.sh append/tail/query`)
-- STATUS-02: status.log 格式规范（JSON Lines）
-- LOCK-01: 任务锁脚本 (`swarm_lock.sh acquire/release/check/list`)
-- LOCK-02: 锁原子获取机制
-- LOCK-03: 锁释放与验证
+- AUTO-01: Worker 状态广播脚本 (START/DONE/ERROR/WAIT)
+- RESC-01: 自动救援脚本 (检测 [y/n]/Press Enter → 自动确认)
+- RESC-02: 30s 冷却机制（防止重复确认）
+- DOCS-01: scripts/_common.sh 统一配置
+- DOCS-02: docs/CONTRIBUTING.md 脚本规范
 
 ### Out of Scope
 
@@ -77,28 +77,29 @@
 
 ## Current State
 
-**v1.4 Started** — 2026-02-02
+**v1.5 Started** — 2026-02-02
 
-- **Focus:** 共享状态文件 (status.log) + 任务锁机制 (locks/)
-- **Scripts:** swarm_status_log.sh, swarm_lock.sh
-- **Plan:** docs/plans/2026-02-02-v1.4-status-locks.md
-- **v1.4 Status:** Ready to plan phases
+- **Milestone:** 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17)
+- **Focus:** Worker 自动状态记录 + 自动救援最小版 + _common.sh
+- **Scripts:** claude_auto_rescue.sh, scripts/_common.sh
+- **Plan:** docs/plans/2026-02-02-v1.5-status-autorescue.md
+- **v1.5 Status:** Ready to define requirements
 
-## Current Milestone: v1.4 共享状态与任务锁
+## Current Milestone: v1.5 状态广播闭环 + 自动救援
 
-**Goal:** 实现外部脚本可读写共享状态文件与任务锁
+**Goal:** Worker 在关键节点自动写 status.log，Master 自动救援卡点，提升协作效率
 
 **Target features:**
-- **STATUS-01**: `swarm_status_log.sh` — append/tail/query status.log
-- **STATUS-02**: status.log JSON Lines 格式
-- **LOCK-01**: `swarm_lock.sh` — acquire/release/check/list
-- **LOCK-02**: 原子锁获取（O_CREAT|O_EXCL）
-- **LOCK-03**: 锁验证与释放
+- **AUTO-01**: Worker 状态广播脚本 — START/DONE/ERROR/WAIT 自动记录
+- **RESC-01**: 自动救援脚本 — 检测 [y/n]/Press Enter → 自动 send-keys
+- **RESC-02**: 冷却机制 — 30s 间隔防止重复确认
+- **DOCS-01**: `scripts/_common.sh` — 统一 SWARM_STATE_DIR / SESSION / 输出格式
+- **DOCS-02**: `docs/CONTRIBUTING.md` — 脚本规范、测试规范
 
 **约束：**
-- 优先脚本化实现，尽量不改 swarm/*.py
-- 仅围绕"共享状态 + 任务锁"展开
-- 不做自动救援、UI/面板、P2P/流水线
+- 优先脚本化实现，不改 `swarm/*.py`
+- 仅围绕"状态广播 + 自动救援 + 维护性"展开
+- 不做冲突锁绑定（留给 v1.6）
 
 ## Context
 
