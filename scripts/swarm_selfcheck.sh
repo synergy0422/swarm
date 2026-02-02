@@ -178,23 +178,6 @@ check_config() {
         failed=1
     fi
 
-    # Check SWARM_STATE_DIR exists and is writable
-    if [[ -n "${SWARM_STATE_DIR:-}" ]]; then
-        if [[ -d "$SWARM_STATE_DIR" ]]; then
-            if [[ -w "$SWARM_STATE_DIR" ]]; then
-                print_pass "State directory is writable"
-            else
-                print_fail "State directory exists but is not writable: $SWARM_STATE_DIR"
-                print_info "Fix permissions: chmod u+w $SWARM_STATE_DIR"
-                failed=1
-            fi
-        else
-            print_fail "State directory does not exist: $SWARM_STATE_DIR"
-            print_info "Create directory: mkdir -p $SWARM_STATE_DIR"
-            failed=1
-        fi
-    fi
-
     return $failed
 }
 
@@ -255,3 +238,43 @@ check_state_dir() {
 
     return $failed
 }
+
+# Main execution
+main() {
+    local FAILED=0
+
+    # Print header (skip in quiet mode)
+    if [[ "${QUIET_MODE:-0}" != "1" ]]; then
+        echo "AI Swarm System Health Check" >&2
+        echo "==============================" >&2
+        echo "" >&2
+    fi
+
+    # Run checks
+    check_tmux || FAILED=1
+    echo "" >&2
+
+    check_scripts || FAILED=1
+    echo "" >&2
+
+    check_config || FAILED=1
+    echo "" >&2
+
+    check_state_dir || FAILED=1
+    echo "" >&2
+
+    # Print summary (skip in quiet mode)
+    if [[ "${QUIET_MODE:-0}" != "1" ]]; then
+        echo "=== Summary ===" >&2
+        if [[ $FAILED -eq 0 ]]; then
+            echo "All checks passed [OK]" >&2
+        else
+            echo "One or more checks failed [FAIL]" >&2
+        fi
+    fi
+
+    return $FAILED
+}
+
+# Execute main with all arguments
+main "$@"
