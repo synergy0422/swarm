@@ -5,7 +5,7 @@
 See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.5 - Phase 15 complete, Auto-Rescue next (16)
+**Current focus:** v1.5 - Phase 16 complete, Status Broadcast next (17)
 
 ## Phase Status
 
@@ -17,17 +17,16 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
 | 15 | v1.5 _common.sh | Complete | 1/1 plans |
-| 16 | v1.5 Auto-Rescue | Ready to Plan | 0/1 plan |
+| 16 | v1.5 Auto-Rescue | Complete | 1/1 plan |
 | 17 | v1.5 Status Broadcast | Pending | 0/1 plan |
 
 ## Current Position
 
 **v1.5 In Progress** — 2026-02-02
 
-- **Milestone:** Phase 15 complete, _common.sh delivered
-- **Focus:** Ready to plan Auto-Rescue (Phase 16)
-- **Plan:** Use `/gsd:plan-phase 16` for Auto-Rescue implementation
-- **Status:** 7 scripts now share common configuration
+- **Milestone:** Phase 16-01 complete, Auto-Rescue script delivered
+- **Focus:** Ready for Phase 17 (Status Broadcast) or continue with Auto-Rescue additional plans
+- **Status:** 8 scripts now share common configuration (_common.sh + claude_auto_rescue.sh)
 
 ## v1.5 Summary
 
@@ -42,7 +41,10 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 | Phase | Decision | Rationale | Status |
 |-------|----------|-----------|--------|
 | 15 | _common.sh before other phases | Foundational configuration needed by all scripts | ✅ Validated |
-| 16 | Auto-Rescue after _common.sh | Uses shared config for output formatting | Pending |
+| 16 | Auto-Rescue after _common.sh | Uses shared config for output formatting | ✅ Validated |
+| 16-01 | Removed done/ready/ok patterns | Too broad, caused false positives | ✅ Validated |
+| 16-01 | Case-insensitive matching | Handles varied capitalization | ✅ Validated |
+| 16-01 | Dangerous patterns checked first | Safety over convenience | ✅ Validated |
 | 17 | Status Broadcast after _common.sh | Uses shared config for consistent logging | Pending |
 | 01 | Path config uses AI_SWARM_DIR env var with /tmp/ai_swarm/ default | Flexible override, auto-create | ✅ Validated |
 | 01 | API key only from environment variables | Security - no .env loading in code | ✅ Validated |
@@ -87,9 +89,9 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 ## Session Continuity
 
 Last session: 2026-02-02
-Completed: Phase 15-01 (_common.sh created, all 6 scripts updated)
-Current: v1.5 milestone in progress
-Next action: `/gsd:plan-phase 16` for Auto-Rescue implementation
+Completed: Phase 16-01 (claude_auto_rescue.sh created with all functions)
+Current: v1.5 milestone in progress (2/3 phases complete)
+Next action: `/gsd:plan-phase 17` for Status Broadcast implementation
 
 ---
 
