@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Defining requirements)
+**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Phase 18 in progress)
 
 ## Phase Status
 
@@ -17,16 +17,16 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
 | 15-17 | v1.5 维护性改进 | Complete | 3/3 plans |
-| 18-21 | v1.6 长期可维护性 + 流程闭环 | Planning | 0/4 phases |
+| 18-21 | v1.6 长期可维护性 + 流程闭环 | In Progress | 1/4 plans |
 
 ## Current Position
 
-**v1.6 Started** — 2026-02-02
+**v1.6 In Progress** — 2026-02-02
 
 - **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-21)
 - **Focus:** 统一配置入口、任务流程闭环、自检与文档、维护文档
-- **Status:** Defining requirements
-- **Next action:** `/gsd:plan-phase 18` after roadmap creation
+- **Status:** Phase 18-01 complete, ready for 18-02
+- **Next action:** Execute 18-02 (or plan remaining phases)
 
 ## v1.6 Summary
 
@@ -35,6 +35,7 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | Phases | 4 (18, 19, 20, 21) |
 | Requirements | 10 (CFGN-01~02, WRAP-01~02, CHK-01, DOCS-03~06) |
 | Focus | 维护性 + 流程闭环 |
+| Completed | 1/4 phases (18-01) |
 
 ## Key Decisions
 
@@ -85,14 +86,23 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | 15-01 | _common.sh source guard pattern | Prevents direct execution, only sourcing | ✅ Validated |
 | 15-01 | log_info/log_warn/log_error to stderr | Separates status from data output | ✅ Validated |
 | 15-01 | CLAUDE_SESSION backward compatibility | Existing scripts continue to work | ✅ Validated |
+| 18-01 | Centralized _config.sh entry point | Single source of truth for configuration | ✅ Validated |
+| 18-01 | BASH_SOURCE[0] + cd/pwd for path resolution | Handles bash -c sourcing edge case | ✅ Validated |
+| 18-01 | SWARM_NO_CONFIG=1 for graceful degradation | Testing defaults without _config.sh | ✅ Validated |
+| 18-01 | log_debug conditional on LOG_LEVEL=DEBUG | Debug logging without performance impact | ✅ Validated |
 
 ## Session Continuity
 
 Last session: 2026-02-02
-Completed: v1.5 milestone (3/3 phases: _common.sh, Auto-Rescue, Status Broadcast)
-Current: v1.6 milestone started (Defining requirements)
-Next action: Create requirements → roadmap → plan phases
+Completed: Phase 18-01 (Unified Configuration Entry Point)
+- scripts/_config.sh created with centralized defaults
+- scripts/_common.sh updated to source _config.sh with graceful degradation
+- log_debug function added for conditional debug output
+- All integration tests pass (swarm_status_log.sh, swarm_lock.sh, swarm_broadcast.sh)
+
+Current: v1.6 milestone in progress (1/4 phases complete)
+Next action: Execute 18-02 or plan remaining phases (19-21)
 
 ---
 
-*State updated: 2026-02-02 after v1.5 milestone completion*
+*State updated: 2026-02-02 after Phase 18-01 completion*
