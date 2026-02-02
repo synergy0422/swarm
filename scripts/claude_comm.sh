@@ -18,7 +18,11 @@ set -euo pipefail
 #   ./scripts/claude_comm.sh poll worker-0 30 task-001  # timeout: 30s (default)
 #   ./scripts/claude_comm.sh status worker-0
 
-SESSION="${CLAUDE_SESSION:-swarm-claude-default}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
+# Backward compatibility: SESSION variable for scripts expecting it
+SESSION="${SESSION_NAME}"
 
 # Parse --session flag early
 parse_args() {
@@ -29,7 +33,7 @@ parse_args() {
                     SESSION="$2"
                     shift 2
                 else
-                    echo "Error: --session requires a value" >&2
+                    log_error "Error: --session requires a value"
                     exit 1
                 fi
                 ;;
@@ -53,7 +57,7 @@ send() {
     # Send Enter to execute
     tmux send-keys -t "$SESSION:$window" "Enter"
 
-    echo "Sent task $task_id to window $window"
+    log_info "Sent task $task_id to window $window"
 }
 
 # Send raw text (no [TASK] prefix) for protocol setup messages
@@ -68,7 +72,7 @@ send_raw() {
     # Send Enter to execute
     tmux send-keys -t "$SESSION:$window" "Enter"
 
-    echo "Sent raw message to window $window"
+    log_info "Sent raw message to window $window"
 }
 
 # Poll for a marker response from a window
@@ -107,7 +111,7 @@ poll() {
         sleep 1
     done
 
-    echo "Timeout: No marker found for task $task_id in ${timeout}s" >&2
+    log_warn "Timeout: No marker found for task $task_id in ${timeout}s"
     return 1
 }
 
