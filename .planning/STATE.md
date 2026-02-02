@@ -18,15 +18,15 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
 | 15 | v1.5 _common.sh | Complete | 1/1 plans |
 | 16 | v1.5 Auto-Rescue | Complete | 1/1 plan |
-| 17 | v1.5 Status Broadcast | Pending | 0/1 plan |
+| 17 | v1.5 Status Broadcast | Complete | 1/1 plan |
 
 ## Current Position
 
-**v1.5 In Progress** — 2026-02-02
+**v1.5 Complete** — 2026-02-02
 
-- **Milestone:** Phase 16-01 complete, Auto-Rescue script delivered
-- **Focus:** Ready for Phase 17 (Status Broadcast) or continue with Auto-Rescue additional plans
-- **Status:** 8 scripts now share common configuration (_common.sh + claude_auto_rescue.sh)
+- **Milestone:** Phase 17-01 complete, Status Broadcast script delivered
+- **Focus:** v1.5 milestone is now complete (3/3 phases: _common.sh, Auto-Rescue, Status Broadcast)
+- **Status:** 10 scripts now share common configuration and logging
 
 ## v1.5 Summary
 
@@ -45,7 +45,7 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 | 16-01 | Removed done/ready/ok patterns | Too broad, caused false positives | ✅ Validated |
 | 16-01 | Case-insensitive matching | Handles varied capitalization | ✅ Validated |
 | 16-01 | Dangerous patterns checked first | Safety over convenience | ✅ Validated |
-| 17 | Status Broadcast after _common.sh | Uses shared config for consistent logging | Pending |
+| 17 | Status Broadcast after _common.sh | Uses shared config for consistent logging | ✅ Validated |
 | 01 | Path config uses AI_SWARM_DIR env var with /tmp/ai_swarm/ default | Flexible override, auto-create | ✅ Validated |
 | 01 | API key only from environment variables | Security - no .env loading in code | ✅ Validated |
 | 01 | Tests use pytest monkeypatch fixture for isolation | Repeatable tests, no pollution | ✅ Validated |
@@ -89,9 +89,9 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 ## Session Continuity
 
 Last session: 2026-02-02
-Completed: Phase 16-01 (claude_auto_rescue.sh created with all functions)
-Current: v1.5 milestone in progress (2/3 phases complete)
-Next action: `/gsd:plan-phase 17` for Status Broadcast implementation
+Completed: Phase 17-01 (swarm_broadcast.sh and CONTRIBUTING.md delivered)
+Current: v1.5 milestone complete (3/3 phases)
+Next action: `/gsd:plan-phase 18` for next feature phase
 
 ---
 
