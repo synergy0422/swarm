@@ -2,36 +2,42 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-02)
+See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.4 共享状态与任务锁
+**Current focus:** v1.4 complete - ready for next milestone
 
 ## Phase Status
 
 | # | Phase | Status | Progress |
 |---|-------|--------|----------|
-| 1-10 | v1.0-v1.2 | Complete | 100% |
+| 1-6 | v1.0 MVP | Complete | 100% |
+| 7-8 | v1.1 | Complete | 2/2 plans |
+| 9-10 | v1.2 | Complete | 2/2 plans |
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
-| 12 | v1.4 状态记录脚本 | Complete | 1/1 plans |
-| 13 | v1.4 任务锁脚本 | Complete | 1/1 plans |
-| 14 | v1.4 集成验证 | In Progress | 1/1 plans |
+| 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
 
 ## Current Position
 
-**v1.4 In Progress** — 2026-02-02
+**v1.4 Completed** — 2026-02-02
 
-Status: Phase 14 (Plan 01) complete
-Last activity: 2026-02-02 — Phase 14-01 (E2E test script) completed
-Next action: v1.4 complete - all integration verified
+- **Milestone:** 共享状态与任务锁 (Phases 12-14)
+- **Delivered:**
+  - scripts/swarm_status_log.sh (193 lines) - append/tail/query status.log
+  - scripts/swarm_lock.sh (301 lines) - atomic task lock management
+  - scripts/swarm_e2e_test.sh (107 lines) - integration tests (8/8 pass)
+- **Status:** All tests passing, no swarm/*.py modified
+- **Next action:** Run `/gsd:new-milestone` to start next milestone
 
-## v1.4 Design
+## v1.4 Summary
 
-| Aspect | Decision |
-|--------|----------|
-| Approach | 脚本化实现（不改 swarm/*.py） |
-| Focus | status.log + locks/ |
-| Plan | docs/plans/2026-02-02-v1.4-status-locks.md |
+| Aspect | Value |
+|--------|-------|
+| Phases | 3 (12, 13, 14) |
+| Plans | 3 |
+| Scripts | 3 (601 lines total) |
+| Tests | All passing |
+| Constraint | No swarm/*.py modified ✅ |
 
 ## Key Decisions
 
@@ -77,8 +83,8 @@ Next action: v1.4 complete - all integration verified
 ## Session Continuity
 
 Last session: 2026-02-02
-Resumed: 2026-02-02 — Phase 14-01 completed, v1.4 complete
-Next action: v1.4 done - all scripts verified
+Completed: v1.4 milestone (3 phases, 3 scripts, 601 lines, all tests pass)
+Next action: `/gsd:new-milestone` to start next milestone cycle
 
 ---
 *State updated: 2026-02-02*
