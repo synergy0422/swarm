@@ -11,8 +11,11 @@ set -euo pipefail
 #   CLAUDE_SESSION=custom-session ./claude_status.sh
 #   ./claude_status.sh --session custom-session
 
-# Default session name
-SESSION="${CLAUDE_SESSION:-swarm-claude-default}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/_common.sh"
+
+# Backward compatibility: SESSION variable for scripts expecting it
+SESSION="${SESSION_NAME}"
 
 # Parse --session flag
 while [[ $# -gt 0 ]]; do
@@ -22,7 +25,7 @@ while [[ $# -gt 0 ]]; do
                 SESSION="$2"
                 shift 2
             else
-                echo "Error: --session requires a value" >&2
+                log_error "Error: --session requires a value"
                 exit 1
             fi
             ;;
@@ -34,13 +37,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "=== Claude Swarm Status ==="
+log_info "=== Claude Swarm Status ==="
 echo ""
 
 WINDOWS="master worker-0 worker-1 worker-2"
 
 for window in $WINDOWS; do
-    echo "--- $window ---"
+    log_info "--- $window ---"
     tmux capture-pane -t "$SESSION:$window" -p | tail -10
     echo ""
 done
