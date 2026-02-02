@@ -5,7 +5,7 @@
 See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.5 - Roadmap created (status broadcast + auto-rescue)
+**Current focus:** v1.5 - Phase 15 complete, Auto-Rescue next (16)
 
 ## Phase Status
 
@@ -16,18 +16,18 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 | 9-10 | v1.2 | Complete | 2/2 plans |
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
-| 15 | v1.5 _common.sh | Ready to Plan | Design specs in ROADMAP.md |
-| 16 | v1.5 Auto-Rescue | Pending | 0/1 plan |
+| 15 | v1.5 _common.sh | Complete | 1/1 plans |
+| 16 | v1.5 Auto-Rescue | Ready to Plan | 0/1 plan |
 | 17 | v1.5 Status Broadcast | Pending | 0/1 plan |
 
 ## Current Position
 
 **v1.5 In Progress** — 2026-02-02
 
-- **Milestone:** 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17)
-- **Focus:** Roadmap created
-- **Plan:** Ready for `/gsd:plan-phase 15`
-- **Status:** 3 phases defined, 9 requirements mapped
+- **Milestone:** Phase 15 complete, _common.sh delivered
+- **Focus:** Ready to plan Auto-Rescue (Phase 16)
+- **Plan:** Use `/gsd:plan-phase 16` for Auto-Rescue implementation
+- **Status:** 7 scripts now share common configuration
 
 ## v1.5 Summary
 
@@ -41,7 +41,7 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 
 | Phase | Decision | Rationale | Status |
 |-------|----------|-----------|--------|
-| 15 | _common.sh before other phases | Foundational configuration needed by all scripts | Active |
+| 15 | _common.sh before other phases | Foundational configuration needed by all scripts | ✅ Validated |
 | 16 | Auto-Rescue after _common.sh | Uses shared config for output formatting | Pending |
 | 17 | Status Broadcast after _common.sh | Uses shared config for consistent logging | Pending |
 | 01 | Path config uses AI_SWARM_DIR env var with /tmp/ai_swarm/ default | Flexible override, auto-create | ✅ Validated |
@@ -80,13 +80,16 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 | 14-01 | E2E test uses mktemp -d for complete isolation | No pollution of real /tmp/ai_swarm data | ✅ Validated |
 | 14-01 | Used grep -F (fixed strings) for simpler matching | More reliable than regex, no escaping needed | ✅ Validated |
 | 14-01 | Replaced ((var++)) with $((var + 1)) for set -e | Prevents premature exit when value is 0 | ✅ Validated |
+| 15-01 | _common.sh source guard pattern | Prevents direct execution, only sourcing | ✅ Validated |
+| 15-01 | log_info/log_warn/log_error to stderr | Separates status from data output | ✅ Validated |
+| 15-01 | CLAUDE_SESSION backward compatibility | Existing scripts continue to work | ✅ Validated |
 
 ## Session Continuity
 
 Last session: 2026-02-02
-Completed: v1.4 milestone (3 phases, 3 scripts, 601 lines, all tests pass)
-Current: v1.5 milestone (roadmap created, phases 15-17 defined)
-Next action: `/gsd:plan-phase 15`
+Completed: Phase 15-01 (_common.sh created, all 6 scripts updated)
+Current: v1.5 milestone in progress
+Next action: `/gsd:plan-phase 16` for Auto-Rescue implementation
 
 ---
 
