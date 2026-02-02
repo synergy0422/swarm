@@ -89,7 +89,7 @@ poll() {
         if [[ -n "$task_id" ]]; then
             # Look for marker with specific task_id
             local match
-            match=$(echo "$pane_content" | grep -E "^[^A-Za-z0-9]*\[(ACK|DONE|ERROR|WAIT|HELP)\] *$task_id" | head -1)
+            match=$(echo "$pane_content" | grep -E "^[^A-Za-z0-9]*\[(ACK|DONE|ERROR|WAIT|HELP)\] *$task_id" | tail -1)
             if [[ -n "$match" ]]; then
                 echo "$match"
                 return 0
