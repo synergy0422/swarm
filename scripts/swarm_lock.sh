@@ -124,8 +124,57 @@ else:
     print(f"  Expires: never")
 PY
         ;;
-    release|check|list)
-        # Valid command placeholders
+    release)
+        # release <task_id> <worker>
+        if [ $# -lt 2 ]; then
+            echo "Error: 'release' requires <task_id> and <worker>" >&2
+            echo "Usage: $0 release <task_id> <worker>" >&2
+            exit 1
+        fi
+
+        TASK_ID="$1"
+        WORKER="$2"
+        LOCK_FILE="${LOCK_DIR}/${TASK_ID}.lock"
+
+        if [ ! -f "$LOCK_FILE" ]; then
+            echo "Error: No lock found for '$TASK_ID'" >&2
+            exit 1
+        fi
+
+        # Read and parse existing lock JSON
+        LOCK_DATA=$(python3 - "$LOCK_FILE" "$WORKER" << 'PY'
+import sys
+import json
+
+lock_file = sys.argv[1]
+expected_worker = sys.argv[2]
+
+try:
+    with open(lock_file, 'r') as f:
+        lock_data = json.load(f)
+except (json.JSONDecodeError, FileNotFoundError) as e:
+    print(f"Error: Cannot read lock file", file=sys.stderr)
+    sys.exit(2)
+
+if lock_data.get('worker') != expected_worker:
+    print(f"Error: Lock held by '{lock_data.get('worker')}', not '{expected_worker}'", file=sys.stderr)
+    sys.exit(1)
+
+# Success - delete the lock
+import os
+os.unlink(lock_file)
+print(f"Lock released for '{sys.argv[1].split('/')[-1].replace('.lock', '')}'")
+PY
+)
+        RESULT=$?
+        if [ $RESULT -eq 0 ]; then
+            echo "$LOCK_DATA"
+        else
+            exit $RESULT
+        fi
+        ;;
+    check|list)
+        # Placeholders
         ;;
     *)
         echo "Error: Unknown command '$COMMAND'" >&2
