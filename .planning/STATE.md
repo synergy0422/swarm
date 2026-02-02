@@ -16,7 +16,7 @@ See: .planning/REQUIREMENTS.md (updated 2026-02-02)
 | 9-10 | v1.2 | Complete | 2/2 plans |
 | 11 | v1.3 通信协议 | Complete | 1/1 plans |
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
-| 15 | v1.5 _common.sh | Pending | 0/1 plan |
+| 15 | v1.5 _common.sh | Planning | 0/1 plan |
 | 16 | v1.5 Auto-Rescue | Pending | 0/1 plan |
 | 17 | v1.5 Status Broadcast | Pending | 0/1 plan |
 
