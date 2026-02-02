@@ -17,6 +17,11 @@
 - 仅围绕"状态广播 + 自动救援 + 维护性"展开
 - 不做冲突锁绑定（留给 v1.6）
 
+**用户注意点：**
+1. **_common.sh 改动范围**：v1.3/v1.4 脚本（claude_comm.sh, claude_poll.sh, claude_status.sh, swarm_status_log.sh, swarm_lock.sh, swarm_e2e_test.sh）全部需要 source _common.sh
+2. **Auto-Rescue 危险命令黑名单**：优先检测 + 仅对 Worker 窗口（worker-0/1/2）生效
+3. **Status Broadcast 自动写入范围**：只在脚本任务流中触发，避免与手工 append 冲突
+
 ### Phase 15: _common.sh
 
 **Goal:** Create unified configuration script with shared variables and output formatting
@@ -28,10 +33,11 @@
 **Success Criteria:**
 
 1. `scripts/_common.sh` exists and is executable
-2. All other scripts source `scripts/_common.sh` at startup
+2. All other scripts source `scripts/_common.sh` at startup (v1.3/v1.4 scripts explicitly included)
 3. `SWARM_STATE_DIR` is exported and used by all scripts that need it
 4. `SESSION_NAME` is exported and used by all scripts that need it
 5. Output format is consistent across all scripts (timestamp, level prefixes)
+6. **Existing scripts modified**: claude_comm.sh, claude_poll.sh, claude_status.sh, swarm_status_log.sh, swarm_lock.sh, swarm_e2e_test.sh
 
 ---
 
@@ -45,11 +51,12 @@
 
 **Success Criteria:**
 
-1. Script detects `[y/n]` prompt patterns and auto-sends Enter
-2. Script detects "Press Enter", "press return", "hit enter" patterns
-3. Script detects confirmation words: confirm, continue, proceed, yes
-4. 30-second cooldown prevents duplicate confirmations per window
-5. Dangerous commands (rm -rf, DROP, DELETE) trigger alert instead of auto-confirm
+1. **Dangerous command blacklist runs first** (rm -rf, DROP, DELETE, sudo) → alert only, never auto-confirm
+2. Script detects `[y/n]` prompt patterns and auto-sends Enter
+3. Script detects "Press Enter", "press return", "hit enter" patterns
+4. Script detects confirmation words: confirm, continue, proceed, yes
+5. 30-second cooldown prevents duplicate confirmations per window
+6. **Only triggers for Worker windows** (worker-0/1/2, not master)
 
 ---
 
@@ -63,12 +70,13 @@
 
 **Success Criteria:**
 
-1. Worker records START when receiving a new task
-2. Worker records DONE when task completes successfully
-3. Worker records ERROR when task fails or encounters error
-4. Worker records WAIT when waiting for external input
+1. Worker records START when receiving a new task (script-triggered only)
+2. Worker records DONE when task completes successfully (script-triggered only)
+3. Worker records ERROR when task fails or encounters error (script-triggered only)
+4. Worker records WAIT when waiting for external input (script-triggered only)
 5. All status records use JSON Lines format with task_id, status, worker, timestamp
 6. CONTRIBUTING.md documents script conventions and testing requirements
+7. **Auto-write only in script task flows** → no conflict with manual append
 
 ---
 
