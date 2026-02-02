@@ -27,6 +27,10 @@
 
 **Requirements:** CFGN-01, CFGN-02
 
+**Plans:** 1 plan
+
+- [x] 18-01-PLAN.md -- 创建 _config.sh 统一配置，_common.sh 集成并添加 log_debug
+
 **Success Criteria:**
 
 1. `scripts/_config.sh` 或 `swarm.env` 存在且可读
