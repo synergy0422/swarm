@@ -12,6 +12,18 @@
 
 ### Validated
 
+**v1.5 - 状态广播闭环 + 自动救援 + 维护性改进 (Shipped 2026-02-02)**
+
+- [x] **AUTO-01**: Worker 状态广播脚本 — START/DONE/ERROR/WAIT 自动记录
+- [x] **AUTO-02**: 状态记录格式 — JSON Lines (task_id, status, worker, timestamp)
+- [x] **AUTO-03**: 自动触发机制 — Worker 收到任务/完成任务/遇到错误时自动记录
+- [x] **RESC-01**: 自动救援脚本 — 检测 [y/n]/Press Enter → 自动 send-keys Enter
+- [x] **RESC-02**: 模式检测 — 识别 confirm, continue, proceed 等确认提示
+- [x] **RESC-03**: 30s 冷却机制 — 同一窗口 30s 内不重复确认
+- [x] **RESC-04**: 危险命令黑名单 — 检测 rm -rf, DROP 等立即告警不自动确认
+- [x] **DOCS-01**: `scripts/_common.sh` — 统一 SWARM_STATE_DIR / SESSION / 输出格式
+- [x] **DOCS-02**: `CONTRIBUTING.md` — 脚本规范、测试规范
+
 **v1.0 MVP - 核心协作能力 (Shipped 2026-01-31)**
 
 - [x] **CORE-01**: tmux 资源发现 — session/window/pane 枚举与选择
@@ -58,15 +70,17 @@
 - [x] **POLL-03**: 超时参数支持 (默认 30 秒)
 - [x] **TEST-01**: 手动验收 — send → ACK → DONE 验证通过
 
+**v1.4 - 共享状态与任务锁 (Shipped 2026-02-02)**
+
+- [x] **STATUS-01**: 状态记录脚本 (`swarm_status_log.sh append/tail/query`)
+- [x] **STATUS-02**: status.log 格式规范（JSON Lines）
+- [x] **LOCK-01**: 任务锁脚本 (`swarm_lock.sh acquire/release/check/list`)
+- [x] **LOCK-02**: 锁原子获取机制（O_CREAT|O_EXCL）
+- [x] **LOCK-03**: 锁释放与验证（严格 owner 验证）
+
 ### Active
 
-**v1.5 - 状态广播闭环 + 自动救援 + 维护性改进**
-
-- AUTO-01: Worker 状态广播脚本 (START/DONE/ERROR/WAIT)
-- RESC-01: 自动救援脚本 (检测 [y/n]/Press Enter → 自动确认)
-- RESC-02: 30s 冷却机制（防止重复确认）
-- DOCS-01: scripts/_common.sh 统一配置
-- DOCS-02: docs/CONTRIBUTING.md 脚本规范
+None — use `/gsd:new-milestone` to define next milestone
 
 ### Out of Scope
 
@@ -77,29 +91,22 @@
 
 ## Current State
 
-**v1.5 Started** — 2026-02-02
+**v1.5 Complete** — 2026-02-02
 
 - **Milestone:** 状态广播闭环 + 自动救援 + 维护性改进 (Phases 15-17)
-- **Focus:** Worker 自动状态记录 + 自动救援最小版 + _common.sh
-- **Scripts:** claude_auto_rescue.sh, scripts/_common.sh
-- **Plan:** docs/plans/2026-02-02-v1.5-status-autorescue.md
-- **v1.5 Status:** Ready to define requirements
+- **Delivered:**
+  - `_common.sh` — unified configuration and logging
+  - `claude_auto_rescue.sh` — auto-confirmation for prompts
+  - `swarm_broadcast.sh` — status broadcasting wrapper
+  - `CONTRIBUTING.md` — script conventions documentation
+- **Scripts:** 10 shell scripts (1400+ LOC total)
+- **Verification:** All components passed code review
 
-## Current Milestone: v1.5 状态广播闭环 + 自动救援
+## Next Milestone
 
-**Goal:** Worker 在关键节点自动写 status.log，Master 自动救援卡点，提升协作效率
+Starting Phase 18 — 待定义
 
-**Target features:**
-- **AUTO-01**: Worker 状态广播脚本 — START/DONE/ERROR/WAIT 自动记录
-- **RESC-01**: 自动救援脚本 — 检测 [y/n]/Press Enter → 自动 send-keys
-- **RESC-02**: 冷却机制 — 30s 间隔防止重复确认
-- **DOCS-01**: `scripts/_common.sh` — 统一 SWARM_STATE_DIR / SESSION / 输出格式
-- **DOCS-02**: `docs/CONTRIBUTING.md` — 脚本规范、测试规范
-
-**约束：**
-- 优先脚本化实现，不改 `swarm/*.py`
-- 仅围绕"状态广播 + 自动救援 + 维护性"展开
-- 不做冲突锁绑定（留给 v1.6）
+Run `/gsd:new-milestone` to begin the next milestone planning cycle.
 
 ## Context
 
@@ -107,7 +114,7 @@
 
 **Design Document:** `/home/user/group/AI蜂群协作-tmux多Agent协作系统.md`
 
-**Milestone Archive:** `.planning/milestones/v1.0-ROADMAP.md`
+**Milestone Archives:** `.planning/milestones/`
 
 ## Constraints
 
@@ -128,7 +135,10 @@
 | 单行任务发送 | 防止 Claude 误解多行消息 | ✅ Validated |
 | send-raw 子命令 | 协议设置消息不加 [TASK] 前缀 | ✅ Validated |
 | 行首 marker 匹配 | 避免描述中的 marker 误匹配 | ✅ Validated |
+| _common.sh 优先 | Foundational config needed by all scripts | ✅ Validated |
+| Auto-Rescue 后执行 | Uses shared config for logging | ✅ Validated |
+| Worker-only 自动救援 | Master window excluded from auto-confirm | ✅ Validated |
 
 ---
 
-*Last updated: 2026-02-02 after v1.4 milestone start*
+*Last updated: 2026-02-02 after v1.5 milestone*
