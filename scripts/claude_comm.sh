@@ -104,7 +104,8 @@ status() {
 
 # Main entry point
 main() {
-    # Handle --session flag first (must be first argument)
+    # Handle --session flag (must be first argument)
+    # TODO: Support --session at any position using while loop parsing
     if [[ "${1:-}" == "--session" ]] && [[ -n "${2:-}" ]]; then
         SESSION="$2"
         shift 2
