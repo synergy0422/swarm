@@ -47,16 +47,28 @@ send() {
     local task_id="$2"
     local description="$3"
 
-    # Send [TASK] marker with task_id
-    tmux send-keys -t "$SESSION:$window" "[TASK] $task_id "
-
-    # Send the description (trim any extra whitespace)
-    echo "$description" | tmux send-keys -t "$SESSION:$window" ""
+    # Send complete task message on single line (no newlines)
+    tmux send-keys -t "$SESSION:$window" "[TASK] $task_id $description"
 
     # Send Enter to execute
     tmux send-keys -t "$SESSION:$window" "Enter"
 
     echo "Sent task $task_id to window $window"
+}
+
+# Send raw text (no [TASK] prefix) for protocol setup messages
+# Usage: send-raw <window> "<message>"
+send_raw() {
+    local window="$1"
+    local message="$2"
+
+    # Send raw message on single line
+    tmux send-keys -t "$SESSION:$window" "$message"
+
+    # Send Enter to execute
+    tmux send-keys -t "$SESSION:$window" "Enter"
+
+    echo "Sent raw message to window $window"
 }
 
 # Poll for a marker response from a window
@@ -112,10 +124,11 @@ main() {
     shift $?
 
     if [[ $# -lt 1 ]]; then
-        echo "Usage: $0 <send|poll|status> [options]"
+        echo "Usage: $0 <send|send-raw|poll|status> [options]"
         echo ""
         echo "Commands:"
-        echo "  send <window> <task_id> \"<description>\"  - Send task to window"
+        echo "  send <window> <task_id> \"<description>\"  - Send task to window (with [TASK] prefix)"
+        echo "  send-raw <window> \"<message>\"            - Send raw message (no prefix)"
         echo "  poll <window> [timeout] [task_id]         - Poll for marker response (default timeout: 30s)"
         echo "  status <window>                           - Get window status"
         echo ""
@@ -138,6 +151,13 @@ main() {
             fi
             send "$1" "$2" "$3"
             ;;
+        send-raw)
+            if [[ $# -lt 2 ]]; then
+                echo "Usage: $0 send-raw <window> \"<message>\"" >&2
+                exit 1
+            fi
+            send_raw "$1" "$2"
+            ;;
         poll)
             poll "$@"
             ;;
@@ -151,7 +171,7 @@ main() {
         *)
             echo "Unknown command: $subcommand" >&2
             echo "" >&2
-            echo "Available commands: send, poll, status" >&2
+            echo "Available commands: send, send-raw, poll, status" >&2
             exit 1
             ;;
     esac
@@ -160,7 +180,9 @@ main() {
 # Run main if called directly (not sourced)
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     if [[ $# -lt 1 ]]; then
-        echo "Usage: $0 <send|poll|status> [options]" >&2
+        echo "Usage: $0 <send|send-raw|poll|status> [options]" >&2
+        echo "" >&2
+        echo "Commands: send, send-raw, poll, status" >&2
         echo "" >&2
         echo "Options:" >&2
         echo "  --session <name>  Override default session" >&2
