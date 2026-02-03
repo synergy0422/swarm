@@ -7,38 +7,7 @@
 
 - ✅ **v1.0 - v1.6** — Previous milestones archived in `.planning/milestones/`
 - ✅ **v1.7** — 5 窗格布局 + Codex — [archived](milestones/v1.7-ROADMAP.md)
-- ⏳ **v1.8** — 诊断快照 — Planning complete
-
-## v1.8 Phases
-
-### Phase 23: 快照脚本实现
-
-**Goal:** 实现 `scripts/swarm_snapshot.sh` 脚本
-
-**Requirements:**
-- SNAP-01 ~ SNAP-09 (快照脚本功能)
-- DOCS-01, DOCS-02 (文档更新)
-
-**Plans:**
-- [x] 23-PLAN.md — 快照脚本实现
-- [x] 23-SUMMARY.md — 2026-02-03
-- [x] 23-VERIFICATION.md — passed (6/6 must-haves)
-
-**Success Criteria:**
-1. [x] 脚本支持 `--session` / `--lines` / `--out` 参数
-2. [x] 脚本输出 tmux 结构信息到快照目录
-3. [x] 脚本捕获每个 pane 的最近 N 行输出
-4. [x] 脚本记录状态文件和锁目录（如存在）
-5. [x] 脚本记录 git 版本信息
-6. [x] 脚本不创建/修改任何状态文件
-
-**Success Criteria:**
-1. 脚本支持 `--session` / `--lines` / `--out` 参数
-2. 脚本输出 tmux 结构信息到快照目录
-3. 脚本捕获每个 pane 的最近 N 行输出
-4. 脚本记录状态文件和锁目录（如存在）
-5. 脚本记录 git 版本信息
-6. 脚本不创建/修改任何状态文件
+- ✅ **v1.8** — 诊断快照 — [archived](milestones/v1.8-ROADMAP.md) (Shipped 2026-02-03)
 
 ---
 

@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.8 诊断快照 — Implementation complete
+**Current focus:** Ready for next milestone
 
 ## Phase Status
 
@@ -25,36 +25,26 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 **v1.8 Complete** — 2026-02-03
 
-- **Milestone:** 诊断快照 (v1.8)
-- **Status:** All phases complete - ready for milestone audit
+- **Milestone:** 诊断快照 (v1.8) - SHIPPED
+- **Status:** Ready for next milestone
 
 ## Progress
 
-Phase 23 plan completed:
-- scripts/swarm_snapshot.sh created with full functionality
-- README.md updated with diagnostic snapshot documentation
-- docs/SCRIPTS.md updated with complete documentation
-
 ```
-Progress: ████████████████████ 100%
-- Phase 1-6 (v1.0): 6/6 complete
-- Phase 7-8 (v1.1): 2/2 complete
-- Phase 9-10 (v1.2): 2/2 complete
-- Phase 11 (v1.3): 1/1 complete
-- Phase 12-14 (v1.4): 3/3 complete
-- Phase 15-17 (v1.5): 3/3 complete
-- Phase 18-21 (v1.6): 4/4 complete
-- Phase 22 (v1.7): 1/1 complete
-- Phase 23 (v1.8): 1/1 complete
+v1.0-v1.8 Complete: ████████████████████ 100%
+- 23 phases completed
+- 23+ plans executed
+- All milestones shipped
 ```
 
 ## Session Continuity
 
 Last session: 2026-02-03
-Completed: Phase 23 execution - 快照脚本实现
+Completed: v1.8 milestone - 诊断快照
 
-Summary: .planning/phases/23-snapshot-script/23-SUMMARY.md
+Milestone summary: .planning/milestones/v1.8-ROADMAP.md
+Requirements archive: .planning/milestones/v1.8-REQUIREMENTS.md
 
 ---
 
-*State updated: 2026-02-03 after Phase 23 completion*
+*State updated: 2026-02-03 after v1.8 milestone completion*

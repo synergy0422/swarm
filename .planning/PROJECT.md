@@ -95,9 +95,23 @@
 - [x] **LOCK-02**: 锁原子获取机制（O_CREAT|O_EXCL）
 - [x] **LOCK-03**: 锁释放与验证（严格 owner 验证）
 
+**v1.8 - 诊断快照 (Shipped 2026-02-03)**
+
+- [x] **SNAP-01**: `--session` / `CLAUDE_SESSION` 参数
+- [x] **SNAP-02**: `--lines` / `SNAPSHOT_LINES` 参数（默认 50）
+- [x] **SNAP-03**: `--out` / `SNAPSHOT_DIR` 参数（自动时间戳）
+- [x] **SNAP-04**: tmux 结构信息输出（sessions/windows/panes）
+- [x] **SNAP-05**: 每个 pane 最近 N 行输出捕获
+- [x] **SNAP-06**: 状态文件（status.log）只读复制
+- [x] **SNAP-07**: 锁目录（locks/）只读列表
+- [x] **SNAP-08**: Git 版本信息捕获
+- [x] **SNAP-09**: 只读操作，不修改 SWARM_STATE_DIR
+- [x] **DOCS-01**: README.md "诊断快照"章节
+- [x] **DOCS-02**: docs/SCRIPTS.md 完整文档
+
 ### Active
 
-_(No active requirements — start /gsd:new-milestone for v1.8)_
+_(No active requirements — start /gsd:new-milestone for v1.9)_
 
 ### Out of Scope
 
@@ -107,20 +121,11 @@ _(No active requirements — start /gsd:new-milestone for v1.8)_
 - **实时交互场景** — 需要人工实时响应的场景
 - **修改 swarm/*.py** — v1.7 仅新增脚本，不改 Python 代码
 
-## Current Milestone: v1.8 诊断快照
+## Current Milestone: v1.9 (待规划)
 
-**Goal:** 一键采集 tmux swarm 运行状态，输出到时间戳目录用于诊断
+**Goal:** 待定义
 
-**Target features:**
-- `scripts/swarm_snapshot.sh` — 诊断快照脚本
-  - tmux 结构信息（sessions/windows/panes）
-  - 每个 pane 的最近 N 行输出（默认 50，可配置）
-  - 状态文件（`$SWARM_STATE_DIR/status.log`）
-  - 锁目录列表（`$SWARM_STATE_DIR/locks/`）
-  - 脚本版本信息（git short SHA）
-  - 只读操作，不修改任何状态文件
-- README.md — 新增"诊断快照"使用说明
-- docs/SCRIPTS.md — 增加 swarm_snapshot.sh 文档
+**Start with:** `/gsd:new-milestone`
 
 ## Context
 
@@ -167,4 +172,4 @@ _(No active requirements — start /gsd:new-milestone for v1.8)_
 
 ---
 
-*Last updated: 2026-02-03 after v1.7 milestone complete*
+*Last updated: 2026-02-03 after v1.8 milestone complete*

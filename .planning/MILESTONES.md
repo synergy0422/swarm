@@ -1,5 +1,48 @@
 # Project Milestones: AI Swarm
 
+## v1.8 诊断快照 (Shipped: 2026-02-03)
+
+**Delivered:** 一键采集 tmux swarm 运行状态的诊断快照脚本，支持 `--session`/`--lines`/`--out` 参数，只读操作不修改状态文件。
+
+**Phases completed:** 23 (1 plan total)
+
+**Key accomplishments:**
+
+1. 诊断快照脚本 — Created `scripts/swarm_snapshot.sh` (353 lines) with:
+   - `--session` / `--lines` / `--out` 参数支持
+   - tmux 结构信息捕获（sessions/windows/panes）
+   - 窗格输出捕获带 `[session:window.pane]` 前缀
+   - 状态文件和锁目录只读复制/列表
+   - Git 版本信息捕获
+   - 自动时间戳目录冲突解决
+   - 只读约束验证（不写入 SWARM_STATE_DIR）
+
+2. 文档完善 — README.md 和 docs/SCRIPTS.md 新增完整文档：
+   - 诊断快照使用说明
+   - 参数表格和示例
+   - 输出目录结构说明
+
+3. Bug 修复 — 验收发现并修复：
+   - Session 不存在时退出码从 0 改为 1
+   - 可选文件缺失不再计入 errors
+   - Summary 显示 "(missing)" 标注
+
+**Stats:**
+
+- 1 script created: swarm_snapshot.sh (353 lines)
+- 2 documentation files updated
+- 1 phase, 1 plan, 15 commits
+- 2 days from start to ship (2026-02-01 → 2026-02-03)
+- 11/11 v1.8 requirements satisfied
+- 6/6 success criteria verified
+
+**Git range:** `docs(23): capture phase context` → `docs(23): update verification with fix details`
+
+**What's next:**
+- v1.9: 待规划
+
+---
+
 ## v1.7 5 窗格布局 + Codex (Shipped: 2026-02-03)
 
 **Delivered:** 5-pane tmux layout script with dedicated codex pane, configurable split ratios, and comprehensive documentation.
