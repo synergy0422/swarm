@@ -95,6 +95,16 @@
 - [x] **LOCK-02**: 锁原子获取机制（O_CREAT|O_EXCL）
 - [x] **LOCK-03**: 锁释放与验证（严格 owner 验证）
 
+**v1.85 - Claude Tasks 集成 + 自动锁闭环 (Shipped 2026-02-04)**
+
+- [x] **TASK-01-16**: 16 tasks for CLAUDE_CODE_TASK_LIST_ID bridge
+- [x] Created `swarm_tasks_bridge.sh` with claim/done/fail commands
+- [x] Automatic lock acquire/release with START/DONE/ERROR status logging
+- [x] Proper exit code semantics (0=success, 1=error, 2=conflict)
+- [x] Automatic expired lock cleanup and reclaim
+- [x] Documentation: README.md "Claude Tasks 协作流程" section
+- [x] Documentation: docs/SCRIPTS.md complete script documentation
+
 **v1.8 - 诊断快照 (Shipped 2026-02-03)**
 
 - [x] **SNAP-01**: `--session` / `CLAUDE_SESSION` 参数
@@ -113,14 +123,9 @@
 
 ### Active
 
-**v1.85 - Claude Tasks 集成 + 自动锁闭环**
+**v1.86 - Planning Required**
 
-- [ ] **TASK-01**: 创建 `swarm_tasks_bridge.sh` — claim/done/fail 子命令
-- [ ] **TASK-02**: claim 子命令 — 自动加锁 + START 状态记录
-- [ ] **TASK-03**: done/fail 子命令 — 自动解锁 + DONE/ERROR 状态记录
-- [ ] **TASK-04**: 错误处理 — acquire/release 失败不吞错
-- [ ] **TASK-05**: 文档更新 — README.md 新增协作流程章节
-- [ ] **TASK-06**: 文档更新 — docs/SCRIPTS.md 新增脚本文档
+Next milestone to be defined.
 
 ### Out of Scope
 
@@ -128,14 +133,16 @@
 - **修改 swarm/*.py** — 不修改 Python 代码
 - **自动重试执行** — 仅提供手动重试流程说明
 
-## Current Milestone: v1.85 Claude Tasks 集成 + 自动锁闭环
+## Current Milestone: v1.86 (Planning Required)
 
-**Goal:** 通过 CLAUDE_CODE_TASK_LIST_ID 实现多窗口任务共享，配合 `swarm_tasks_bridge.sh` 脚本实现 claim→lock→work→done/fail 自动闭环。
+**Status:** Ready to define requirements
 
-**Target features:**
-- `swarm_tasks_bridge.sh` — claim/done/fail 子命令，自动加解锁 + 状态记录
-- 统一任务列表 — CLAUDE_CODE_TASK_LIST_ID 环境变量
-- 文档更新 — 任务命名、依赖策略、冲突规则、回退与重试说明
+**Next steps:**
+- Define scope and requirements for v1.86
+- Create ROADMAP.md entry
+- Create REQUIREMENTS.md
+
+See: `.planning/milestones/v1.85-ROADMAP.md` for completed milestone details.
 
 ## Context
 
@@ -183,4 +190,4 @@
 
 ---
 
-*Last updated: 2026-02-03 after v1.85 milestone started*
+*Last updated: 2026-02-04 after v1.85 milestone shipped*
