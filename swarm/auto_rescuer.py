@@ -73,14 +73,33 @@ MANUAL_CONFIRM_PATTERNS = [
 # DANGEROUS_PATTERNS: Block auto-rescue immediately (security blacklist)
 # Priority: Highest - checked first, blocks all auto-actions
 DANGEROUS_PATTERNS = [
+    # File deletion
     r'rm\s+-rf',           # Force recursive delete
     r'rm\s+-r',            # Recursive delete
     r'rm\s+-fr',           # Force recursive delete
     r'shred',              # Secure file deletion
+
+    # Database operations
     r'DROP\s+DATABASE',    # Database deletion
     r'DROP\s+TABLE',       # Table deletion
     r'DROP\s+INDEX',       # Index deletion
+    r'DROP\s+VIEW',        # View deletion
+    r'DROP\s+SCHEMA',      # Schema deletion
     r'TRUNCATE',           # Table truncation
+    r'DELETE\s+FROM',      # Data deletion
+    r'ALTER\s+.*\s+DROP',  # ALTER DROP operations
+
+    # Shell/command injection
+    r'\$\(',              # Command substitution
+    r'\|.*\w',             # Pipe to command
+    r'&&\s*\w',            # Chained command execution
+    r';\s*\w',             # Sequential command execution
+    r'>>\s*\/',            # Append redirect to root
+    r'>\s*\/',             # Write redirect to root
+
+    # Destructive operations
+    r'mkfs',               # Filesystem creation (destructive)
+    r'dd\s+if=\/dev\/zero', # Disk writing with zero fill
 ]
 
 
