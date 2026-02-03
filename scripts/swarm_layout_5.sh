@@ -123,39 +123,39 @@ log_info "Working directory: $WORKDIR"
 log_info "Left pane ratio: ${LEFT_RATIO}% master, $((100 - LEFT_RATIO))% codex"
 
 # Create new detached session with window name "layout"
-# Layout: main-horizontal (left large pane, right panes stacked)
+# Layout: master/codex on left, 3 workers on right
+# Use pane_id capture to ensure correct pane assignment
 tmux new-session -d -s "$SESSION" -n layout -x 200 -y 60
 
-# Create panes using split-window commands
-# Initial pane is pane 0 (left side)
+# Create panes using split-window commands with pane_id capture
+# This ensures stable pane assignment regardless of split order
 
-# Split horizontally to create right side (pane 1)
-tmux split-window -h -t "$SESSION:0"
+# Split horizontally to create right side (worker area)
+# Capture the new pane's ID for worker-0
+RIGHT_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$SESSION:0")
 
-# Split right pane vertically to create 3 equal worker panes
-tmux split-window -v -t "$SESSION:0.1"  # pane 2
-tmux split-window -v -t "$SESSION:0.1"  # pane 3
+# Split right pane vertically for worker-1 (66% height)
+WORKER1_PANE=$(tmux split-window -v -p 66 -P -F '#{pane_id}' -t "$RIGHT_PANE")
 
-# Now split left pane vertically to create master/codex panes
-# Left pane is at 70% (due to even-horizontal layout), split it vertically
-tmux split-window -v -p "$LEFT_RATIO" -t "$SESSION:0.0"  # pane 4 (codex)
+# Split right pane again for worker-2 (50% of remaining = 33% total)
+WORKER2_PANE=$(tmux split-window -v -p 50 -P -F '#{pane_id}' -t "$RIGHT_PANE")
+
+# Now split left pane vertically to create codex pane
+# Left pane is at 0, split it to get codex pane
+CODEX_PANE=$(tmux split-window -v -p "$LEFT_RATIO" -P -F '#{pane_id}' -t "$SESSION:0")
+
+# Master pane is the original pane 0
+MASTER_PANE="$SESSION:0.0"
 
 # Send startup commands to each pane
-# Pane 0: master (left top)
-tmux send-keys -t "$SESSION:0.0" "cd \"$WORKDIR\" && claude" Enter
+tmux send-keys -t "$MASTER_PANE" "cd \"$WORKDIR\" && claude" Enter
+tmux send-keys -t "$CODEX_PANE" "cd \"$WORKDIR\" && $CODEX_CMD" Enter
+tmux send-keys -t "$RIGHT_PANE" "cd \"$WORKDIR\" && claude" Enter
+tmux send-keys -t "$WORKER1_PANE" "cd \"$WORKDIR\" && claude" Enter
+tmux send-keys -t "$WORKER2_PANE" "cd \"$WORKDIR\" && claude" Enter
 
-# Pane 4: codex (left bottom) - needs to be pane 1 after the horizontal split
-tmux send-keys -t "$SESSION:0.1" "cd \"$WORKDIR\" && $CODEX_CMD" Enter
-
-# Worker panes on the right (panes 2, 3, 4 in the right column)
-for i in 0 1 2; do
-    # Calculate pane index: master/codex on left (0,1), workers on right (2,3,4)
-    pane_idx=$((i + 2))
-    tmux send-keys -t "$SESSION:0.$pane_idx" "cd \"$WORKDIR\" && claude" Enter
-done
-
-# Select master pane as starting point (pane 0)
-tmux select-pane -t "$SESSION:0.0"
+# Select master pane as starting point
+tmux select-pane -t "$MASTER_PANE"
 
 # Verify layout
 PANE_COUNT=$(tmux list-panes -t "$SESSION:0" 2>/dev/null | wc -l)
