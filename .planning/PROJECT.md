@@ -24,6 +24,11 @@
 - [x] **DOCS-05**: 创建 docs/SCRIPTS.md — 完整脚本索引 (用途/参数/示例)
 - [x] **DOCS-06**: 创建 CHANGELOG.md — v1.0-v1.6 变更摘要
 
+**v1.7 - 5 窗格布局 + Codex (Shipped 2026-02-03)**
+
+- [x] **LAYOUT-01**: 5 窗格布局脚本 — `scripts/swarm_layout_5.sh` (左侧 master/codex，右侧 3 workers)
+- [x] **LAYOUT-02**: 文档更新 — README.md 和 docs/SCRIPTS.md 新增布局说明
+
 **v1.5 - 状态广播闭环 + 自动救援 + 维护性改进 (Shipped 2026-02-02)**
 
 - [x] **AUTO-01**: Worker 状态广播脚本 — START/DONE/ERROR/WAIT 自动记录
@@ -92,10 +97,7 @@
 
 ### Active
 
-**v1.7 - 5 窗格布局 + Codex**
-
-- [ ] **LAYOUT-01**: 5 窗格布局脚本 — `scripts/swarm_layout_5.sh` (左侧 master/codex，右侧 3 workers)
-- [ ] **LAYOUT-02**: 文档更新 — README.md 和 docs/SCRIPTS.md 新增布局说明
+_(No active requirements — start /gsd:new-milestone for v1.8)_
 
 ### Out of Scope
 
@@ -107,12 +109,12 @@
 
 ## Current State
 
-**v1.7 Started** — 2026-02-03
+**v1.7 Complete** — 2026-02-03
 
 - **Milestone:** 5 窗格布局 + Codex (Phase 22)
-- **Focus:** scripts/swarm_layout_5.sh 布局脚本
-- **Scripts:** 11 executable scripts (existing)
-- **Status:** Ready for Phase 22 planning
+- **Script:** scripts/swarm_layout_5.sh (246 lines)
+- **Files:** 11 executable scripts + 3 docs updated
+- **Status:** Ready for v1.8 planning
 
 ## Context
 
@@ -154,7 +156,9 @@
 | log_debug conditional | Debug logging without performance impact | ✅ Validated |
 | task_wrap 原子锁 | Prevents duplicate task execution | ✅ Validated |
 | 5-step emergency procedure | 备份 → 优雅停 → 强杀 → 清锁 → 复验 | ✅ Documented |
+| scripts/ directory | Consistent with other swarm scripts | ✅ Validated |
+| 5-pane single window | Left: master/codex, Right: 3 workers | ✅ Validated |
 
 ---
 
-*Last updated: 2026-02-03 after v1.7 milestone started*
+*Last updated: 2026-02-03 after v1.7 milestone complete*

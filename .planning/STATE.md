@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.7 - 5 窗格布局 + Codex (Phase 22)
+**Current focus:** v1.8 - 待规划
 
 ## Phase Status
 
@@ -24,37 +24,20 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 **v1.7 Complete** — 2026-02-03
 
-- **Milestone:** 5 窗格布局 + Codex (Phases 22)
-- **Focus:** scripts/swarm_layout_5.sh 布局脚本
-- **Status:** Plan 22-01 executed successfully
-
-## v1.7 Summary
-
-| Aspect | Value |
-|--------|-------|
-| Phases | 1 (22) |
-| Requirements | 2 (LAYOUT-01, LAYOUT-02) |
-| Focus | 5 窗格布局 + Codex 集成 |
-| Status | 1/1 plans completed |
-
-## Key Decisions
-
-| Phase | Decision | Rationale | Status |
-|-------|----------|-----------|--------|
-| 22 | scripts/ directory | Consistent with other swarm scripts | Implemented |
-| 22 | Inherit _config.sh/_common.sh | Unified configuration style | Implemented |
-| 22 | Single window 5 panes | Left: master/codex, Right: 3 workers | Implemented |
+- **Milestone:** 5 窗格布局 + Codex (Phase 22)
+- **Focus:** Ready for v1.8 planning
+- **Status:** Run `/gsd:new-milestone` to start next cycle
 
 ## Session Continuity
 
 Last session: 2026-02-03
-Completed: Phase 22 Plan 1 - 5 窗格布局脚本
+Completed: v1.7 milestone completion workflow
 
-Progress: Phase 22 of v1.7 milestone complete
-- scripts/swarm_layout_5.sh created (246 lines, executable)
-- README.md updated with 5 窗格布局 section
-- docs/SCRIPTS.md updated with complete documentation
+Progress: All milestones through v1.7 archived
+- scripts/swarm_layout_5.sh created and verified
+- Documentation updated (README.md, docs/SCRIPTS.md)
+- Audit passed, archives created, PROJECT.md evolved
 
 ---
 
-*State updated: 2026-02-03 after completing 22-01-PLAN.md*
+*State updated: 2026-02-03 after v1.7 milestone completion*

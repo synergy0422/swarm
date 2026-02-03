@@ -1,5 +1,47 @@
 # Project Milestones: AI Swarm
 
+## v1.7 5 窗格布局 + Codex (Shipped: 2026-02-03)
+
+**Delivered:** 5-pane tmux layout script with dedicated codex pane, configurable split ratios, and comprehensive documentation.
+
+**Phases completed:** 22 (1 plan total)
+
+**Key accomplishments:**
+
+1. 5 窗格布局脚本 — Created `scripts/swarm_layout_5.sh` with:
+   - Single tmux window: master + codex (left) + 3 workers (right)
+   - Configurable left-ratio (50-80%) for master/codex split
+   - Parameters: --session, --workdir, --left-ratio, --codex-cmd, --attach
+   - Environment variables: CLAUDE_SESSION, SWARM_WORKDIR, CODEX_CMD
+
+2. 代码集成 — Inherited `_config.sh`/`_common.sh` configuration system
+   - Consistent with other swarm scripts in scripts/ directory
+   - Uses tmux display-message for dynamic pane sizing
+
+3. Bug 修复 — Fixed during verification:
+   - split-window -l direction semantics (tmux creates pane below)
+   - pane sizing from -p to -l for tmux 3.4 compatibility
+
+4. 文档完善 — README.md and docs/SCRIPTS.md updated with:
+   - Layout diagram and usage examples
+   - Complete parameter documentation
+   - Customization guide
+
+**Stats:**
+
+- 1 script created: swarm_layout_5.sh (246 lines)
+- 2 documentation files updated: +164 lines
+- 1 phase, 1 plan, 10 commits
+- 3 days from start to ship (2026-01-31 → 2026-02-03)
+- 9/9 v1.7 verification criteria passed
+
+**Git range:** `feat(22-01): create 5-pane tmux layout script` → `docs(22-01): final verification after -l fix`
+
+**What's next:**
+- v1.8: UI 面板, P2P/流水线模式 (待规划)
+
+---
+
 ## v1.0 MVP (Shipped: 2026-01-31)
 
 **Delivered:** Multi-agent collaboration system with tmux integration, shared state management, Master coordination, and CLI tools.
