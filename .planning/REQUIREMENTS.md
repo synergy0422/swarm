@@ -16,10 +16,10 @@ Requirements for this milestone: 主控自动救援闭环 + 状态汇总表
 
 ### 状态汇总表
 
-- [ ] **RESCUE-05**: 每次扫描生成一张"窗口/状态/当前任务/备注"的简表
-- [ ] **RESCUE-06**: 与文档中"指挥官汇报格式"对齐
-- [ ] **RESCUE-07**: 能区分 ERROR / WAIT / DONE / RUNNING 状态
-- [ ] **RESCUE-08**: 状态优先级：ERROR > WAIT > RUNNING > DONE/IDLE
+- [x] **RESCUE-05**: 每次扫描生成一张"窗口/状态/当前任务/备注"的简表
+- [x] **RESCUE-06**: 与文档中"指挥官汇报格式"对齐
+- [x] **RESCUE-07**: 能区分 ERROR / WAIT / DONE / RUNNING 状态
+- [x] **RESCUE-08**: 状态优先级：ERROR > WAIT > RUNNING > DONE/IDLE
 
 ### 技术集成
 
@@ -48,25 +48,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RESCUE-01 | - | Pending |
-| RESCUE-02 | - | Pending |
-| RESCUE-03 | - | Pending |
-| RESCUE-04 | - | Pending |
-| RESCUE-05 | - | Pending |
-| RESCUE-06 | - | Pending |
-| RESCUE-07 | - | Pending |
-| RESCUE-08 | - | Pending |
-| RESCUE-09 | - | Pending |
-| RESCUE-10 | - | Pending |
-| RESCUE-11 | - | Pending |
-| RESCUE-12 | - | Pending |
-| RESCUE-13 | - | Pending |
+| RESCUE-01 | 24 | Complete |
+| RESCUE-02 | 24 | Complete |
+| RESCUE-03 | 24 | Complete |
+| RESCUE-04 | 24 | Complete |
+| RESCUE-05 | 25 | Complete |
+| RESCUE-06 | 25 | Complete |
+| RESCUE-07 | 25 | Complete |
+| RESCUE-08 | 25 | Complete |
+| RESCUE-09 | 26 | Pending |
+| RESCUE-10 | 26 | Pending |
+| RESCUE-11 | 26 | Pending |
+| RESCUE-12 | 26 | Pending |
+| RESCUE-13 | 26 | Pending |
 
 **Coverage:**
 - v1.86 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Complete: 8 (RESCUE-01~08)
+- Pending: 5 (RESCUE-09~13)
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after initial definition*
+*Last updated: 2026-02-04 after Phase 25 verification*

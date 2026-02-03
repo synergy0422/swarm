@@ -21,7 +21,7 @@
 | # | Phase | Goal | Requirements | Success Criteria | Status |
 |---|-------|------|--------------|------------------|--------|
 | 24 | Master 救援核心 | 实现 Master 自动判断 WAIT/confirm 状态并安全确认 | RESCUE-01, RESCUE-02, RESCUE-03, RESCUE-04 | 6 | ✓ Complete |
-| 25 | 状态汇总表 | 实现窗口状态汇总表输出 | RESCUE-05, RESCUE-06, RESCUE-07, RESCUE-08 | 4 | Pending |
+| 25 | 状态汇总表 | 实现窗口状态汇总表输出 | RESCUE-05, RESCUE-06, RESCUE-07, RESCUE-08 | 4 | ✓ Complete (Verification) |
 | 26 | 集成与配置 | 技术集成与配置项整理 | RESCUE-09, RESCUE-10, RESCUE-11, RESCUE-12, RESCUE-13 | 5 | Pending |
 
 ### Phase 24: Master 救援核心
@@ -55,10 +55,12 @@
 - RESCUE-08: 状态优先级：ERROR > WAIT > RUNNING > DONE/IDLE
 
 **Success Criteria:**
-1. [ ] 每轮扫描后输出状态汇总表
-2. [ ] 字段包含：window、state、task_id、note
-3. [ ] 状态优先级正确：ERROR > WAIT > RUNNING > DONE/IDLE
-4. [ ] 汇总表包含所有窗口的状态
+1. [x] 每轮扫描后输出状态汇总表
+2. [x] 字段包含：window、state、task_id、note
+3. [x] 状态优先级正确：ERROR > WAIT > RUNNING > DONE/IDLE
+4. [x] 汇总表包含所有窗口的状态
+
+**Status:** Complete (2026-02-04)
 
 ### Phase 26: 集成与配置
 
@@ -88,10 +90,10 @@
 | RESCUE-02 | 24 | Complete |
 | RESCUE-03 | 24 | Complete |
 | RESCUE-04 | 24 | Complete |
-| RESCUE-05 | 25 | Pending |
-| RESCUE-06 | 25 | Pending |
-| RESCUE-07 | 25 | Pending |
-| RESCUE-08 | 25 | Pending |
+| RESCUE-05 | 25 | Complete |
+| RESCUE-06 | 25 | Complete |
+| RESCUE-07 | 25 | Complete |
+| RESCUE-08 | 25 | Complete |
 | RESCUE-09 | 26 | Pending |
 | RESCUE-10 | 26 | Pending |
 | RESCUE-11 | 26 | Pending |
@@ -100,10 +102,10 @@
 
 **Coverage:**
 - v1.86 requirements: 13 total
-- Complete: 4 (RESCUE-01~04)
-- Pending: 9 (RESCUE-05~13)
+- Complete: 8 (RESCUE-01~08)
+- Pending: 5 (RESCUE-09~13)
 
 ---
 
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 after Phase 24 complete*
+*Last updated: 2026-02-04 after Phase 25 verification complete*
