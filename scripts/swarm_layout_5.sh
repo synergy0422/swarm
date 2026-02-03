@@ -104,7 +104,11 @@ if [[ ! -d "$WORKDIR" ]]; then
     exit 1
 fi
 
-# Validate left ratio
+# Validate left ratio (must be numeric first, then in range)
+if [[ ! "$LEFT_RATIO" =~ ^[0-9]+$ ]]; then
+    log_error "LEFT_RATIO must be a number (50-80)"
+    exit 1
+fi
 if [[ "$LEFT_RATIO" -lt 50 ]] || [[ "$LEFT_RATIO" -gt 80 ]]; then
     log_error "LEFT_RATIO must be between 50 and 80"
     exit 1
@@ -138,8 +142,9 @@ RIGHT_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$MASTER_PANE")
 WORKER1_PANE=$(tmux split-window -v -P -F '#{pane_id}' -t "$RIGHT_PANE")
 WORKER2_PANE=$(tmux split-window -v -P -F '#{pane_id}' -t "$RIGHT_PANE")
 
-# Ensure right pane workers are equal height using select-layout
-tmux select-layout -t "$RIGHT_PANE" even-vertical
+# Ensure right pane workers are equal height using select-layout on window
+tmux select-layout -t "$SESSION:0" even-vertical
+tmux select-pane -t "$MASTER_PANE"
 
 # Now split left pane vertically to create codex pane
 CODEX_PANE=$(tmux split-window -v -p "$LEFT_RATIO" -P -F '#{pane_id}' -t "$MASTER_PANE")
@@ -163,7 +168,7 @@ else
 fi
 
 log_info "Session created successfully!"
-log_info "5 panes: master(codex) + 3 workers"
+log_info "5 panes: master + codex + 3 workers"
 log_info ""
 log_info "Commands:"
 log_info "  Attach:   tmux attach -t $SESSION"
