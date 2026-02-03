@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** Ready for next milestone
+**Current focus:** v1.85 - Claude Tasks 集成 + 自动锁闭环
 
 ## Phase Status
 
@@ -20,31 +20,34 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 | 18-21 | v1.6 长期可维护性 + 流程闭环 | Complete | 4/4 plans |
 | 22 | v1.7 5 窗格布局 + Codex | Complete | 1/1 plans |
 | 23 | v1.8 诊断快照 | Complete | 1/1 plans |
+| 24 | v1.85 Claude Tasks 集成 | Pending | 0/1 plans |
 
 ## Current Position
 
-**v1.8 Complete** — 2026-02-03
+**v1.85 Started** — 2026-02-03
 
-- **Milestone:** 诊断快照 (v1.8) - SHIPPED
-- **Status:** Ready for next milestone
+- **Milestone:** Claude Tasks 集成 + 自动锁闭环
+- **Status:** Ready for phase planning
 
 ## Progress
 
 ```
 v1.0-v1.8 Complete: ████████████████████ 100%
+v1.85 In Progress: ░░░░░░░░░░░░░░░░░░░░░░░░░░░ 0%
 - 23 phases completed
-- 23+ plans executed
-- All milestones shipped
+- 24+ plans executed
+- All milestones shipped or in progress
 ```
 
 ## Session Continuity
 
 Last session: 2026-02-03
-Completed: v1.8 milestone - 诊断快照
+Started: v1.85 milestone - Claude Tasks 集成 + 自动锁闭环
 
-Milestone summary: .planning/milestones/v1.8-ROADMAP.md
-Requirements archive: .planning/milestones/v1.8-REQUIREMENTS.md
+Previous milestone: v1.8 - 诊断快照 (archived in .planning/milestones/)
+Current milestone: v1.85 (planning phase)
 
 ---
 
-*State updated: 2026-02-03 after v1.8 milestone completion*
+---
+*State updated: 2026-02-03 after v1.85 milestone started*

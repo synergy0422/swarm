@@ -111,21 +111,31 @@
 
 ### Active
 
-_(No active requirements — start /gsd:new-milestone for v1.9)_
+### Active
+
+**v1.85 - Claude Tasks 集成 + 自动锁闭环**
+
+- [ ] **TASK-01**: 创建 `swarm_tasks_bridge.sh` — claim/done/fail 子命令
+- [ ] **TASK-02**: claim 子命令 — 自动加锁 + START 状态记录
+- [ ] **TASK-03**: done/fail 子命令 — 自动解锁 + DONE/ERROR 状态记录
+- [ ] **TASK-04**: 错误处理 — acquire/release 失败不吞错
+- [ ] **TASK-05**: 文档更新 — README.md 新增协作流程章节
+- [ ] **TASK-06**: 文档更新 — docs/SCRIPTS.md 新增脚本文档
 
 ### Out of Scope
 
-- **危险命令自动执行** — rm -rf、DROP TABLE 等需人工确认
-- **跨网络分布式协作** — 暂不支持 SSH 远程控制（预留接口）
-- **图形界面操作** — 纯终端工具
-- **实时交互场景** — 需要人工实时响应的场景
-- **修改 swarm/*.py** — v1.7 仅新增脚本，不改 Python 代码
+- **自动调度系统** — 本版本不引入任务自动调度
+- **修改 swarm/*.py** — 不修改 Python 代码
+- **自动重试执行** — 仅提供手动重试流程说明
 
-## Current Milestone: v1.9 (待规划)
+## Current Milestone: v1.85 Claude Tasks 集成 + 自动锁闭环
 
-**Goal:** 待定义
+**Goal:** 通过 CLAUDE_CODE_TASK_LIST_ID 实现多窗口任务共享，配合 `swarm_tasks_bridge.sh` 脚本实现 claim→lock→work→done/fail 自动闭环。
 
-**Start with:** `/gsd:new-milestone`
+**Target features:**
+- `swarm_tasks_bridge.sh` — claim/done/fail 子命令，自动加解锁 + 状态记录
+- 统一任务列表 — CLAUDE_CODE_TASK_LIST_ID 环境变量
+- 文档更新 — 任务命名、依赖策略、冲突规则、回退与重试说明
 
 ## Context
 
@@ -169,7 +179,8 @@ _(No active requirements — start /gsd:new-milestone for v1.9)_
 | 5-step emergency procedure | 备份 → 优雅停 → 强杀 → 清锁 → 复验 | ✅ Documented |
 | scripts/ directory | Consistent with other swarm scripts | ✅ Validated |
 | 5-pane single window | Left: master/codex, Right: 3 workers | ✅ Validated |
+| CLAUDE_CODE_TASK_LIST_ID | Unified task list ID for multi-window sharing | ⏳ Pending |
 
 ---
 
-*Last updated: 2026-02-03 after v1.8 milestone complete*
+*Last updated: 2026-02-03 after v1.85 milestone started*
