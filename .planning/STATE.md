@@ -21,15 +21,17 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 | Plan | Name | Status |
 |------|------|--------|
 | 24-01 | AutoRescuer 核心 + 状态汇总表 | Complete |
+| 24-fix-issues | Bug Fixes | Complete |
 
-**Last activity:** 2026-02-04 - Completed 24-01 plan
+**Last activity:** 2026-02-04 - Completed 24-fix-issues (all 4 fixes applied)
 
 ## Progress
 
 ```
 v1.0-v1.85 Complete: ████████████████████ 100%
-v1.86 In Progress: ████████░░░░░░░░░░░░░ 33%
+v1.86 In Progress: ████████░░░░░░░░░░░░░ 50%
                    └── Phase 24: Complete ✓
+                       └── Bug Fixes: Complete ✓
                        Phase 25: Pending
                        Phase 26: Pending
 ```
@@ -37,10 +39,10 @@ v1.86 In Progress: ████████░░░░░░░░░░░░�
 ## Session Continuity
 
 Last session: 2026-02-04
-Completed: 24-01 AutoRescuer core implementation
+Completed: 24-fix-issues - All 4 bug fixes applied to Phase 24
 
 Previous milestone: v1.85 - Claude Tasks 集成 (archived)
-Current milestone: v1.86 - 主控自动救援闭环 + 状态汇总表 (24-01 complete)
+Current milestone: v1.86 - 主控自动救援闭环 + 状态汇总表 (24-01 complete, 24-fix-issues complete)
 
 ## Decisions Made
 
@@ -50,6 +52,10 @@ Current milestone: v1.86 - 主控自动救援闭环 + 状态汇总表 (24-01 com
 | Pattern priority: DANGEROUS > AUTO_ENTER > MANUAL_CONFIRM > NONE | Security | Implemented |
 | State priority for summary: ERROR > WAIT > RUNNING > DONE/IDLE | UX | Implemented |
 | Per-window 30s cooldown mechanism | Prevent spam | Implemented |
+| Priority-based state merging (fix issue 1) | State consistency | Implemented |
+| IDLE reset on 'none' action (fix issue 3) | State cleanup | Implemented |
+| broadcast_wait for internal events (fix issue 2) | Status semantics | Implemented |
+| Expanded DANGEROUS_PATTERNS (fix issue 4) | Security coverage | Implemented |
 
 ## Issues / Blockers
 
