@@ -52,6 +52,10 @@
    - claim + fail 流程无人工调用 swarm_lock.sh
    - 状态日志包含 START/DONE/ERROR 记录
 
+**Plans:**
+- [ ] 24-01-PLAN.md — Create swarm_tasks_bridge.sh script with claim/done/fail commands
+- [ ] 24-02-PLAN.md — Update README.md and SCRIPTS.md documentation
+
 ---
 
 ## Traceability
