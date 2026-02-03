@@ -5,22 +5,36 @@
 
 ## Milestones
 
-- ✅ **v1.0 - v1.5** — Previous milestones archived in `.planning/milestones/`
-- ✅ **v1.6** — 长期可维护性 + 流程闭环 (Phases 18-21, shipped 2026-02-03) ← Complete
-- 📋 **v1.7+** — UI 面板、P2P/流水线模式 (待规划)
+- ✅ **v1.0 - v1.6** — Previous milestones archived in `.planning/milestones/`
+- 📋 **v1.7** — 5 窗格布局 + Codex (Phase 22, planning pending)
+- ⏳ **v1.7+** — UI 面板、P2P/流水线模式 (待规划)
 
-## Current Status
+## v1.7 Roadmap
 
-**v1.6 Shipped** — 2026-02-03
+**Goal:** 5 窗格布局 + Codex 集成
 
-All 4 phases complete:
-- Phase 18: _config.sh 统一配置
-- Phase 19: swarm_task_wrap.sh 任务生命周期
-- Phase 20: swarm_selfcheck.sh 一键自检
-- Phase 21: 完整维护文档 (MAINTENANCE.md, SCRIPTS.md, CHANGELOG.md, README.md)
+### Plans
 
-**Next:** Plan v1.7 or start new milestone
+| # | Plan | Objective |
+|---|------|-----------|
+| 22-01 | 5 窗格布局脚本 | 创建 `scripts/swarm_layout_5.sh` 和文档 |
+
+### Phase 22-01: 5 窗格布局脚本
+
+**Requirements covered:** LAYOUT-01, LAYOUT-02
+
+**Success criteria:**
+1. `scripts/swarm_layout_5.sh` 可执行
+2. 单 tmux window 内 5 个窗格（panes）
+3. 左侧 master/codex 上下 50/50
+4. 右侧 worker-0/1/2 等分
+5. `tmux list-panes -t <session>:0` 显示 5 个窗格
+6. Codex 窗口运行 `codex --yolo`
+7. 参数和环境变量生效
+8. README.md 新增"5 窗格布局"说明
+9. docs/SCRIPTS.md 补充完整文档
 
 ---
 
-*Roadmap updated: 2026-02-03 after v1.6 milestone completion*
+*Roadmap created: 2026-02-03*
+*Last updated: 2026-02-03 after v1.7 milestone started*

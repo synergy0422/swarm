@@ -12,6 +12,18 @@
 
 ### Validated
 
+**v1.6 - 长期可维护性 + 流程闭环 (Shipped 2026-02-03)**
+
+- [x] **CFGN-01**: 统一配置入口 — _config.sh 管理 SESSION_NAME/SWARM_STATE_DIR/WORKERS/LOG_LEVEL
+- [x] **CFGN-02**: 所有脚本统一读取配置 — _common.sh source _config.sh
+- [x] **WRAP-01**: 任务流程包装脚本 — lock → START → execute → DONE/ERROR → release
+- [x] **WRAP-02**: 失败场景处理 — SKIP/WAIT 状态，锁释放机制
+- [x] **CHK-01**: 一键自检脚本 — tmux/脚本/配置/状态目录检查
+- [x] **DOCS-03**: 更新 README — 导航链接到 MAINTENANCE.md/SCRIPTS.md/CHANGELOG.md
+- [x] **DOCS-04**: 创建 docs/MAINTENANCE.md — 环境恢复、故障排查、紧急流程、维护清单
+- [x] **DOCS-05**: 创建 docs/SCRIPTS.md — 完整脚本索引 (用途/参数/示例)
+- [x] **DOCS-06**: 创建 CHANGELOG.md — v1.0-v1.6 变更摘要
+
 **v1.5 - 状态广播闭环 + 自动救援 + 维护性改进 (Shipped 2026-02-02)**
 
 - [x] **AUTO-01**: Worker 状态广播脚本 — START/DONE/ERROR/WAIT 自动记录
@@ -78,24 +90,12 @@
 - [x] **LOCK-02**: 锁原子获取机制（O_CREAT|O_EXCL）
 - [x] **LOCK-03**: 锁释放与验证（严格 owner 验证）
 
-**v1.6 - 长期可维护性 + 流程闭环 (Shipped 2026-02-03)**
-
-- [x] **CFGN-01**: 统一配置入口 — _config.sh 管理 SESSION_NAME/SWARM_STATE_DIR/WORKERS/LOG_LEVEL
-- [x] **CFGN-02**: 所有脚本统一读取配置 — _common.sh source _config.sh
-- [x] **WRAP-01**: 任务流程包装脚本 — lock → START → execute → DONE/ERROR → release
-- [x] **WRAP-02**: 失败场景处理 — SKIP/WAIT 状态，锁释放机制
-- [x] **CHK-01**: 一键自检脚本 — tmux/脚本/配置/状态目录检查
-- [x] **DOCS-03**: 更新 README — 导航链接到 MAINTENANCE.md/SCRIPTS.md/CHANGELOG.md
-- [x] **DOCS-04**: 创建 docs/MAINTENANCE.md — 环境恢复、故障排查、紧急流程、维护清单
-- [x] **DOCS-05**: 创建 docs/SCRIPTS.md — 完整脚本索引 (用途/参数/示例)
-- [x] **DOCS-06**: 创建 CHANGELOG.md — v1.0-v1.6 变更摘要
-
 ### Active
 
-**v1.7+ - 待规划 (UI 面板、P2P/流水线模式)**
+**v1.7 - 5 窗格布局 + Codex**
 
-- [ ] **UI-01**: Web 状态面板 — 实时显示所有 Worker 状态
-- [ ] **UI-02**: 可视化任务流程 — 展示任务流转状态
+- [ ] **LAYOUT-01**: 5 窗格布局脚本 — `scripts/swarm_layout_5.sh` (左侧 master/codex，右侧 3 workers)
+- [ ] **LAYOUT-02**: 文档更新 — README.md 和 docs/SCRIPTS.md 新增布局说明
 
 ### Out of Scope
 
@@ -103,23 +103,16 @@
 - **跨网络分布式协作** — 暂不支持 SSH 远程控制（预留接口）
 - **图形界面操作** — 纯终端工具
 - **实时交互场景** — 需要人工实时响应的场景
+- **修改 swarm/*.py** — v1.7 仅新增脚本，不改 Python 代码
 
 ## Current State
 
-**v1.6 Shipped** — 2026-02-03
+**v1.7 Started** — 2026-02-03
 
-- **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-21)
-- **Focus:** 所有 v1.6 交付物已完成
-- **Scripts:** 11 executable scripts (1400+ LOC total)
-- **Status:** Ready for v1.7 planning
-
-## Next Milestone: v1.7+
-
-**Goal:** UI 面板、P2P/流水线模式 (待规划)
-
-**Initial ideas:**
-- Web 状态面板 — 实时显示所有 Worker 状态
-- 可视化任务流程 — 展示任务流转状态
+- **Milestone:** 5 窗格布局 + Codex (Phase 22)
+- **Focus:** scripts/swarm_layout_5.sh 布局脚本
+- **Scripts:** 11 executable scripts (existing)
+- **Status:** Ready for Phase 22 planning
 
 ## Context
 
@@ -129,12 +122,17 @@
 
 **Milestone Archives:** `.planning/milestones/`
 
+**Existing Scripts:**
+- `run_claude_swarm.sh` — 根目录，4 独立窗口
+- `scripts/*.sh` — scripts/ 目录，配置/通信/任务管理等
+
 ## Constraints
 
 - **环境**: 同机 Linux/tmux（WSL 或服务器）
-- **依赖最小化**: Python 标准库 + requests（无第三方依赖）
-- **兼容性**: 保留 Phase 1/2 的向后兼容
+- **依赖最小化**: 仅使用 tmux 原生命令（无第三方依赖）
+- **兼容性**: 复用 `_config.sh`/`_common.sh` 配置系统
 - **安全**: 危险命令需白名单，默认不自动确认
+- **代码限制**: 不修改 `swarm/*.py` 文件
 
 ## Key Decisions
 
@@ -159,4 +157,4 @@
 
 ---
 
-*Last updated: 2026-02-03 after v1.6 milestone shipped*
+*Last updated: 2026-02-03 after v1.7 milestone started*

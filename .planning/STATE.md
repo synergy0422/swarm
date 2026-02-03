@@ -2,10 +2,10 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-02)
+See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.6 - 长期可维护性 + 流程闭环 (Phase 21 complete)
+**Current focus:** v1.7 - 5 窗格布局 + Codex (Phase 22)
 
 ## Phase Status
 
@@ -18,103 +18,42 @@ See: .planning/PROJECT.md (updated 2026-02-02)
 | 12-14 | v1.4 共享状态与任务锁 | Complete | 3/3 plans |
 | 15-17 | v1.5 维护性改进 | Complete | 3/3 plans |
 | 18-21 | v1.6 长期可维护性 + 流程闭环 | Complete | 4/4 plans |
+| 22 | v1.7 5 窗格布局 + Codex | Pending | 0/1 plans |
 
 ## Current Position
 
-**v1.6 Complete** — 2026-02-02
+**v1.7 Started** — 2026-02-03
 
-- **Milestone:** 长期可维护性 + 流程闭环 (Phases 18-21)
-- **Focus:** 统一配置入口、任务流程闭环、自检与文档、维护文档
-- **Status:** All 4 phases complete (18-01, 19-01, 20-01, 21-01)
-- **Next action:** v1.6 ready for release
+- **Milestone:** 5 窗格布局 + Codex (Phases 22)
+- **Focus:** scripts/swarm_layout_5.sh 布局脚本
+- **Status:** Ready for Phase 22 planning
 
-## v1.6 Summary
+## v1.7 Summary
 
 | Aspect | Value |
 |--------|-------|
-| Phases | 4 (18, 19, 20, 21) |
-| Requirements | 10 (CFGN-01~02, WRAP-01~02, CHK-01, DOCS-03~06) |
-| Focus | 维护性 + 流程闭环 |
-| Completed | 4/4 phases (18-01, 19-01, 20-01, 21-01) |
-
-Progress: ████████████████████████████████████ 100%
+| Phases | 1 (22) |
+| Requirements | 2 (LAYOUT-01, LAYOUT-02) |
+| Focus | 5 窗格布局 + Codex 集成 |
+| Status | Planning pending |
 
 ## Key Decisions
 
 | Phase | Decision | Rationale | Status |
 |-------|----------|-----------|--------|
-| 15 | _common.sh before other phases | Foundational configuration needed by all scripts | ✅ Validated |
-| 16 | Auto-Rescue after _common.sh | Uses shared config for output formatting | ✅ Validated |
-| 16-01 | Removed done/ready/ok patterns | Too broad, caused false positives | ✅ Validated |
-| 16-01 | Case-insensitive matching | Handles varied capitalization | ✅ Validated |
-| 16-01 | Dangerous patterns checked first | Safety over convenience | ✅ Validated |
-| 17 | Status Broadcast after _common.sh | Uses shared config for consistent logging | ✅ Validated |
-| 01 | Path config uses AI_SWARM_DIR env var with /tmp/ai_swarm/ default | Flexible override, auto-create | ✅ Validated |
-| 01 | API key only from environment variables | Security - no .env loading in code | ✅ Validated |
-| 01 | Tests use pytest monkeypatch fixture for isolation | Repeatable tests, no pollution | ✅ Validated |
-| 01 | Imports use "from swarm import" pattern | Package cohesion | ✅ Validated |
-| 02 | libtmux for tmux automation | Full programmatic control | ✅ Validated |
-| 02 | AgentStatus enum for agent state tracking | PENDING, RUNNING, STOPPED, etc. | ✅ Validated |
-| 03 | JSON Lines format for status broadcasting | Simple, parseable, tool-friendly | ✅ Validated |
-| 03 | O_CREAT|O_EXCL for atomic lock acquisition | Platform-independent | ✅ Validated |
-| 04-01 | MasterScanner uses polling (1s default) | Simple, reliable, no external deps | ✅ Validated |
-| 04-02 | Auto-confirm disabled by default - opt-in policy | Prevents unintended automated actions | ✅ Validated |
-| 04-02 | Only Press ENTER patterns auto-confirm (never y/n) | Conservative safety | ✅ Validated |
-| 04-02 | Blacklist keywords always block auto-action | delete, rm -rf, sudo, password | ✅ Validated |
-| 04-03 | FIFO dispatch within priority groups | First-in-first-out | ✅ Validated |
-| 04-03 | Lock acquisition before dispatch (atomic) | Prevents duplicate execution | ✅ Validated |
-| 05-01 | Use argparse only (not typer/click) | Minimize dependencies | ✅ Validated |
-| 05-01 | Direct class instantiation for master/worker | Avoids argparse conflicts | ✅ Validated |
-| 05-01 | Session naming: swarm-{cluster_id} | Multi-cluster support | ✅ Validated |
-| 05-02 | argparse parents pattern for --cluster-id | Flag after subcommands | ✅ Validated |
-| 05-03 | Removed eager cli import from __init__.py | Prevents RuntimeWarning | ✅ Validated |
-| 07-01 | Updated to libtmux 0.53.0 modern API | Server.sessions.get() instead of find_where() | ✅ Validated |
-| 08-01 | Pane poll interval: 3 seconds | Independent from poll_interval, configurable via constructor | ✅ Validated |
-| 08-01 | ENTER patterns: 5 total | press enter, press return, hit enter, 回车继续, 按回车 | ✅ Validated |
-| 08-01 | Cooldown: 30 seconds per window | Prevents repeated ENTERs | ✅ Validated |
-| 08-01 | Minimal logging for auto-ENTER | `[Master] Auto-ENTER for {window_name}` | ✅ Validated |
-| 08-01 | tmux unavailable: silently skip | No errors raised | ✅ Validated |
-| 09-01 | --panes flag with store_true action | Boolean flag for optional pane display | ✅ Validated |
-| 09-01 | Status icon logic: Error/Failed -> [ERROR], DONE/Complete -> [DONE] | Visual status at a glance | ✅ Validated |
-| 09-01 | 20-line content limit per window | Readable output, prevents terminal flood | ✅ Validated |
-| 11-01 | Single-line task delivery via tmux send-keys | Prevents Claude from processing partial messages | ✅ Validated |
-| 11-01 | send-raw subcommand for protocol setup | Protocol messages without [TASK] prefix | ✅ Validated |
-| 12-01 | Shell script for status.log operations | append/tail/query with JSON Lines format | ✅ Validated |
-| 13-01 | JSON lock format with 4 fields (task_id, worker, acquired_at, expires_at) | TTL optional - null means never expires | ✅ Validated |
-| 13-01 | Python os.open(O_CREAT|O_EXCL) for atomic lock creation | Platform-independent, race-condition safe | ✅ Validated |
-| 14-01 | E2E test uses mktemp -d for complete isolation | No pollution of real /tmp/ai_swarm data | ✅ Validated |
-| 14-01 | Used grep -F (fixed strings) for simpler matching | More reliable than regex, no escaping needed | ✅ Validated |
-| 14-01 | Replaced ((var++)) with $((var + 1)) for set -e | Prevents premature exit when value is 0 | ✅ Validated |
-| 15-01 | _common.sh source guard pattern | Prevents direct execution, only sourcing | ✅ Validated |
-| 15-01 | log_info/log_warn/log_error to stderr | Separates status from data output | ✅ Validated |
-| 15-01 | CLAUDE_SESSION backward compatibility | Existing scripts continue to work | ✅ Validated |
-| 18-01 | Centralized _config.sh entry point | Single source of truth for configuration | ✅ Validated |
-| 18-01 | BASH_SOURCE[0] + cd/pwd for path resolution | Handles bash -c sourcing edge case | ✅ Validated |
-| 18-01 | SWARM_NO_CONFIG=1 for graceful degradation | Testing defaults without _config.sh | ✅ Validated |
-| 18-01 | log_debug conditional on LOG_LEVEL=DEBUG | Debug logging without performance impact | ✅ Validated |
-| 19-01 | Subshell for command execution | Captures exit code without affecting main script error handling | ✅ Validated |
-| 19-01 | Manual lock release in cmd_run | Clearer control flow than EXIT trap | ✅ Validated |
-| 19-01 | Worker pattern detection in skip/wait | Correctly parses worker-* vs reason arguments | ✅ Validated |
-| 20-01 | Self-check script for system health | Single command to verify tmux, scripts, and config | ✅ Validated |
-| 20-01 | Local SCRIPT_DIR definition | _common.sh unsets SCRIPT_DIR, so define it locally | ✅ Validated |
-| 20-01 | print_fail always shown | Critical failures never suppressed, even in quiet mode | ✅ Validated |
-| 20-01 | Exit code 0/1 for success/failure | Enables CI/CD pipelines to fail on health check | ✅ Validated |
-| 21-01 | 5-step emergency procedure format | 备份 -> 优雅停 -> 强杀 -> 清锁 -> 复验 | ✅ Documented |
-| 21-01 | Chinese section headings for maintainer accessibility | All maintenance docs in Chinese | ✅ Documented |
+| 22 | scripts/ 目录 | 与其他脚本保持一致 | Pending |
+| 22 | 继承 _config.sh/_common.sh | 统一配置风格 | Pending |
+| 22 | 单 window 5 窗格 | 左侧 master/codex，右侧 3 workers | Pending |
 
 ## Session Continuity
 
-Last session: 2026-02-02
-Completed: Phase 21-01 (Maintenance Documentation)
-- docs/MAINTENANCE.md created with 5-step emergency recovery procedure
-- docs/SCRIPTS.md created with 11 scripts, 22+ code examples
-- CHANGELOG.md created with v1.0-v1.6 version history
-- README.md updated with navigation and command mapping
+Last session: 2026-02-03
+Started: v1.7 milestone - 5 窗格布局 + Codex
 
-Current: v1.6 milestone COMPLETE (4/4 phases)
-- All v1.6 deliverables finished
-- Ready for v1.6 release
+Current: v1.7 milestone started (Phase 22 pending planning)
+- All v1.6 deliverables finished and shipped
+- Ready for Phase 22 planning
 
 ---
 
-*State updated: 2026-02-02 after Phase 21-01 completion*
+*State updated: 2026-02-03 after v1.7 milestone started*
