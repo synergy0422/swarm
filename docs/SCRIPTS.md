@@ -16,7 +16,91 @@
 
 ---
 
-## 配置脚本
+## 布局脚本
+
+### swarm_layout_5.sh
+
+**用途：** 5 窗格 tmux 布局脚本，在单个窗口中创建 5 个窗格。
+
+**布局结构：**
+```
+┌─────────────────┬────────────────────┐
+│      master     │      worker-0      │
+│                 ├────────────────────┤
+│      codex      │      worker-1      │
+│                 ├────────────────────┤
+│                 │      worker-2      │
+└─────────────────┴────────────────────┘
+```
+
+**参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `--session, -s NAME` | tmux 会话名称 |
+| `--workdir, -d DIR` | 工作目录 |
+| `--left-ratio, -l PCT` | 左侧垂直分割比例 (50-80) |
+| `--codex-cmd, -c CMD` | codex 窗格执行的命令 |
+| `--attach, -a` | 创建后附加到会话 |
+| `--help, -h` | 显示帮助信息 |
+
+**环境变量：**
+
+| 变量 | 说明 |
+|------|------|
+| `CLAUDE_SESSION` | 会话名称覆盖 |
+| `SWARM_WORKDIR` | 工作目录覆盖（默认当前目录） |
+| `CODEX_CMD` | codex 命令覆盖（默认 "codex --yolo"） |
+
+**示例：**
+
+```bash
+# 基本用法
+./scripts/swarm_layout_5.sh
+
+# 创建并附加
+./scripts/swarm_layout_5.sh --attach
+
+# 自定义会话名称
+./scripts/swarm_layout_5.sh --session my-session
+
+# 自定义工作目录
+./scripts/swarm_layout_5.sh --workdir /path/to/project
+
+# 自定义 codex 命令
+./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --model o1"
+
+# 调整左侧比例
+./scripts/swarm_layout_5.sh --left-ratio 60
+
+# 使用环境变量
+SWARM_WORKDIR=/my/project ./scripts/swarm_layout_5.sh
+CODEX_CMD="codex --yolo" ./scripts/swarm_layout_5.sh
+```
+
+**自定义布局比例：**
+
+```bash
+# 左侧 60% master，40% codex
+./scripts/swarm_layout_5.sh --left-ratio 60
+
+# 左侧 70% master，30% codex
+./scripts/swarm_layout_5.sh --left-ratio 70
+```
+
+**自定义 codex 命令：**
+
+```bash
+# 使用特定模型
+./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --model o1"
+
+# 添加额外参数
+./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --system 'You are an expert'"
+```
+
+**依赖：** `_config.sh`, `_common.sh`, tmux
+
+---
 
 ### _config.sh
 
@@ -530,16 +614,27 @@ grep '"ERROR"' /tmp/ai_swarm/status.log | wc -l
 ## 脚本依赖关系图
 
 ```
+_layout_5.sh
+    |
+    +-- _config.sh
+    +-- _common.sh
+        |
+        +-- _config.sh
+```
+或
+```
 _common.sh
     |
-    +-- claude_comm.sh (tmux)
-    +-- claude_poll.sh (tmux)
-    +-- claude_status.sh (tmux)
-    +-- claude_auto_rescue.sh (tmux)
-    +-- swarm_broadcast.sh (swarm_status_log.sh, tmux)
-    +-- swarm_task_wrap.sh (swarm_lock.sh, swarm_status_log.sh)
-    +-- swarm_selfcheck.sh (_config.sh)
-    |
+    +-- _config.sh
+        |
+        +-- claude_comm.sh (tmux)
+        +-- claude_poll.sh (tmux)
+        +-- claude_status.sh (tmux)
+        +-- claude_auto_rescue.sh (tmux)
+        +-- swarm_broadcast.sh (swarm_status_log.sh, tmux)
+        +-- swarm_task_wrap.sh (swarm_lock.sh, swarm_status_log.sh)
+        +-- swarm_selfcheck.sh (_config.sh)
+        |
 _config.sh
 ```
 
