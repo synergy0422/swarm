@@ -1,0 +1,72 @@
+# Requirements: AI Swarm v1.86
+
+**Defined:** 2026-02-04
+**Core Value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
+
+## v1.86 Requirements
+
+Requirements for this milestone: 主控自动救援闭环 + 状态汇总表
+
+### Master 自动救援闭环
+
+- [ ] **RESCUE-01**: Master 扫描 tmux pane 输出时，自动判断 WAIT/confirm/press-enter 等等待状态
+- [ ] **RESCUE-02**: 自动执行 send-keys Enter 进行安全确认
+- [ ] **RESCUE-03**: 具备冷却时间（建议 30s/窗口），避免重复确认
+- [ ] **RESCUE-04**: 严格白名单逻辑，不做危险操作（检测 rm -rf, DROP 等立即告警）
+
+### 状态汇总表
+
+- [ ] **RESCUE-05**: 每次扫描生成一张"窗口/状态/当前任务/备注"的简表
+- [ ] **RESCUE-06**: 与文档中"指挥官汇报格式"对齐
+- [ ] **RESCUE-07**: 能区分 ERROR / WAIT / DONE / RUNNING 状态
+- [ ] **RESCUE-08**: 状态优先级：ERROR > WAIT > RUNNING > DONE/IDLE
+
+### 技术集成
+
+- [ ] **RESCUE-09**: 复用 swarm/master.py 中的 PaneScanner 与 WaitDetector
+- [ ] **RESCUE-10**: 复用 scripts/claude_auto_rescue.sh 的"安全确认"理念
+- [ ] **RESCUE-11**: 统一走 swarm/status_broadcaster.py 输出状态日志
+- [ ] **RESCUE-12**: 所有新增逻辑必须有清晰函数封装，避免在主循环里写过多内联逻辑
+- [ ] **RESCUE-13**: 冷却时间、扫描频率可配置（用环境变量）
+
+## v2 Requirements
+
+(None yet - to be defined in future milestones)
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Web 监控 | 不引入 Web 服务和远程控制 |
+| 跨机器控制 | 保持同机 Linux/tmux 架构 |
+| 修改核心协议 | 不改动现有 CLI 行为 |
+| 自动调度系统 | 本版本不引入任务自动调度 |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| RESCUE-01 | - | Pending |
+| RESCUE-02 | - | Pending |
+| RESCUE-03 | - | Pending |
+| RESCUE-04 | - | Pending |
+| RESCUE-05 | - | Pending |
+| RESCUE-06 | - | Pending |
+| RESCUE-07 | - | Pending |
+| RESCUE-08 | - | Pending |
+| RESCUE-09 | - | Pending |
+| RESCUE-10 | - | Pending |
+| RESCUE-11 | - | Pending |
+| RESCUE-12 | - | Pending |
+| RESCUE-13 | - | Pending |
+
+**Coverage:**
+- v1.86 requirements: 13 total
+- Mapped to phases: 0
+- Unmapped: 13 ⚠️
+
+---
+*Requirements defined: 2026-02-04*
+*Last updated: 2026-02-04 after initial definition*

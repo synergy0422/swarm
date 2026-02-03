@@ -121,11 +121,15 @@
 
 ### Active
 
-### Active
+**v1.86 - 主控自动救援闭环 + 状态汇总表**
 
-**v1.86 - Planning Required**
+**目标**: 把"主控自动救援闭环 + 状态汇总表"产品化，与现有脚本/日志系统一致，便于长期维护。
 
-Next milestone to be defined.
+**Target features:**
+- **RESCUE-01**: Master 自动救援闭环 — 扫描 pane 时自动判断 WAIT/confirm/press-enter 等状态
+- **RESCUE-02**: 安全确认机制 — 冷却时间 30s/窗口，危险命令白名单
+- **RESCUE-03**: 状态汇总表 — 每轮扫描生成简表：window/state/task_id/note
+- **RESCUE-04**: 状态优先级 — ERROR > WAIT > RUNNING > DONE/IDLE
 
 ### Out of Scope
 
@@ -133,14 +137,15 @@ Next milestone to be defined.
 - **修改 swarm/*.py** — 不修改 Python 代码
 - **自动重试执行** — 仅提供手动重试流程说明
 
-## Current Milestone: v1.86 (Planning Required)
+## Current Milestone: v1.86
 
-**Status:** Ready to define requirements
+**Status:** Defining requirements
+
+**Goal:** 把"主控自动救援闭环 + 状态汇总表"产品化
 
 **Next steps:**
-- Define scope and requirements for v1.86
-- Create ROADMAP.md entry
 - Create REQUIREMENTS.md
+- Create ROADMAP.md
 
 See: `.planning/milestones/v1.85-ROADMAP.md` for completed milestone details.
 
@@ -190,4 +195,4 @@ See: `.planning/milestones/v1.85-ROADMAP.md` for completed milestone details.
 
 ---
 
-*Last updated: 2026-02-04 after v1.85 milestone shipped*
+*Last updated: 2026-02-04 after v1.86 milestone started*
