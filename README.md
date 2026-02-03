@@ -219,6 +219,110 @@ v1.8 引入了诊断快照功能，用于采集 tmux swarm 运行状态进行诊
 
 **注意：** 快照脚本为只读操作，不会修改 SWARM_STATE_DIR 中任何文件。
 
+## Claude Tasks 协作流程
+
+v1.85 引入了 CLAUDE_CODE_TASK_LIST_ID 桥接功能，支持与外部任务系统（如 Claude Code 的 Tasks）集成，实现自动化的 claim -> lock -> work -> done/fail 闭环。
+
+### 架构概览
+
+```
+┌─────────────────────────┐    ┌─────────────────────────┐
+│   Claude Code Tasks     │    │   AI Swarm Worker        │
+│                         │    │                         │
+│  - Create task list     │───>│  - Claim task via bridge │
+│  - Assign CLAUDE_CODE_  │    │  - Acquire lock          │
+│    TASK_LIST_ID         │    │  - Execute work          │
+│  - Monitor progress     │<───│  - Report done/fail      │
+│                         │    │  - Release lock          │
+└─────────────────────────┘    └─────────────────────────┘
+            │                            │
+            │                            v
+            │                   ┌─────────────────────────┐
+            │                   │   swarm_tasks_bridge   │
+            │                   │                        │
+            └──────────────────>│  - claim: lock+start  │
+                                │  - done: unlock+done   │
+                                │  - fail: unlock+error  │
+                                └─────────────────────────┘
+```
+
+### 命令参考
+
+| 命令 | 参数 | 说明 |
+|------|------|------|
+| `claim <task_id> <worker> [lock_key]` | 获取任务锁并记录 START 状态 |
+| `done <task_id> <worker> [lock_key]` | 释放任务锁并记录 DONE 状态 |
+| `fail <task_id> <worker> <reason> [lock_key]` | 释放任务锁并记录 ERROR 状态 |
+
+### 退出码
+
+| 命令 | 退出码 | 含义 |
+|------|--------|------|
+| claim | 0 | 成功获取锁 |
+| claim | 2 | 锁已被占用 |
+| claim | 1 | 其他错误 |
+| done | 0 | 成功释放锁 |
+| done | 1 | 释放失败 |
+| fail | 0 | 成功记录错误 |
+| fail | 1 | 记录失败 |
+
+### 完整工作流示例
+
+```bash
+# 1. Worker claim 任务（获取锁 + 记录 START）
+./scripts/swarm_tasks_bridge.sh claim task-001 worker-0
+
+# 2. 执行实际工作...
+echo "Processing task-001..."
+
+# 3. 任务完成（释放锁 + 记录 DONE）
+./scripts/swarm_tasks_bridge.sh done task-001 worker-0
+```
+
+### 错误处理示例
+
+```bash
+# 任务失败场景
+./scripts/swarm_tasks_bridge.sh fail task-002 worker-1 "Validation failed: missing required field"
+```
+
+### 自定义锁键
+
+```bash
+# 使用自定义 lock_key（适用于多任务共享同一个锁）
+./scripts/swarm_tasks_bridge.sh claim task-003 worker-0 feature-x-lock
+./scripts/swarm_tasks_bridge.sh done task-003 worker-0 feature-x-lock
+```
+
+### 与外部任务系统集成
+
+在外部任务系统的 Worker 脚本中集成：
+
+```bash
+#!/usr/bin/env bash
+source "$(dirname "$0")/swarm_tasks_bridge.sh"
+
+# 获取任务 ID（来自外部系统）
+TASK_ID="$CLAUDE_CODE_TASK_LIST_ID"
+WORKER="worker-$WORKER_ID"
+
+# Claim 任务
+"$SCRIPT_DIR/swarm_tasks_bridge.sh" claim "$TASK_ID" "$WORKER" || {
+    echo "Task already claimed or lock held by another worker"
+    exit 1
+}
+
+# 执行实际工作
+process_task "$TASK_ID"
+
+# 根据结果报告状态
+if [ $? -eq 0 ]; then
+    "$SCRIPT_DIR/swarm_tasks_bridge.sh" done "$TASK_ID" "$WORKER"
+else
+    "$SCRIPT_DIR/swarm_tasks_bridge.sh" fail "$TASK_ID" "$WORKER" "Processing failed"
+fi
+```
+
 ## Development
 
 ```bash
