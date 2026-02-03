@@ -53,8 +53,8 @@
    - 状态日志包含 START/DONE/ERROR 记录
 
 **Plans:**
-- [ ] 24-01-PLAN.md — Create swarm_tasks_bridge.sh script with claim/done/fail commands
-- [ ] 24-02-PLAN.md — Update README.md and SCRIPTS.md documentation
+- [x] 24-01-PLAN.md — Create swarm_tasks_bridge.sh script with claim/done/fail commands
+- [x] 24-02-PLAN.md — Update README.md and SCRIPTS.md documentation
 
 ---
 

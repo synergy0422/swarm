@@ -9,37 +9,37 @@ Requirements for the Claude Tasks Integration milestone.
 
 ### TASK-01: swarm_tasks_bridge.sh 脚本基础
 
-- [ ] **TASK-01**: 创建 `scripts/swarm_tasks_bridge.sh` 主框架和帮助文档
+- [x] **TASK-01**: 创建 `scripts/swarm_tasks_bridge.sh` 主框架和帮助文档
 
 ### TASK-02: claim 子命令
 
-- [ ] **TASK-02**: 实现 claim <task_id> <worker> [lock_key]
-- [ ] **TASK-03**: 默认 lock_key = task_id
-- [ ] **TASK-04**: 自动调用 `swarm_lock.sh acquire <lock_key> <worker>`
-- [ ] **TASK-05**: 记录状态 `swarm_status_log.sh append START <worker> <task_id>`
+- [x] **TASK-02**: 实现 claim <task_id> <worker> [lock_key]
+- [x] **TASK-03**: 默认 lock_key = task_id
+- [x] **TASK-04**: 自动调用 `swarm_lock.sh acquire <lock_key> <worker>`
+- [x] **TASK-05**: 记录状态 `swarm_status_log.sh append START <worker> <task_id>`
 
 ### TASK-06: done 子命令
 
-- [ ] **TASK-06**: 实现 done <task_id> <worker> [lock_key]
-- [ ] **TASK-07**: 自动调用 `swarm_lock.sh release <lock_key> <worker>`
-- [ ] **TASK-08**: 记录状态 `swarm_status_log.sh append DONE <worker> <task_id>`
+- [x] **TASK-06**: 实现 done <task_id> <worker> [lock_key]
+- [x] **TASK-07**: 自动调用 `swarm_lock.sh release <lock_key> <worker>`
+- [x] **TASK-08**: 记录状态 `swarm_status_log.sh append DONE <worker> <task_id>`
 
 ### TASK-07: fail 子命令
 
-- [ ] **TASK-09**: 实现 fail <task_id> <worker> <reason> [lock_key]
-- [ ] **TASK-10**: 自动调用 release
-- [ ] **TASK-11**: 记录状态 `swarm_status_log.sh append ERROR <worker> <task_id> <reason>`
+- [x] **TASK-09**: 实现 fail <task_id> <worker> <reason> [lock_key]
+- [x] **TASK-10**: 自动调用 release
+- [x] **TASK-11**: 记录状态 `swarm_status_log.sh append ERROR <worker> <task_id> <reason>`
 
 ### TASK-08: 错误处理
 
-- [ ] **TASK-12**: acquire 失败 → 退出 1，打印原因
-- [ ] **TASK-13**: release 失败 → 退出 1
-- [ ] **TASK-14**: 任何错误不得吞掉
+- [x] **TASK-12**: acquire 失败 → 退出 1，打印原因
+- [x] **TASK-13**: release 失败 → 退出 1
+- [x] **TASK-14**: 任何错误不得吞掉
 
 ### TASK-09: 文档更新
 
-- [ ] **TASK-15**: README.md 新增"Claude Tasks 协作流程"章节
-- [ ] **TASK-16**: docs/SCRIPTS.md 新增 swarm_tasks_bridge.sh 完整文档
+- [x] **TASK-15**: README.md 新增"Claude Tasks 协作流程"章节
+- [x] **TASK-16**: docs/SCRIPTS.md 新增 swarm_tasks_bridge.sh 完整文档
 
 ## v1.85 文档规范
 
@@ -77,22 +77,22 @@ Requirements for the Claude Tasks Integration milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TASK-01 | Phase 24 | Pending |
-| TASK-02 | Phase 24 | Pending |
-| TASK-03 | Phase 24 | Pending |
-| TASK-04 | Phase 24 | Pending |
-| TASK-05 | Phase 24 | Pending |
-| TASK-06 | Phase 24 | Pending |
-| TASK-07 | Phase 24 | Pending |
-| TASK-08 | Phase 24 | Pending |
-| TASK-09 | Phase 24 | Pending |
-| TASK-10 | Phase 24 | Pending |
-| TASK-11 | Phase 24 | Pending |
-| TASK-12 | Phase 24 | Pending |
-| TASK-13 | Phase 24 | Pending |
-| TASK-14 | Phase 24 | Pending |
-| TASK-15 | Phase 24 | Pending |
-| TASK-16 | Phase 24 | Pending |
+| TASK-01 | Phase 24 | Complete |
+| TASK-02 | Phase 24 | Complete |
+| TASK-03 | Phase 24 | Complete |
+| TASK-04 | Phase 24 | Complete |
+| TASK-05 | Phase 24 | Complete |
+| TASK-06 | Phase 24 | Complete |
+| TASK-07 | Phase 24 | Complete |
+| TASK-08 | Phase 24 | Complete |
+| TASK-09 | Phase 24 | Complete |
+| TASK-10 | Phase 24 | Complete |
+| TASK-11 | Phase 24 | Complete |
+| TASK-12 | Phase 24 | Complete |
+| TASK-13 | Phase 24 | Complete |
+| TASK-14 | Phase 24 | Complete |
+| TASK-15 | Phase 24 | Complete |
+| TASK-16 | Phase 24 | Complete |
 
 **Coverage:**
 - v1.85 requirements: 16 total
