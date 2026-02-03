@@ -494,6 +494,88 @@ done
 
 ---
 
+### swarm_tasks_bridge.sh
+
+**用途：** CLAUDE_CODE_TASK_LIST_ID 桥接脚本，将外部任务系统与 swarm 锁/状态系统集成。提供 claim/done/fail 三个命令，实现自动化的 claim -> lock -> work -> done/fail 闭环。
+
+**参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `claim <task_id> <worker> [lock_key]` | 获取任务锁并记录 START 状态 |
+| `done <task_id> <worker> [lock_key]` | 释放任务锁并记录 DONE 状态 |
+| `fail <task_id> <worker> <reason> [lock_key]` | 释放任务锁并记录 ERROR 状态 |
+
+**选项：**
+
+| 选项 | 说明 |
+|------|------|
+| `-h, --help` | 显示帮助信息 |
+
+**退出码：**
+
+| 命令 | 退出码 | 含义 |
+|------|--------|------|
+| claim | 0 | 成功获取锁 |
+| claim | 2 | 锁已被占用 |
+| done | 0 | 成功释放锁 |
+| fail | 0 | 成功记录错误 |
+
+**示例：**
+
+```bash
+# 基本 claim/done 工作流
+./scripts/swarm_tasks_bridge.sh claim task-001 worker-0
+./scripts/swarm_tasks_bridge.sh done task-001 worker-0
+
+# 任务失败场景
+./scripts/swarm_tasks_bridge.sh fail task-002 worker-1 "Validation failed"
+
+# 使用自定义 lock_key
+./scripts/swarm_tasks_bridge.sh claim task-003 worker-0 feature-x-lock
+./scripts/swarm_tasks_bridge.sh done task-003 worker-0 feature-x-lock
+
+# 查看帮助信息
+./scripts/swarm_tasks_bridge.sh --help
+```
+
+**在外部任务系统中集成：**
+
+```bash
+#!/usr/bin/env bash
+source scripts/swarm_tasks_bridge.sh
+
+TASK_ID="$CLAUDE_CODE_TASK_LIST_ID"
+WORKER="worker-$WORKER_ID"
+
+# Claim 任务（自动获取锁）
+"$SCRIPT_DIR/swarm_tasks_bridge.sh" claim "$TASK_ID" "$WORKER" || {
+    echo "Task already claimed or lock held"
+    exit 1
+}
+
+# 执行实际工作
+process_task "$TASK_ID"
+RESULT=$?
+
+# 根据结果报告状态
+if [ $RESULT -eq 0 ]; then
+    "$SCRIPT_DIR/swarm_tasks_bridge.sh" done "$TASK_ID" "$WORKER"
+else
+    "$SCRIPT_DIR/swarm_tasks_bridge.sh" fail "$TASK_ID" "$WORKER" "Processing failed"
+fi
+```
+
+**环境变量：**
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `SWARM_STATE_DIR` | 状态目录覆盖 | `/tmp/ai_swarm` |
+
+**依赖：** `_common.sh`, `swarm_lock.sh`, `swarm_status_log.sh`
+
+---
+
 ## 系统工具脚本
 
 ### swarm_selfcheck.sh
