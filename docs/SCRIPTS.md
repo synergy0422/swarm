@@ -550,6 +550,90 @@ source scripts/_config.sh && test -d "$SWARM_STATE_DIR"
 
 ---
 
+## 诊断快照脚本
+
+### swarm_snapshot.sh
+
+**用途：** 一键采集 tmux swarm 运行状态用于诊断分析。脚本为只读操作，不会修改 SWARM_STATE_DIR 中任何文件。
+
+**参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `-s, --session NAME` | tmux 会话名称（默认：swarm-claude-default） |
+| `-n, --lines N` | 每个窗格捕获的行数（默认：50） |
+| `-o, --out DIR` | 输出目录（默认：/tmp/ai_swarm_snapshot_<timestamp>） |
+| `-h, --help` | 显示帮助信息 |
+
+**环境变量：**
+
+| 变量 | 说明 |
+|------|------|
+| `CLAUDE_SESSION` | 会话名称覆盖 |
+| `SNAPSHOT_LINES` | 捕获行数覆盖 |
+| `SNAPSHOT_DIR` | 输出目录覆盖 |
+
+**示例：**
+
+```bash
+# 基本用法（采集默认会话）
+./scripts/swarm_snapshot.sh
+
+# 指定会话名称
+./scripts/swarm_snapshot.sh --session my-session
+
+# 自定义输出行数
+./scripts/swarm_snapshot.sh --lines 100
+
+# 自定义输出目录
+./scripts/swarm_snapshot.sh --out /path/to/snapshot
+
+# 环境变量方式
+CLAUDE_SESSION=test-session SNAPSHOT_LINES=200 ./scripts/swarm_snapshot.sh
+```
+
+**高级用法：**
+
+```bash
+# 采集并立即查看摘要
+./scripts/swarm_snapshot.sh && cat /tmp/ai_swarm_snapshot_*/meta/summary.txt
+
+# 批量采集多个会话
+for session in swarm-default test-session; do
+    ./scripts/swarm_snapshot.sh --session "$session" --out "/snapshots/$session"
+done
+
+# 错误处理（在脚本中使用）
+if ./scripts/swarm_snapshot.sh --session "$SESSION" --out "/tmp/$SESSION"; then
+    echo "Snapshot created successfully"
+else
+    echo "Snapshot completed with errors"
+fi
+```
+
+**输出结构：**
+
+```
+<snapshot_dir>/
+  tmux/
+    structure.txt   # 会话、窗口、窗格结构
+  panes/
+    <session>.<window>.<pane>.txt  # 各窗格输出（带前缀）
+  state/
+    status.log      # 只读复制（如果存在）
+  locks/
+    list.txt        # 只读列出（如果存在）
+  meta/
+    git.txt         # git 状态、分支、提交
+    summary.txt     # 快照概览和错误摘要
+```
+
+**只读约束：** 脚本不会对 `$SWARM_STATE_DIR` 执行任何写操作（mkdir, cp, rm 等）。状态文件通过只读复制方式采集。
+
+**依赖：** `_common.sh`, tmux
+
+---
+
 ## 实用脚本
 
 ### swarm_status_log.sh
@@ -634,6 +718,7 @@ _common.sh
         +-- swarm_broadcast.sh (swarm_status_log.sh, tmux)
         +-- swarm_task_wrap.sh (swarm_lock.sh, swarm_status_log.sh)
         +-- swarm_selfcheck.sh (_config.sh)
+        +-- swarm_snapshot.sh (tmux)
         |
 _config.sh
 ```
