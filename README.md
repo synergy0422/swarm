@@ -368,6 +368,7 @@ Note: `claude status` is a Claude CLI command, not a swarm command. Swarm comman
 | `swarm lock` | `swarm_lock.sh` | Task lock operations |
 | `swarm broadcast` | `swarm_broadcast.sh` | Status broadcasting |
 | `swarm rescue` | `claude_auto_rescue.sh` | Auto-confirm prompts |
+| `swarm tasks-bridge` | `swarm_tasks_bridge.sh` | CLAUDE_CODE_TASK_LIST_ID bridge for lock/state operations |
 
 ## Changelog
 
