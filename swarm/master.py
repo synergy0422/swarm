@@ -327,6 +327,15 @@ class Master:
                 summary.last_action = 'COOLDOWN'
                 remaining = self.auto_rescuer.get_cooldown_time(window_name)
                 summary.note = f'Wait {remaining:.1f}s'
+            elif action == 'rescue_failed':
+                summary.last_state = 'WAIT'
+                summary.last_action = 'FAILED'
+                summary.note = f'Rescue failed: "{pattern}"'
+            elif action == 'none':
+                # Reset to IDLE when no patterns detected
+                summary.last_state = 'IDLE'
+                summary.last_action = ''
+                summary.note = ''
 
     def handle_wait_states(self, workers: Dict[str, dict]) -> None:
         """
