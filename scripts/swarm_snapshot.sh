@@ -236,8 +236,16 @@ generate_summary() {
         echo "Files:"
         echo "  - tmux/structure.txt"
         echo "  - panes/*.txt ($pane_count files)"
-        [[ -f "$SNAPSHOT_DIR/state/status.log" ]] && echo "  - state/status.log"
-        [[ -f "$SNAPSHOT_DIR/locks/list.txt" ]] && echo "  - locks/list.txt"
+        if [[ -f "$SNAPSHOT_DIR/state/status.log" ]]; then
+            echo "  - state/status.log"
+        else
+            echo "  - state/status.log (missing)"
+        fi
+        if [[ -f "$SNAPSHOT_DIR/locks/list.txt" ]]; then
+            echo "  - locks/list.txt"
+        else
+            echo "  - locks/list.txt (missing)"
+        fi
         echo "  - meta/git.txt"
         echo "  - meta/summary.txt"
         echo ""
