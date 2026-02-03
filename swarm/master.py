@@ -6,6 +6,8 @@ Provides minimal Master loop for:
 - Worker status scanning (via status.log)
 - Task assignment (FIFO with lock acquisition)
 - WAIT detection with conservative auto-confirm
+- Auto-rescue for interactive prompts (via AutoRescuer)
+- Status summary table output
 """
 
 import os
@@ -14,12 +16,13 @@ import time
 import signal
 import re
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Tuple
 
 from swarm.task_queue import TaskQueue
 from swarm.task_lock import TaskLockManager
 from swarm.status_broadcaster import get_ai_swarm_dir, StatusBroadcaster
 from swarm.master_dispatcher import MasterDispatcher
+from swarm.auto_rescuer import AutoRescuer
 
 
 # Default configuration
@@ -47,33 +50,15 @@ def get_poll_interval() -> float:
     return DEFAULT_POLL_INTERVAL
 
 
-# WAIT detection patterns (by priority)
-WAIT_PATTERNS = [
-    # Priority 1: Interactive confirm (y/n)
-    (r'\[y[\//]n\]|\[Y[\//]n\]|\(y[\//]n\)|y or n', 1),
-    # Priority 2: Press ENTER to continue
-    (r'[Pp]ress [Ee]nter|[Pp]ress [Rr]eturn|[Hh]it [Ee]nter|按回车|回车继续|[Pp]ress any key to continue', 2),
-    # Priority 3: Confirm prompts
-    (r'[Cc]onfirm|[Aa]re you sure|确认|确定吗', 3),
-]
-
-# ENTER patterns for pane detection (Priority 2 - safe to auto-confirm)
-ENTER_PATTERNS = [
-    r'[Pp]ress [Ee]nter',
-    r'[Pp]ress [Rr]eturn',
-    r'[Hh]it [Ee]nter',
-    r'回车继续',
-    r'按回车',
-]
-
-# Blacklist keywords (never auto-confirm)
-BLACKLIST_KEYWORDS = [
-    'delete', 'remove', 'rm -rf', 'format', 'overwrite',
-    'drop database', 'drop table',
-    'kill', 'terminate',
-    'sudo', 'password', 'token', 'ssh', 'key',
-    '生产', 'prod',
-]
+# State priority for summary table (highest to lowest)
+STATE_PRIORITY = {
+    'ERROR': 0,
+    'WAIT': 1,
+    'RUNNING': 2,
+    'START': 3,
+    'DONE': 4,
+    'SKIP': 5,
+}
 
 
 class MasterScanner:
@@ -174,8 +159,6 @@ class WaitDetector:
     def __init__(self):
         """Initialize WaitDetector"""
         self._ai_swarm_dir = get_ai_swarm_dir()
-        # TODO: Support tmux capture-pane for WAIT detection
-        # For MVP, we rely on status.log state = WAIT
 
     def is_wait_state(self, worker_status: dict) -> bool:
         """
@@ -190,56 +173,6 @@ class WaitDetector:
         if not worker_status:
             return False
         return worker_status.get('state') == 'WAIT'
-
-    def should_auto_confirm(self, message: str) -> bool:
-        """
-        Determine if WAIT can be auto-confirmed (ENTER only, never yes).
-
-        Only auto-confirm if:
-        - No blacklist keywords present
-        - Pattern is "Press ENTER to continue" type
-
-        Args:
-            message: Status message to check
-
-        Returns:
-            bool: True if safe to send ENTER
-        """
-        if not message:
-            return False
-
-        message_lower = message.lower()
-
-        # Check blacklist first
-        for keyword in BLACKLIST_KEYWORDS:
-            if keyword in message_lower:
-                return False
-
-        # Check for safe ENTER patterns (Priority 2 only)
-        safe_pattern = WAIT_PATTERNS[1][0]  # Press ENTER patterns
-        if re.search(safe_pattern, message, re.IGNORECASE):
-            return True
-
-        return False
-
-    def detect_in_pane(self, content: str) -> List[str]:
-        """
-        Detect ENTER patterns in pane content.
-
-        Args:
-            content: String content from tmux pane
-
-        Returns:
-            List of matching patterns found in content
-        """
-        if not content:
-            return []
-
-        matches = []
-        for pattern in ENTER_PATTERNS:
-            if re.search(pattern, content, re.IGNORECASE):
-                matches.append(pattern)
-        return matches
 
 
 class PaneScanner:
@@ -263,24 +196,25 @@ class PaneScanner:
         except Exception:
             return {}
 
-    def send_enter(self, session_name: str, window_name: str) -> bool:
-        """Send ENTER key to a window by name.
 
-        Returns:
-            True if sent, False if window not found or error.
-        """
-        if not self.tmux:
-            return False
-        try:
-            # Find window index by name
-            windows = self.tmux.list_windows(session_name)
-            for w in windows:
-                if w["name"] == window_name:
-                    self.tmux.send_keys_to_window(session_name, w["index"], "")
-                    return True
-            return False
-        except Exception:
-            return False
+class PaneSummary:
+    """
+    Tracks pane state for summary table output.
+
+    Attributes:
+        window_name: Name of the tmux window
+        last_state: Last detected state (ERROR, WAIT, RUNNING, DONE, IDLE)
+        last_action: Last auto-rescue action taken
+        task_id: Associated task ID (if any)
+        note: Additional notes (pattern detected, etc.)
+    """
+
+    def __init__(self, window_name: str):
+        self.window_name = window_name
+        self.last_state = 'IDLE'
+        self.last_action = ''
+        self.task_id = '-'
+        self.note = ''
 
 
 class Master:
@@ -292,7 +226,8 @@ class Master:
     2. Detect WAIT states (check for auto-confirm)
     3. Find idle workers
     4. Assign pending tasks to idle workers (via MasterDispatcher with mailbox)
-    5. Sleep for poll_interval
+    5. Scan panes and auto-rescue (via AutoRescuer)
+    6. Output status summary table
 
     Conservative behavior:
     - Never auto-yes (only auto-enter for safe prompts)
@@ -305,7 +240,8 @@ class Master:
         poll_interval: Optional[float] = None,
         cluster_id: str = 'default',
         tmux_collaboration: Optional['TmuxCollaboration'] = None,
-        pane_poll_interval: float = 3.0
+        pane_poll_interval: float = 3.0,
+        dry_run: bool = False
     ):
         """
         Initialize Master.
@@ -315,11 +251,14 @@ class Master:
             cluster_id: Cluster identifier for dispatcher and tmux session name
             tmux_collaboration: Optional TmuxCollaboration instance for pane scanning
             pane_poll_interval: Interval for pane scanning in seconds (default 3.0)
+            dry_run: Dry-run mode for auto-rescuer (no actual send-keys)
         """
         self.poll_interval = poll_interval or get_poll_interval()
         self.running = True
         self.cluster_id = cluster_id
         self.pane_poll_interval = pane_poll_interval
+        self.dry_run = dry_run
+        self.session_name = f"swarm-{cluster_id}"
 
         self.scanner = MasterScanner()
         self.wait_detector = WaitDetector()
@@ -327,8 +266,15 @@ class Master:
         self.dispatcher = MasterDispatcher(cluster_id=cluster_id)
         self.broadcaster = StatusBroadcaster(worker_id='master')
 
-        # Cooldown tracking for auto-ENTER (30 seconds per window)
-        self._last_auto_enter: Dict[str, float] = {}
+        # AutoRescuer for automatic rescue of interactive prompts
+        self.auto_rescuer = AutoRescuer(
+            tmux_manager=self.pane_scanner.tmux if self.pane_scanner.tmux else None,
+            broadcaster=self.broadcaster,
+            dry_run=dry_run
+        )
+
+        # Pane summary tracking {window_name: PaneSummary}
+        self._pane_summaries: Dict[str, PaneSummary] = {}
 
         # Register signal handlers
         signal.signal(signal.SIGINT, self._shutdown)
@@ -340,32 +286,55 @@ class Master:
         self.running = False
 
     def _handle_pane_wait_states(self) -> None:
-        """Scan all panes and auto-send ENTER for detected patterns."""
-        session_name = f"swarm-{self.cluster_id}"
-        pane_contents = self.pane_scanner.scan_all(session_name)
+        """
+        Scan all panes and execute auto-rescue via AutoRescuer.
 
-        now = time.time()
+        Uses AutoRescuer.check_and_rescue() which:
+        1. Detects dangerous patterns (blocks)
+        2. Detects auto-enter patterns (executes rescue)
+        3. Detects manual confirm patterns (returns manual_needed)
+        4. Manages per-window cooldown internally
+        """
+        pane_contents = self.pane_scanner.scan_all(self.session_name)
+
         for window_name, content in pane_contents.items():
-            patterns = self.wait_detector.detect_in_pane(content)
+            # Initialize summary if needed
+            if window_name not in self._pane_summaries:
+                self._pane_summaries[window_name] = PaneSummary(window_name)
+            summary = self._pane_summaries[window_name]
 
-            if patterns:
-                # Check cooldown (30 seconds)
-                last_enter = self._last_auto_enter.get(window_name, 0)
-                if now - last_enter < 30:
-                    continue  # Still in cooldown
+            # Use AutoRescuer for detection and rescue
+            should_rescue, action, pattern = self.auto_rescuer.check_and_rescue(
+                pane_output=content,
+                window_name=window_name,
+                session_name=self.session_name
+            )
 
-                # Send ENTER
-                if self.pane_scanner.send_enter(session_name, window_name):
-                    self._last_auto_enter[window_name] = now
-                    print(f"[Master] Auto-ENTER for {window_name}")
+            # Update summary based on action
+            if action == 'auto_enter':
+                summary.last_state = 'RUNNING'
+                summary.last_action = 'AUTO_ENTER'
+                summary.note = f'"{pattern}"'
+            elif action == 'manual_confirm_needed':
+                summary.last_state = 'WAIT'
+                summary.last_action = 'MANUAL'
+                summary.note = f'"{pattern}"'
+            elif action == 'dangerous_blocked':
+                summary.last_state = 'ERROR'
+                summary.last_action = 'BLOCKED'
+                summary.note = f'[DANGEROUS] {pattern}'
+            elif action == 'cooldown':
+                summary.last_action = 'COOLDOWN'
+                remaining = self.auto_rescuer.get_cooldown_time(window_name)
+                summary.note = f'Wait {remaining:.1f}s'
 
     def handle_wait_states(self, workers: Dict[str, dict]) -> None:
         """
-        Handle workers in WAIT state.
+        Handle workers in WAIT state from status.log.
 
         For each WAIT state:
         1. Check if safe to auto-confirm
-        2. If safe, send ENTER (conservative)
+        2. If safe, log (pane-based rescue handles actual send)
         3. If not safe, broadcast HELP for human intervention
 
         Args:
@@ -378,17 +347,92 @@ class Master:
             task_id = status.get('task_id', '')
             message = status.get('message', '')
 
-            if self.wait_detector.should_auto_confirm(message):
-                # TODO: Send ENTER to worker via tmux
-                # For MVP, just log
-                print(f"[Master] Worker {worker_id} waiting, would auto-ENTER")
-            else:
-                # Broadcast HELP state for human intervention
-                self.broadcaster.broadcast_help(
-                    task_id=task_id,
-                    message=f'Worker {worker_id} needs human help: {message}',
-                    meta={'worker_id': worker_id}
-                )
+            # For pane-based rescue (AutoRescuer), just log
+            print(f"[Master] Worker {worker_id} waiting: {message}")
+
+    def _get_state_priority(self, state: str) -> int:
+        """
+        Get priority value for state sorting.
+
+        Priority order: ERROR > WAIT > RUNNING > START > DONE > SKIP > IDLE
+
+        Args:
+            state: State string
+
+        Returns:
+            Priority value (lower = higher priority)
+        """
+        return STATE_PRIORITY.get(state, 99)
+
+    def _format_summary_table(self) -> str:
+        """
+        Format status summary table for output.
+
+        Format: window | state | task_id | note
+        Sorted by state priority (ERROR > WAIT > RUNNING > DONE/IDLE)
+
+        Returns:
+            Formatted table string
+        """
+        if not self._pane_summaries:
+            return "No pane data available"
+
+        # Collect summaries with priority
+        summaries = list(self._pane_summaries.values())
+
+        # Sort by state priority, then by window name
+        summaries.sort(key=lambda s: (self._get_state_priority(s.last_state), s.window_name))
+
+        # Format output
+        lines = []
+        lines.append("")
+        lines.append("=" * 70)
+        lines.append("WINDOW         STATE    TASK_ID    NOTE")
+        lines.append("-" * 70)
+
+        for summary in summaries:
+            window = summary.window_name[:12].ljust(12)
+            state = summary.last_state.ljust(8)
+            task_id = summary.task_id.ljust(10)
+            note = summary.note if summary.note else '-'
+            lines.append(f"{window} {state} {task_id} {note}")
+
+        lines.append("=" * 70)
+        lines.append(f"Total windows: {len(summaries)}")
+        lines.append("")
+
+        return "\n".join(lines)
+
+    def _update_summary_from_workers(self, workers: Dict[str, dict]) -> None:
+        """
+        Update pane summaries based on worker status.
+
+        Args:
+            workers: Dict of worker_id -> status dict
+        """
+        for worker_id, status in workers.items():
+            # Map worker_id to window_name (usually same as worker_id)
+            window_name = worker_id
+
+            if window_name not in self._pane_summaries:
+                self._pane_summaries[window_name] = PaneSummary(window_name)
+            summary = self._pane_summaries[window_name]
+
+            state = status.get('state', 'IDLE')
+            task_id = status.get('task_id', '-')
+
+            summary.task_id = task_id
+            summary.last_state = state
+
+    def output_status_summary(self) -> None:
+        """Output status summary table to stdout."""
+        # Update summary table
+        workers = self.scanner.scan_workers()
+        self._update_summary_from_workers(workers)
+
+        # Print summary table
+        summary_table = self._format_summary_table()
+        print(summary_table)
 
     def run(self) -> None:
         """
@@ -398,12 +442,15 @@ class Master:
         1. Scan worker status
         2. Handle WAIT states
         3. Dispatch tasks to idle workers (via MasterDispatcher with mailbox)
-        3.5. Scan panes and auto-ENTER (on pane_poll_interval timing)
-        4. Sleep for poll_interval
+        4. Scan panes and auto-rescue (on pane_poll_interval timing)
+        5. Output status summary table
+        6. Sleep for poll_interval
         """
         print(f"[Master] Starting Master loop (poll_interval={self.poll_interval}s)")
 
         last_pane_scan_time = 0.0
+        last_summary_time = 0.0
+        summary_interval = 30.0  # Output summary every 30 seconds
 
         while self.running:
             try:
@@ -435,12 +482,17 @@ class Master:
                         if result.success:
                             print(f"[Master] Assigned {result.task_id} to {result.worker_id}")
 
-                # 3.5. Scan panes and auto-ENTER (independent interval)
+                # 4. Scan panes and auto-rescue (independent interval)
                 if now - last_pane_scan_time >= self.pane_poll_interval:
                     self._handle_pane_wait_states()
                     last_pane_scan_time = now
 
-                # 4. Sleep before next scan
+                # 5. Output status summary table (periodic)
+                if now - last_summary_time >= summary_interval:
+                    self.output_status_summary()
+                    last_summary_time = now
+
+                # 6. Sleep before next scan
                 time.sleep(self.poll_interval)
 
             except Exception as e:
@@ -469,10 +521,26 @@ def main():
         default=None,
         help='Poll interval in seconds (default: from env or 1.0)'
     )
+    parser.add_argument(
+        '--pane-poll-interval',
+        type=float,
+        default=3.0,
+        help='Pane scanning interval in seconds (default: 3.0)'
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        default=False,
+        help='Dry-run mode (no actual tmux send-keys)'
+    )
 
     args = parser.parse_args()
 
-    master = Master(poll_interval=args.poll_interval)
+    master = Master(
+        poll_interval=args.poll_interval,
+        pane_poll_interval=args.pane_poll_interval,
+        dry_run=args.dry_run
+    )
     master.run()
 
 
