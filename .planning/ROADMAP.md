@@ -18,15 +18,17 @@
 
 ## v1.86 Phases
 
-| # | Phase | Goal | Requirements | Success Criteria |
-|---|-------|------|--------------|------------------|
-| 24 | Master 救援核心 | 实现 Master 自动判断 WAIT/confirm 状态并安全确认 | RESCUE-01, RESCUE-02, RESCUE-03, RESCUE-04 | 6 |
-| 25 | 状态汇总表 | 实现窗口状态汇总表输出 | RESCUE-05, RESCUE-06, RESCUE-07, RESCUE-08 | 4 |
-| 26 | 集成与配置 | 技术集成与配置项整理 | RESCUE-09, RESCUE-10, RESCUE-11, RESCUE-12, RESCUE-13 | 5 |
+| # | Phase | Goal | Requirements | Success Criteria | Status |
+|---|-------|------|--------------|------------------|--------|
+| 24 | Master 救援核心 | 实现 Master 自动判断 WAIT/confirm 状态并安全确认 | RESCUE-01, RESCUE-02, RESCUE-03, RESCUE-04 | 6 | ✓ Complete |
+| 25 | 状态汇总表 | 实现窗口状态汇总表输出 | RESCUE-05, RESCUE-06, RESCUE-07, RESCUE-08 | 4 | Pending |
+| 26 | 集成与配置 | 技术集成与配置项整理 | RESCUE-09, RESCUE-10, RESCUE-11, RESCUE-12, RESCUE-13 | 5 | Pending |
 
 ### Phase 24: Master 救援核心
 
 **Goal:** 实现 Master 自动判断 WAIT/confirm/press-enter 状态，并执行安全确认
+
+**Status:** Complete (2026-02-04)
 
 **Requirements:**
 - RESCUE-01: Master 扫描 tmux pane 输出时，自动判断 WAIT/confirm/press-enter 等等待状态
@@ -35,12 +37,12 @@
 - RESCUE-04: 严格白名单逻辑，不做危险操作（检测 rm -rf, DROP 等立即告警）
 
 **Success Criteria:**
-1. [ ] Master 扫描 pane 时能识别 [WAIT], [confirm], [press enter] 等模式
-2. [ ] 检测到等待状态时自动发送 Enter
-3. [ ] 同一窗口 30s 内不重复确认（冷却机制）
-4. [ ] 检测到 rm -rf, DROP 等危险关键词时不自动确认
-5. [ ] 通过手测验证：模拟 WAIT 输出 → 验证 Enter 发送
-6. [ ] 不影响现有任务分发与锁机制
+1. [x] Master 扫描 pane 时能识别 [WAIT], [confirm], [press enter] 等模式
+2. [x] 检测到等待状态时自动发送 Enter
+3. [x] 同一窗口 30s 内不重复确认（冷却机制）
+4. [x] 检测到 rm -rf, DROP 等危险关键词时不自动确认
+5. [x] 通过手测验证：模拟 WAIT 输出 → 验证 Enter 发送
+6. [x] 不影响现有任务分发与锁机制
 
 ### Phase 25: 状态汇总表
 
@@ -82,10 +84,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RESCUE-01 | 24 | Pending |
-| RESCUE-02 | 24 | Pending |
-| RESCUE-03 | 24 | Pending |
-| RESCUE-04 | 24 | Pending |
+| RESCUE-01 | 24 | Complete |
+| RESCUE-02 | 24 | Complete |
+| RESCUE-03 | 24 | Complete |
+| RESCUE-04 | 24 | Complete |
 | RESCUE-05 | 25 | Pending |
 | RESCUE-06 | 25 | Pending |
 | RESCUE-07 | 25 | Pending |
@@ -98,10 +100,10 @@
 
 **Coverage:**
 - v1.86 requirements: 13 total
-- Mapped to phases: 13
-- Unmapped: 0 ✓
+- Complete: 4 (RESCUE-01~04)
+- Pending: 9 (RESCUE-05~13)
 
 ---
 
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 after v1.86 roadmap created*
+*Last updated: 2026-02-04 after Phase 24 complete*
