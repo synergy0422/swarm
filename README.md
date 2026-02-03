@@ -170,6 +170,55 @@ v1.7 引入了新的 5 窗格布局脚本，将所有窗格集中在单个 tmux 
 tmux attach -t <session-name>
 ```
 
+## 诊断快照
+
+v1.8 引入了诊断快照功能，用于采集 tmux swarm 运行状态进行诊断分析。
+
+### 使用方法
+
+```bash
+# 基本用法（采集默认会话）
+./scripts/swarm_snapshot.sh
+
+# 指定会话名称
+./scripts/swarm_snapshot.sh --session my-session
+
+# 自定义输出行数（默认 50）
+./scripts/swarm_snapshot.sh --lines 100
+
+# 自定义输出目录
+./scripts/swarm_snapshot.sh --out /path/to/snapshot
+```
+
+### 参数说明
+
+| 参数 | 说明 |
+|------|------|
+| `--session, -s` | tmux 会话名称 |
+| `--lines, -n` | 每个窗格捕获的行数（默认 50） |
+| `--out, -o` | 输出目录（默认 /tmp/ai_swarm_snapshot_<timestamp>） |
+| `--help, -h` | 显示帮助信息 |
+
+### 输出内容
+
+快照会创建以下目录结构：
+```
+<snapshot_dir>/
+  tmux/           # tmux 结构信息
+    structure.txt # 会话、窗口、窗格结构
+  panes/          # 各窗格输出（带 session:window.pane 前缀）
+    <session>.<window>.<pane>.txt
+  state/          # 状态文件（只读复制）
+    status.log     #（如果存在于 SWARM_STATE_DIR）
+  locks/          # 锁目录列表（只读）
+    list.txt       #（如果 locks/ 存在于 SWARM_STATE_DIR）
+  meta/           # git 信息和摘要
+    git.txt        # git 状态、分支、提交记录
+    summary.txt    # 快照概览和错误摘要
+```
+
+**注意：** 快照脚本为只读操作，不会修改 SWARM_STATE_DIR 中任何文件。
+
 ## Development
 
 ```bash
@@ -199,7 +248,7 @@ All script documentation available at [docs/SCRIPTS.md](docs/SCRIPTS.md):
 - Configuration scripts (_config.sh, _common.sh)
 - Communication scripts (claude_comm.sh, claude_poll.sh, claude_status.sh, claude_auto_rescue.sh)
 - Task management scripts (swarm_task_wrap.sh, swarm_lock.sh, swarm_broadcast.sh)
-- System tools (swarm_selfcheck.sh)
+- System tools (swarm_selfcheck.sh, swarm_snapshot.sh)
 - Utility scripts (swarm_status_log.sh)
 
 ## Command Mapping
@@ -211,6 +260,7 @@ Note: `claude status` is a Claude CLI command, not a swarm command. Swarm comman
 | `claude status` | `claude_status.sh` | Quick status check for all windows |
 | `swarm task-wrap` | `swarm_task_wrap.sh` | Task lifecycle wrapper |
 | `swarm selfcheck` | `swarm_selfcheck.sh` | System health check |
+| `swarm snapshot` | `swarm_snapshot.sh` | Diagnostic snapshot collection |
 | `swarm lock` | `swarm_lock.sh` | Task lock operations |
 | `swarm broadcast` | `swarm_broadcast.sh` | Status broadcasting |
 | `swarm rescue` | `claude_auto_rescue.sh` | Auto-confirm prompts |
