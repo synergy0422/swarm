@@ -6,7 +6,7 @@
 ## Milestones
 
 - ✅ **v1.0 - v1.6** — Previous milestones archived in `.planning/milestones/`
-- 📋 **v1.7** — 5 窗格布局 + Codex (Phase 22, planning pending)
+- 📋 **v1.7** — 5 窗格布局 + Codex (Phase 22, 1 plan created)
 - ⏳ **v1.7+** — UI 面板、P2P/流水线模式 (待规划)
 
 ## v1.7 Roadmap
@@ -34,7 +34,9 @@
 8. README.md 新增"5 窗格布局"说明
 9. docs/SCRIPTS.md 补充完整文档
 
+**Plan:** .planning/phases/22-5窗格布局脚本/22-01-PLAN.md
+
 ---
 
 *Roadmap created: 2026-02-03*
-*Last updated: 2026-02-03 after v1.7 milestone started*
+*Last updated: 2026-02-03 after v1.7 plan created*
