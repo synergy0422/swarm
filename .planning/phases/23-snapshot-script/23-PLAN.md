@@ -29,13 +29,48 @@
   panes/
     <session>.<window>.<pane>.txt  # each pane output with prefix
   state/
-    status.log         # status.log content (if exists)
+    status.log         # copy of status.log (if exists)
   locks/
     list.txt           # lock directory listing (if exists)
   meta/
     git.txt            # git status, branch, dirty state
     summary.txt        # snapshot overview and error summary
 ```
+
+**Critical Constraints (must_haves):**
+- [ ] **只读操作**: 禁止对 `$SWARM_STATE_DIR` 执行任何写入（mkdir, cp, rm 等）
+- [ ] 状态文件复制：从 `$SWARM_STATE_DIR/status.log` **只读复制**到快照目录的 `state/`
+- [ ] 锁目录读取：仅执行 `ls -la` 读取列表，**禁止写操作**
+
+## Output Directory Conflict Resolution
+
+**策略：** 如果 `--out` 指定且目录存在，自动追加 `_YYYYmmdd_HHMMSS` 后缀
+
+```bash
+if [[ -d "$SNAPSHOT_DIR" ]]; then
+    SNAPSHOT_DIR="${SNAPSHOT_DIR}_$(date +%Y%m%d_%H%M%S)"
+fi
+```
+
+## Error Handling
+
+- 部分失败继续执行（非阻塞）
+- 所有错误收集到 ERRORS 数组
+- **Summary 格式** (`meta/summary.txt`):
+  ```text
+  Snapshot: /path/to/snapshot_<timestamp>
+  Session: swarm-claude-default
+  Panes: 5
+  Time: 2026-02-03 15:30:45
+
+  Files:
+  - tmux/structure.txt
+  - panes/*.txt
+  ...
+
+  Errors:
+  - [15:30:42] tmux: session 'invalid-session' not found
+  ```
 
 ## Tasks
 
@@ -66,20 +101,21 @@
 
     5. **Variable initialization:**
        - SNAPSHOT_LINES default 50
-       - SNAPSHOT_DIR auto-increment if exists (append _<timestamp>)
+       - SNAPSHOT_DIR with auto-increment: if --out exists, append `_YYYYmmdd_HHMMSS`
        - ERRORS array for error collection
+       - declare -a ERRORS=()
 
     6. **Skeleton functions** (to be filled):
-       - `check_tmux_session()` - verify session exists
-       - `dump_tmux_structure()` - save structure.txt
+       - `check_tmux_session()` - verify session exists (read-only)
+       - `dump_tmux_structure()` - save structure.txt for specified session only
        - `dump_pane_output()` - save panes/*.txt
-       - `dump_state_files()` - save state/status.log
-       - `dump_locks()` - save locks/list.txt
+       - `dump_state_files()` - READ-ONLY copy status.log to snapshot
+       - `dump_locks()` - READ-ONLY ls to list.txt
        - `dump_git_info()` - save meta/git.txt
-       - `generate_summary()` - create meta/summary.txt
+       - `generate_summary()` - create meta/summary.txt with Errors section
        - `main()` - orchestrate all functions
   </action>
-  <verify>File exists with correct structure: head -50 scripts/swarm_snapshot.sh</verify>
+  <verify>File exists with correct structure: head -60 scripts/swarm_snapshot.sh</verify>
   <done>Script skeleton created with all functions stubbed and argument parsing working</done>
 </task>
 
@@ -90,41 +126,48 @@
     Implement all snapshot functions in scripts/swarm_snapshot.sh:
 
     1. **check_tmux_session():**
-       - Use `tmux list-sessions` to verify session exists
-       - Return error if session not found
+       - Use `tmux list-sessions -F '#{session_name}'` to verify session exists
+       - Return error if session not found (add to ERRORS array)
+       - **只读操作**
 
     2. **dump_tmux_structure():**
-       - `tmux list-sessions -F '#{session_name}'`
-       - For each session: `tmux list-windows -F '#{window_index}: #{window_name}'`
-       - For each window: `tmux list-panes -F '#{pane_index}: #{pane_title}'`
+       - 仅采集指定 session（`$SESSION_NAME`）的结构
+       - `tmux list-windows -t "$SESSION_NAME" -F '#{window_index}: #{window_name}'`
+       - For each window: `tmux list-panes -t "$SESSION_NAME:window_index" -F '#{pane_index}: #{pane_title}'`
        - Save to `$SNAPSHOT_DIR/tmux/structure.txt`
+       - **只读操作**
 
     3. **dump_pane_output():**
-       - Loop all panes in session using `tmux list-panes`
-       - For each pane: `tmux capture-pane -p -t <session>:<window>.<pane>`
-       - Add prefix to each line: `[session:window.pane] <content>`
-       - Save to `$SNAPSHOT_DIR/panes/<session>.<window>.<pane>.txt`
+       - Loop all panes in specified session using `tmux list-panes -t "$SESSION_NAME"`
+       - For each pane: `tmux capture-pane -p -t "$SESSION_NAME:$win.$pane"`
+       - Add prefix to each line: `[${SESSION_NAME}:${win}.${pane}] <content>`
+       - Save to `$SNAPSHOT_DIR/panes/${SESSION_NAME}.${win}.${pane}.txt`
        - Limit to last N lines using `tail -n $SNAPSHOT_LINES`
+       - **只读操作**
 
     4. **dump_state_files():**
        - Check if `$SWARM_STATE_DIR/status.log` exists
-       - If exists: copy to `$SNAPSHOT_DIR/state/status.log`
-       - If not: mark as "NOT FOUND" in summary later
+       - If exists: `cp "$SWARM_STATE_DIR/status.log" "$SNAPSHOT_DIR/state/status.log"`
+       - If not: mark as "NOT FOUND" (will be in summary)
+       - **只读复制到快照目录，禁止对 SWARM_STATE_DIR 写操作**
 
     5. **dump_locks():**
        - Check if `$SWARM_STATE_DIR/locks/` exists
-       - If exists: `ls -la` to `$SNAPSHOT_DIR/locks/list.txt`
-       - If not: mark as "NOT FOUND" in summary later
+       - If exists: `ls -la "$SWARM_STATE_DIR/locks/" > "$SNAPSHOT_DIR/locks/list.txt"`
+       - If not: mark as "NOT FOUND" (will be in summary)
+       - **只读列出，禁止写操作**
 
     6. **dump_git_info():**
        - `git rev-parse --short HEAD` (commit SHA)
        - `git rev-parse --abbrev-ref HEAD` (branch)
        - `git status --porcelain` (dirty state)
        - Save to `$SNAPSHOT_DIR/meta/git.txt`
+       - **只读操作**
 
     7. **Error collection:**
        - Every function captures errors to ERRORS array
        - Continue on partial failure (non-blocking)
+       - Pattern: `ERRORS+=("[$(date +%H:%M:%S)] Error description")`
   </action>
   <verify>All functions implemented, script runs without syntax errors</verify>
   <done>Core snapshot functions complete and functional</done>
@@ -137,28 +180,46 @@
     Complete scripts/swarm_snapshot.sh:
 
     1. **generate_summary():**
-       Create `$SNAPSHOT_DIR/meta/summary.txt` with:
-       - Snapshot timestamp
-       - Session name
-       - Pane count
-       - File list (tree -L 2 or find)
-       - Error summary (all collected ERRORS)
-       - "NOT FOUND" markers for missing files
+       Create `$SNAPSHOT_DIR/meta/summary.txt` with format:
+       ```
+       Snapshot: /path/to/snapshot_<timestamp>
+       Session: swarm-claude-default
+       Panes: 5
+       Time: 2026-02-03 15:30:45
+
+       Files:
+       - tmux/structure.txt
+       - panes/*.txt
+       - state/status.log (if exists)
+       - locks/list.txt (if exists)
+       - meta/git.txt
+       - meta/summary.txt
+
+       Errors:
+       - [15:30:42] tmux: session 'xxx' not found
+       - [15:30:43] status.log: NOT FOUND
+       ```
+       - If no errors: omit Errors section or show "Errors: none"
 
     2. **main() function:**
        - Parse arguments
-       - Create output directory (with auto-increment if exists)
-       - Run all dump_* functions
-       - Collect errors (don't fail on partial errors)
+       - Create output directory: `mkdir -p "$SNAPSHOT_DIR/{tmux,panes,state,locks,meta}"`
+       - Check tmux session exists
+       - Run all dump_* functions (collect errors, don't fail)
        - Generate summary
        - Print output directory path to stdout
-       - Print error count (if any)
+       - Print error count: "Errors: N"
 
     3. **Execute main:**
        - `main "$@"` at end of script
 
     4. **Make executable:**
        - `chmod +x scripts/swarm_snapshot.sh`
+
+    5. **must_haves validation:**
+       - Verify no write operations to `$SWARM_STATE_DIR`
+       - Verify errors are collected in ERRORS array
+       - Verify summary.txt has proper format with Errors section
   </action>
   <verify>Script runs end-to-end, creates snapshot with all expected files</verify>
   <done>Summary generation and main orchestration complete</done>
@@ -168,7 +229,10 @@
   <name>Update README.md with diagnostic snapshot section</name>
   <files>README.md</files>
   <action>
-    Add "诊断快照" (Diagnostic Snapshot) section to README.md after "5 窗格布局" section:
+    Add "诊断快照" (Diagnostic Snapshot) section to README.md in appropriate location:
+
+    1. **Find insertion point:** Look for "使用说明" (Usage) or "脚本索引" (Script Index) sections
+    2. **Insert before/after the most relevant section**
 
     ```markdown
     ## 诊断快照
@@ -206,7 +270,7 @@
     ```
     <snapshot_dir>/
       tmux/           # tmux 结构信息
-      panes/          # 各窗格输出
+      panes/          # 各窗格输出（带 session:window.pane 前缀）
       state/          # 状态文件
       locks/          # 锁目录列表
       meta/           # git 信息和摘要
@@ -215,7 +279,7 @@
     **注意：** 快照脚本为只读操作，不会修改任何状态文件。
     ```
 
-    Update "Script Index" section to add swarm_snapshot.sh entry.
+    3. **Update Script Index section** to add swarm_snapshot.sh entry.
   </action>
   <verify>README.md contains new section, script index updated</verify>
   <done>README.md updated with diagnostic snapshot documentation</done>
@@ -235,6 +299,7 @@
        - **环境变量：** CLAUDE_SESSION, SNAPSHOT_LINES, SNAPSHOT_DIR
        - **示例：** Basic usage, custom session, custom lines, custom output
        - **高级用法：** Error handling notes, output structure explanation
+       - **只读约束：** 不会修改 SWARM_STATE_DIR 中任何文件
        - **依赖：** _common.sh, tmux
 
     3. Update script dependency diagram to include swarm_snapshot.sh
@@ -269,17 +334,22 @@ test -x scripts/swarm_snapshot.sh
 
 # 6. SCRIPTS.md updated
 # grep -c "swarm_snapshot.sh" docs/SCRIPTS.md
+
+# 7. Verify read-only constraint (no writes to SWARM_STATE_DIR)
+# strace -f -e trace=open,openat,mkdir,cp ./scripts/swarm_snapshot.sh 2>&1 | grep /tmp/ai_swarm
 ```
 
 ## Success Criteria
 
 - [ ] `scripts/swarm_snapshot.sh` created with `--session`, `--lines`, `--out` arguments
-- [ ] `tmux/` directory contains session/window/pane structure info
+- [ ] `tmux/` directory contains session/window/pane structure info (specified session only)
 - [ ] `panes/` directory contains pane output with `[session:window.pane]` prefix
-- [ ] `state/` directory contains status.log (if exists)
+- [ ] `state/` directory contains status.log copy (if exists)
 - [ ] `locks/` directory contains lock list (if exists)
 - [ ] `meta/` directory contains git.txt and summary.txt
-- [ ] Script is read-only (no state file modification)
+- [ ] **只读操作:** 禁止对 `$SWARM_STATE_DIR` 执行任何写操作
+- [ ] **错误摘要:** summary.txt 包含 Errors: 段落
+- [ ] **目录冲突:** 自动追加 `_YYYYmmdd_HHMMSS` 后缀
 - [ ] README.md has new "诊断快照" section
 - [ ] docs/SCRIPTS.md has swarm_snapshot.sh documentation
 
