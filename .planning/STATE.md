@@ -23,11 +23,10 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 ## Current Position
 
-**v1.8 In Progress** — 2026-02-03
+**v1.8 Complete** — 2026-02-03
 
 - **Milestone:** 诊断快照 (v1.8)
-- **Focus:** Implementation complete
-- **Status:** Plan 23-01 executed successfully
+- **Status:** All phases complete - ready for milestone audit
 
 ## Progress
 
