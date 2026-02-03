@@ -169,11 +169,12 @@ dump_state_files() {
             add_error "state: failed to copy status.log"
         fi
     else
+        # status.log is optional - just note it doesn't exist
         {
             echo "NOT FOUND: $status_log"
             echo "Reason: File does not exist in SWARM_STATE_DIR"
         } > "$output_file"
-        add_error "status.log: NOT FOUND"
+        # Do NOT add error - this file is optional
     fi
 }
 
@@ -189,11 +190,12 @@ dump_locks() {
             add_error "locks: failed to list locks directory"
         fi
     else
+        # locks directory is optional - just note it doesn't exist
         {
             echo "NOT FOUND: $locks_dir"
             echo "Reason: Directory does not exist in SWARM_STATE_DIR"
         } > "$output_file"
-        add_error "locks: NOT FOUND"
+        # Do NOT add error - this directory is optional
     fi
 }
 
@@ -313,9 +315,11 @@ main() {
     # Create output directory structure
     mkdir -p "$SNAPSHOT_DIR/tmux" "$SNAPSHOT_DIR/panes" "$SNAPSHOT_DIR/state" "$SNAPSHOT_DIR/locks" "$SNAPSHOT_DIR/meta"
 
-    # Check tmux session
+    # Check tmux session - fail fast if session doesn't exist
     if ! check_tmux_session; then
-        echo "Warning: Session '$SESSION_NAME' not found. Creating snapshot with available data." >&2
+        echo "Error: Session '$SESSION_NAME' not found. Cannot create snapshot." >&2
+        generate_summary
+        exit 1
     fi
 
     # Run all dump functions (collect errors, don't fail)
@@ -341,10 +345,8 @@ main() {
         done
     fi
 
-    # Return exit code based on errors
-    if [[ ${#ERRORS[@]} -gt 0 ]]; then
-        exit 1
-    fi
+    # Return exit code - always 0 since errors are reported in summary
+    # Critical errors (session not found) exit earlier at line 320
     exit 0
 }
 
