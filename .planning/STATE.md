@@ -20,35 +20,35 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 | 18-21 | v1.6 长期可维护性 + 流程闭环 | Complete | 4/4 plans |
 | 22 | v1.7 5 窗格布局 + Codex | Complete | 1/1 plans |
 | 23 | v1.8 诊断快照 | Complete | 1/1 plans |
-| 24 | v1.85 Claude Tasks 集成 | Executing | 1/1 plans |
+| 24 | v1.85 Claude Tasks 集成 | Complete | 1/1 plans |
 
 ## Current Position
 
-**v1.85 Started** — 2026-02-03
+**v1.85 Completed** — 2026-02-03
 
 - **Milestone:** Claude Tasks 集成 + 自动锁闭环
-- **Status:** Phase 24 executing (1/1 plans)
-- **Last activity:** 2026-02-03 - Completed 24-01-PLAN.md (swarm_tasks_bridge.sh)
+- **Status:** Phase 24 complete (1/1 plans)
+- **Last activity:** 2026-02-03 - Completed 24-02-PLAN.md (documentation update)
 
 ## Progress
 
 ```
 v1.0-v1.8 Complete: ████████████████████ 100%
-v1.85 In Progress: ████████████████████ 100%
+v1.85 Complete:     ████████████████████ 100%
 - 24 phases completed
 - 25+ plans executed
-- All milestones shipped or in progress
+- All milestones shipped
 ```
 
 ## Session Continuity
 
 Last session: 2026-02-03
 Started: v1.85 milestone - Claude Tasks 集成 + 自动锁闭环
-Stopped at: Completed 24-01-PLAN.md (swarm_tasks_bridge.sh implementation)
+Stopped at: Completed 24-02-PLAN.md (documentation update)
 Resume file: None
 
-Previous milestone: v1.8 - 诊断快照 (archived in .planning/milestones/)
-Current milestone: v1.85 (executing - 1/1 plans complete)
+Previous milestone: v1.85 - Claude Tasks 集成 (just completed)
+Current milestone: v1.85 (complete)
 
 ---
 
