@@ -1,397 +1,379 @@
+#!/usr/bin/env python3
 """
 Auto Rescuer Module for AI Swarm System
 
-Provides conservative auto-rescue for workers stuck waiting for user input.
-Detects WAIT patterns (y/n, Press ENTER, confirm) and can auto-confirm safe patterns.
+Provides automatic rescue for interactive prompts in tmux panes.
+Detects WAIT/confirm/press-enter patterns and executes safe auto-confirm.
+
+Features:
+- Pattern classification: AUTO_ENTER, MANUAL_CONFIRM, DANGEROUS
+- Per-window cooldown mechanism (30 seconds default)
+- Dangerous operation blocking (rm -rf, DROP, TRUNCATE, etc.)
+- Dry-run mode for testing
 """
 
+import os
 import re
-from datetime import datetime, timedelta
-from dataclasses import dataclass
-from enum import Enum
-from typing import Optional, List
-
-from swarm.tmux_manager import TmuxSwarmManager
+import time
+from typing import Dict, Optional, Tuple
 
 
-# ==================== Constants ====================
+# Environment variable names
+ENV_AUTO_RESCUE_COOLING = 'AI_SWARM_AUTO_RESCUE_COOLING'
+ENV_AUTO_RESCUE_DRY_RUN = 'AI_SWARM_AUTO_RESCUE_DRY_RUN'
 
-DETECTION_LINE_COUNT = 20  # Only check last 20 lines
-DETECTION_TIME_WINDOW = 30  # 30 seconds window
+# Default cooling time in seconds
+DEFAULT_COOLING_TIME = 30.0
 
-BLACKLIST_KEYWORDS = [
-    'delete', 'remove', 'rm -rf', 'format', 'overwrite',
-    'drop database', 'drop table',
-    'kill', 'terminate',
-    'sudo', 'password', 'token', 'ssh', 'key',
-    '生产', 'prod',
-    '删除',  # Chinese for delete
+
+# =====================================
+# Pattern Classification (strict priority)
+# =====================================
+
+# AUTO_ENTER_PATTERNS: Safe to auto-send Enter (press enter only)
+# Priority: Highest for auto-rescue category
+AUTO_ENTER_PATTERNS = [
+    # Press Enter / Hit Return variants (case-insensitive)
+    (r'[Pp]ress [Ee]nter', 1),
+    (r'[Pp]ress [Rr]eturn', 1),
+    (r'[Hh]it [Ee]nter', 1),
+    (r'[Hh]it [Rr]eturn', 1),
+    # Chinese patterns
+    (r'按回车', 1),
+    (r'按回车键', 1),
+    (r'回车继续', 1),
+    # Press any key (also safe)
+    (r'[Pp]ress any key to continue', 1),
 ]
 
 
-# ==================== PatternCategory Enum ====================
-
-class PatternCategory(str, Enum):
-    """Category of WAIT pattern detected."""
-    INTERACTIVE_CONFIRM = 'interactive_confirm'  # [y/n], [Y/n] patterns
-    PRESS_ENTER = 'press_enter'                  # Press ENTER to continue
-    CONFIRM_PROMPT = 'confirm_prompt'            # confirm, are you sure
-    NONE = 'none'                                # no pattern detected
-
-
-# ==================== WaitPattern Dataclass ====================
-
-@dataclass
-class WaitPattern:
-    """
-    Represents a detected WAIT pattern in pane output.
-
-    Attributes:
-        category: Type of pattern detected
-        matched_text: The actual text that matched the pattern
-        line_number: Line number where pattern was found (from end, 0-indexed)
-        should_auto_confirm: True only for PRESS_ENTER patterns
-        timestamp: When the pattern was detected
-    """
-    category: PatternCategory
-    matched_text: str
-    line_number: int
-    should_auto_confirm: bool
-    timestamp: datetime
+# MANUAL_CONFIRM_PATTERNS: Require manual confirmation (y/n, confirm, continue)
+# Priority: Second - returns manual_confirm_needed action
+MANUAL_CONFIRM_PATTERNS = [
+    # y/n interactive patterns
+    (r'\[y[\/\]n\]', 2),
+    (r'\[Y[\/\]n\]', 2),
+    (r'\[y[\/\]N\]', 2),
+    (r'\[Y[\/\]N\]', 2),
+    (r'\(y[\/\]n\)', 2),
+    (r'y or n', 2),
+    (r'y\/n', 2),
+    # Confirm prompts
+    (r'[Cc]onfirm', 3),
+    (r'[Aa]re you sure', 3),
+    (r'确认', 3),
+    (r'确定吗', 3),
+    # Continue/Proceed prompts
+    (r'[Cc]ontinue', 4),
+    (r'[Pp]roceed', 4),
+    (r'[Yy]es[/\s]?[Nn]o', 4),
+    (r'ok to proceed', 4),
+]
 
 
-# ==================== WaitPatternDetector Class ====================
+# DANGEROUS_PATTERNS: Block auto-rescue immediately (security blacklist)
+# Priority: Highest - checked first, blocks all auto-actions
+DANGEROUS_PATTERNS = [
+    r'rm\s+-rf',           # Force recursive delete
+    r'rm\s+-r',            # Recursive delete
+    r'rm\s+-fr',           # Force recursive delete
+    r'shred',              # Secure file deletion
+    r'DROP\s+DATABASE',    # Database deletion
+    r'DROP\s+TABLE',       # Table deletion
+    r'DROP\s+INDEX',       # Index deletion
+    r'TRUNCATE',           # Table truncation
+]
 
-class WaitPatternDetector:
-    """
-    Detects WAIT patterns in pane output.
-
-    Detection priorities:
-    1. INTERACTIVE_CONFIRM - y/n patterns (highest priority)
-    2. PRESS_ENTER - Press ENTER to continue
-    3. CONFIRM_PROMPT - confirm/are you sure
-
-    Only checks last 20 lines and patterns within last 30 seconds.
-    All pattern matching is case-insensitive.
-    """
-
-    def __init__(self):
-        """Initialize the pattern detector with compiled regex patterns."""
-        # Interactive confirm patterns: [y/n], [Y/n], (y/n), etc.
-        self._interactive_patterns = [
-            re.compile(r'\[y/n\]', re.IGNORECASE),
-            re.compile(r'\[Y/n\]', re.IGNORECASE),
-            re.compile(r'\(y/n\)', re.IGNORECASE),
-            re.compile(r'\by or n\b', re.IGNORECASE),
-            re.compile(r'\byes or no\b', re.IGNORECASE),
-        ]
-
-        # Press ENTER patterns: Press ENTER, hit enter, 按回车
-        self._press_enter_patterns = [
-            re.compile(r'press\s+enter', re.IGNORECASE),
-            re.compile(r'press\s+return', re.IGNORECASE),
-            re.compile(r'hit\s+enter', re.IGNORECASE),
-            re.compile(r'按回车', re.IGNORECASE),
-            re.compile(r'回车继续', re.IGNORECASE),
-            re.compile(r'press\s+any\s+key\s+to\s+continue', re.IGNORECASE),
-        ]
-
-        # Confirm prompt patterns: confirm, are you sure, 确认
-        self._confirm_patterns = [
-            re.compile(r'\bconfirm\b', re.IGNORECASE),
-            re.compile(r'are\s+you\s+sure', re.IGNORECASE),
-            re.compile(r'确认', re.IGNORECASE),
-            re.compile(r'确定吗', re.IGNORECASE),
-        ]
-
-    def detect(self, pane_output: str, recent_threshold: datetime) -> Optional[WaitPattern]:
-        """
-        Detect WAIT patterns in pane output.
-
-        Args:
-            pane_output: Full output from tmux pane
-            recent_threshold: Only consider patterns after this timestamp
-
-        Returns:
-            WaitPattern if detected, None otherwise
-        """
-        if not pane_output:
-            return None
-
-        # Split output into lines
-        lines = pane_output.splitlines()
-
-        # Only check last N lines
-        recent_lines = lines[-DETECTION_LINE_COUNT:]
-
-        # Check patterns in priority order
-        # 1. Interactive confirm (highest priority)
-        pattern = self._check_interactive_confirm(recent_lines)
-        if pattern:
-            return pattern
-
-        # 2. Press ENTER
-        pattern = self._check_press_enter(recent_lines)
-        if pattern:
-            return pattern
-
-        # 3. Confirm prompt
-        pattern = self._check_confirm_prompt(recent_lines)
-        if pattern:
-            return pattern
-
-        return None
-
-    def _check_interactive_confirm(self, lines: List[str]) -> Optional[WaitPattern]:
-        """
-        Check for interactive confirm patterns (y/n).
-
-        Returns WaitPattern with should_auto_confirm=False
-        """
-        for i, line in enumerate(lines):
-            for pattern in self._interactive_patterns:
-                match = pattern.search(line)
-                if match:
-                    # Check if blacklisted
-                    if self._is_blacklisted(line):
-                        # Still return pattern, but mark for manual intervention
-                        return WaitPattern(
-                            category=PatternCategory.INTERACTIVE_CONFIRM,
-                            matched_text=match.group(0),
-                            line_number=i,
-                            should_auto_confirm=False,
-                            timestamp=datetime.now()
-                        )
-
-                    return WaitPattern(
-                        category=PatternCategory.INTERACTIVE_CONFIRM,
-                        matched_text=match.group(0),
-                        line_number=i,
-                        should_auto_confirm=False,  # NEVER auto-confirm y/n
-                        timestamp=datetime.now()
-                    )
-
-        return None
-
-    def _check_press_enter(self, lines: List[str]) -> Optional[WaitPattern]:
-        """
-        Check for Press ENTER patterns.
-
-        Returns WaitPattern with should_auto_confirm=True (conservative policy)
-        """
-        for i, line in enumerate(lines):
-            for pattern in self._press_enter_patterns:
-                match = pattern.search(line)
-                if match:
-                    # Check if blacklisted
-                    if self._is_blacklisted(line):
-                        # Blacklisted - don't auto-confirm
-                        return WaitPattern(
-                            category=PatternCategory.PRESS_ENTER,
-                            matched_text=match.group(0),
-                            line_number=i,
-                            should_auto_confirm=False,  # Blocked by blacklist
-                            timestamp=datetime.now()
-                        )
-
-                    # Safe to auto-confirm (send Enter key only)
-                    return WaitPattern(
-                        category=PatternCategory.PRESS_ENTER,
-                        matched_text=match.group(0),
-                        line_number=i,
-                        should_auto_confirm=True,  # Conservative: only Enter
-                        timestamp=datetime.now()
-                    )
-
-        return None
-
-    def _check_confirm_prompt(self, lines: List[str]) -> Optional[WaitPattern]:
-        """
-        Check for confirm prompt patterns.
-
-        Returns WaitPattern with should_auto_confirm=False
-        """
-        for i, line in enumerate(lines):
-            for pattern in self._confirm_patterns:
-                match = pattern.search(line)
-                if match:
-                    # Check if blacklisted
-                    if self._is_blacklisted(line):
-                        return WaitPattern(
-                            category=PatternCategory.CONFIRM_PROMPT,
-                            matched_text=match.group(0),
-                            line_number=i,
-                            should_auto_confirm=False,
-                            timestamp=datetime.now()
-                        )
-
-                    return WaitPattern(
-                        category=PatternCategory.CONFIRM_PROMPT,
-                        matched_text=match.group(0),
-                        line_number=i,
-                        should_auto_confirm=False,
-                        timestamp=datetime.now()
-                    )
-
-        return None
-
-    def _is_blacklisted(self, text: str) -> bool:
-        """
-        Check if text contains blacklist keywords.
-
-        Args:
-            text: Text to check
-
-        Returns:
-            True if any blacklist keyword is found (case-insensitive)
-        """
-        text_lower = text.lower()
-        for keyword in BLACKLIST_KEYWORDS:
-            if keyword.lower() in text_lower:
-                return True
-        return False
-
-
-# ==================== AutoRescuer Class ====================
 
 class AutoRescuer:
     """
-    Conservative auto-rescue for WAIT patterns.
+    Automatic rescue for interactive prompts in tmux panes.
 
-    Policy:
-    - Auto-confirm disabled by default (opt-in via enable())
-    - Only auto-confirms PRESS_ENTER patterns (sends Enter key only)
-    - NEVER auto-confirms y/n or other interactive prompts
-    - Blacklist keywords always block auto-action
-    - Returns pattern info for user to decide on interactive confirms
+    Responsibilities:
+    1. Detect waiting prompt patterns in pane output
+    2. Check dangerous operation blacklist
+    3. Manage cooldown per window (prevent spam)
+    4. Execute auto-confirm (send Enter key)
+    5. Replace internal logic of Master._handle_pane_wait_states()
+
+    Pattern Priority (strict):
+    1. DANGEROUS - Block immediately, broadcast error
+    2. AUTO_ENTER - Execute rescue if not in cooldown
+    3. MANUAL_CONFIRM - Return manual_confirm_needed
+    4. NONE - No action required
 
     Usage:
-        rescuer = AutoRescuer(tmux_manager)
-        rescuer.enable()
-
-        pattern = rescuer.check_and_rescue(agent_id, pane_output)
-        if pattern and rescuer.should_request_help(pattern):
-            # Broadcast HELP state
+        rescuer = AutoRescuer(tmux_manager=tmux, broadcaster=broadcaster)
+        should_rescue, action, pattern = rescuer.check_and_rescue(
+            pane_output=content,
+            window_name='worker-01',
+            session_name='swarm-cluster-1'
+        )
     """
 
-    def __init__(self, tmux_manager: TmuxSwarmManager):
+    def __init__(
+        self,
+        tmux_manager: Optional[object] = None,
+        cooling_time: Optional[float] = None,
+        broadcaster: Optional[object] = None,
+        dry_run: Optional[bool] = None
+    ):
         """
         Initialize AutoRescuer.
 
         Args:
-            tmux_manager: TmuxSwarmManager instance for sending keys
+            tmux_manager: Tmux operation manager (for send-keys)
+            cooling_time: Cooldown seconds per window (default 30s)
+            broadcaster: StatusBroadcaster instance for logging
+            dry_run: Dry-run mode (no actual send-keys)
         """
-        self.tmux_manager = tmux_manager
-        self.detector = WaitPatternDetector()
-        self._enabled = False  # Always disabled by default (conservative)
+        # Load environment variables with defaults
+        if cooling_time is None:
+            cooling_time_str = os.environ.get(ENV_AUTO_RESCUE_COOLING)
+            if cooling_time_str:
+                try:
+                    cooling_time = float(cooling_time_str)
+                except ValueError:
+                    cooling_time = DEFAULT_COOLING_TIME
+            else:
+                cooling_time = DEFAULT_COOLING_TIME
 
-    def enable(self) -> None:
-        """Enable auto-confirm for safe patterns (PRESS_ENTER only)."""
-        self._enabled = True
+        if dry_run is None:
+            dry_run = os.environ.get(ENV_AUTO_RESCUE_DRY_RUN, '').lower() in ('1', 'true', 'yes')
 
-    def disable(self) -> None:
-        """Disable auto-confirm (default state)."""
-        self._enabled = False
+        self.tmux = tmux_manager
+        self.cooling_time = cooling_time
+        self.dry_run = dry_run
 
-    def is_enabled(self) -> bool:
-        """Check if auto-confirm is enabled."""
-        return self._enabled
+        # Use provided broadcaster or create default
+        if broadcaster is not None:
+            self.broadcaster = broadcaster
+        else:
+            from swarm.status_broadcaster import StatusBroadcaster
+            self.broadcaster = StatusBroadcaster(worker_id='master')
+
+        # Per-window cooldown tracking {window_name: last_rescue_timestamp}
+        self._cooldown: Dict[str, float] = {}
+
+        # Statistics tracking
+        self._stats = {
+            'total_checks': 0,
+            'total_rescues': 0,
+            'manual_confirms': 0,
+            'dangerous_blocked': 0,
+            'cooldown_skipped': 0,
+        }
 
     def check_and_rescue(
         self,
-        agent_id: str,
         pane_output: str,
-        recent_threshold: Optional[datetime] = None
-    ) -> Optional[WaitPattern]:
+        window_name: str,
+        session_name: str
+    ) -> Tuple[bool, str, str]:
         """
-        Check agent pane output for WAIT patterns and attempt auto-rescue.
+        Check pane output and execute auto-rescue if needed.
+
+        This method:
+        1. Checks for empty content
+        2. Detects dangerous patterns (blocks all actions)
+        3. Detects auto-enter patterns (executes rescue)
+        4. Detects manual confirm patterns (returns manual_needed)
+        5. Returns none if no pattern matches
 
         Args:
-            agent_id: Agent identifier
-            pane_output: Full output from agent's tmux pane
-            recent_threshold: Only consider patterns after this timestamp
-                             (defaults to 30 seconds ago)
+            pane_output: Text content from tmux pane
+            window_name: Window name (for lookup and cooldown)
+            session_name: Tmux session name
 
         Returns:
-            WaitPattern if detected, None if safe
-
-        Rescue behavior:
-            - If PRESS_ENTER pattern and enabled: sends Enter key
-            - If INTERACTIVE_CONFIRM or CONFIRM_PROMPT: returns pattern only
-            - If blacklist keyword found: blocks auto-confirm
+            Tuple of (should_rescue, action, pattern):
+            - should_rescue: bool - Whether action was executed
+            - action: str - 'auto_enter' | 'manual_confirm' | 'dangerous_blocked' | 'cooldown' | 'rescue_failed' | 'none'
+            - pattern: str - Detected pattern text, or '' if none
         """
-        if recent_threshold is None:
-            recent_threshold = datetime.now() - timedelta(seconds=DETECTION_TIME_WINDOW)
+        self._stats['total_checks'] += 1
 
-        # Detect pattern
-        pattern = self.detector.detect(pane_output, recent_threshold)
+        # Step 0: Empty content check
+        if not pane_output or not pane_output.strip():
+            return False, 'none', ''
 
-        if not pattern:
-            return None
+        # Step 1: Dangerous pattern detection (highest priority - block immediately)
+        dangerous_match = self._match_dangerous(pane_output)
+        if dangerous_match:
+            self._stats['dangerous_blocked'] += 1
+            self.broadcaster.broadcast_error(
+                task_id='',
+                message=f'Dangerous pattern detected in {window_name}, blocking auto-rescue',
+                meta={'window_name': window_name, 'action': 'blocked', 'pattern': dangerous_match}
+            )
+            return False, 'dangerous_blocked', dangerous_match
 
-        # Attempt auto-confirm only if:
-        # 1. Enabled AND
-        # 2. Pattern is PRESS_ENTER AND
-        # 3. should_auto_confirm is True (not blacklisted)
-        if (self._enabled and
-            pattern.category == PatternCategory.PRESS_ENTER and
-            pattern.should_auto_confirm):
-            self.send_enter(agent_id)
+        # Step 2: Auto-enter pattern detection (executes rescue)
+        auto_pattern = self._detect_pattern(pane_output, AUTO_ENTER_PATTERNS)
+        if auto_pattern:
+            if self._is_in_cooldown(window_name):
+                self._stats['cooldown_skipped'] += 1
+                return False, 'cooldown', auto_pattern
 
-        return pattern
+            success = self._execute_rescue(window_name, session_name)
+            if success:
+                self._update_cooldown(window_name)
+                self._stats['total_rescues'] += 1
+                self.broadcaster.broadcast_status(
+                    worker_id='master',
+                    task_id='',
+                    state='RUNNING',
+                    message=f'Auto-rescued {window_name}: detected "{auto_pattern}"'
+                )
+                return True, 'auto_enter', auto_pattern
+            return False, 'rescue_failed', auto_pattern
 
-    def should_request_help(self, pattern: WaitPattern) -> bool:
+        # Step 3: Manual confirm pattern detection (returns manual_needed)
+        manual_pattern = self._detect_pattern(pane_output, MANUAL_CONFIRM_PATTERNS)
+        if manual_pattern:
+            self._stats['manual_confirms'] += 1
+            self.broadcaster.broadcast_status(
+                worker_id='master',
+                task_id='',
+                state='WAIT',
+                message=f'Manual confirm needed {window_name}: "{manual_pattern}"'
+            )
+            return False, 'manual_confirm_needed', manual_pattern
+
+        # Step 4: No pattern matched
+        return False, 'none', ''
+
+    def _is_dangerous(self, content: str) -> bool:
         """
-        Determine if pattern requires user help (HELP state broadcast).
+        Check if content contains dangerous patterns.
 
         Args:
-            pattern: Detected WaitPattern
+            content: Text to check
 
         Returns:
-            True if HELP state should be broadcast
-
-        HELP triggers:
-            - INTERACTIVE_CONFIRM patterns (y/n prompts)
-            - Patterns with blacklist keywords (should_auto_confirm=False)
-            - CONFIRM_PROMPT patterns
+            True if dangerous pattern detected
         """
-        # Always request help for interactive confirms
-        if pattern.category == PatternCategory.INTERACTIVE_CONFIRM:
-            return True
-
-        # Request help for confirm prompts
-        if pattern.category == PatternCategory.CONFIRM_PROMPT:
-            return True
-
-        # Request help if blacklisted (even if PRESS_ENTER)
-        if not pattern.should_auto_confirm:
-            return True
-
+        for pattern in DANGEROUS_PATTERNS:
+            if re.search(pattern, content, re.IGNORECASE):
+                return True
         return False
 
-    def send_enter(self, agent_id: str) -> bool:
+    def _match_dangerous(self, content: str) -> str:
         """
-        Send Enter key to agent pane.
+        Return the matched dangerous pattern text.
 
         Args:
-            agent_id: Agent identifier
+            content: Text to check
+
+        Returns:
+            Matched pattern string, or '' if no match
+        """
+        for pattern in DANGEROUS_PATTERNS:
+            match = re.search(pattern, content, re.IGNORECASE)
+            if match:
+                return match.group(0)
+        return ''
+
+    def _detect_pattern(self, content: str, pattern_list: list) -> Optional[str]:
+        """
+        Detect first matching pattern from a pattern list.
+
+        Args:
+            content: Text to check
+            pattern_list: List of (regex_pattern, priority) tuples
+
+        Returns:
+            Matched text string, or None if no match
+        """
+        for pattern, _ in pattern_list:
+            match = re.search(pattern, content, re.IGNORECASE)
+            if match:
+                return match.group(0)
+        return None
+
+    def _is_in_cooldown(self, window_name: str) -> bool:
+        """
+        Check if window is in cooldown period.
+
+        Args:
+            window_name: Window identifier
+
+        Returns:
+            True if within cooldown window
+        """
+        now = time.time()
+        last_time = self._cooldown.get(window_name, 0)
+        return (now - last_time) < self.cooling_time
+
+    def _update_cooldown(self, window_name: str) -> None:
+        """
+        Update cooldown timestamp for window.
+
+        Args:
+            window_name: Window identifier
+        """
+        self._cooldown[window_name] = time.time()
+
+    def _execute_rescue(self, window_name: str, session_name: str) -> bool:
+        """
+        Execute auto-rescue by sending Enter key to window.
+
+        Args:
+            window_name: Window name to send Enter
+            session_name: Tmux session name
 
         Returns:
             True if successful, False otherwise
-
-        Note:
-            Only sends empty string with enter=True (tmux sends Enter key).
-            Never sends 'y', 'yes', or other text input.
         """
-        try:
-            # Get agent from tmux manager
-            agent = self.tmux_manager._agents.get(agent_id)
-            if not agent:
-                return False
-
-            # Send Enter key only (empty string + enter)
-            agent.pane.send_keys('', enter=True)
+        if self.dry_run:
+            print(f'[AutoRescuer] [DRY-RUN] Would send Enter to {window_name}')
             return True
+
+        if not self.tmux:
+            return False
+
+        try:
+            # Find window by name and send keys
+            windows = self.tmux.list_windows(session_name)
+            for w in windows:
+                if w['name'] == window_name:
+                    self.tmux.send_keys_to_window(session_name, w['index'], '')
+                    return True
+            return False
         except Exception:
             return False
 
+    def get_stats(self) -> Dict[str, int]:
+        """
+        Get rescue operation statistics.
+
+        Returns:
+            Dict with: total_checks, total_rescues, manual_confirms,
+                       dangerous_blocked, cooldown_skipped
+        """
+        return self._stats.copy()
+
+    def reset_stats(self) -> None:
+        """Reset all statistics counters."""
+        self._stats = {
+            'total_checks': 0,
+            'total_rescues': 0,
+            'manual_confirms': 0,
+            'dangerous_blocked': 0,
+            'cooldown_skipped': 0,
+        }
+
+    def get_cooldown_time(self, window_name: str) -> float:
+        """
+        Get remaining cooldown time for a window.
+
+        Args:
+            window_name: Window identifier
+
+        Returns:
+            Seconds remaining in cooldown, 0 if not in cooldown
+        """
+        now = time.time()
+        last_time = self._cooldown.get(window_name, 0)
+        elapsed = now - last_time
+        return max(0, self.cooling_time - elapsed)
