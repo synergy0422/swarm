@@ -407,6 +407,9 @@ class Master:
         """
         Update pane summaries based on worker status.
 
+        Uses priority-based merging: only update state if worker state has higher priority.
+        Priority order: ERROR(0) > WAIT(1) > RUNNING(2) > DONE(3) > IDLE(4)
+
         Args:
             workers: Dict of worker_id -> status dict
         """
@@ -418,11 +421,18 @@ class Master:
                 self._pane_summaries[window_name] = PaneSummary(window_name)
             summary = self._pane_summaries[window_name]
 
-            state = status.get('state', 'IDLE')
+            worker_state = status.get('state', 'IDLE')
             task_id = status.get('task_id', '-')
 
             summary.task_id = task_id
-            summary.last_state = state
+
+            # Priority-based merge: only update if worker state has higher priority
+            # ERROR(0) > WAIT(1) > RUNNING(2) > DONE(3) > IDLE(4)
+            worker_priority = self._get_state_priority(worker_state)
+            pane_priority = self._get_state_priority(summary.last_state)
+
+            if worker_priority < pane_priority:
+                summary.last_state = worker_state
 
     def output_status_summary(self) -> None:
         """Output status summary table to stdout."""
