@@ -20,7 +20,7 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 | 18-21 | v1.6 长期可维护性 + 流程闭环 | Complete | 4/4 plans |
 | 22 | v1.7 5 窗格布局 + Codex | Complete | 1/1 plans |
 | 23 | v1.8 诊断快照 | Complete | 1/1 plans |
-| 24 | v1.85 Claude Tasks 集成 | Pending | 0/1 plans |
+| 24 | v1.85 Claude Tasks 集成 | Planning | 0/1 plans |
 
 ## Current Position
 
