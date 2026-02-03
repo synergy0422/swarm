@@ -110,6 +110,66 @@ Terminate swarm tmux session.
 └─────────────────────────────────────┘
 ```
 
+## 5 窗格布局
+
+v1.7 引入了新的 5 窗格布局脚本，将所有窗格集中在单个 tmux 窗口中：
+
+```
+┌─────────────────┬────────────────────┐
+│      master     │      worker-0      │
+│                 ├────────────────────┤
+│      codex      │      worker-1      │
+│                 ├────────────────────┤
+│                 │      worker-2      │
+└─────────────────┴────────────────────┘
+```
+
+### 使用方法
+
+```bash
+# 基本用法（默认工作目录为当前目录）
+./scripts/swarm_layout_5.sh
+
+# 创建并附加
+./scripts/swarm_layout_5.sh --attach
+
+# 自定义会话名称
+./scripts/swarm_layout_5.sh --session my-session
+
+# 自定义工作目录
+./scripts/swarm_layout_5.sh --workdir /path/to/project
+
+# 自定义 codex 命令
+./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --model o1"
+
+# 调整左侧窗格比例（60% master，40% codex）
+./scripts/swarm_layout_5.sh --left-ratio 60
+```
+
+### 参数说明
+
+| 参数 | 说明 |
+|------|------|
+| `--session, -s` | tmux 会话名称 |
+| `--workdir, -d` | 工作目录 |
+| `--left-ratio, -l` | 左侧垂直分割比例 (50-80) |
+| `--codex-cmd, -c` | codex 窗格执行的命令 |
+| `--attach, -a` | 创建后附加到会话 |
+
+### 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `CLAUDE_SESSION` | 会话名称覆盖 |
+| `SWARM_WORKDIR` | 工作目录覆盖 |
+| `CODEX_CMD` | codex 命令覆盖 |
+
+附加命令：
+
+```bash
+tmux attach -t <session-name>
+```
+
 ## Development
 
 ```bash
