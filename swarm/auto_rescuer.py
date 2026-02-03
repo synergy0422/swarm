@@ -90,16 +90,14 @@ DANGEROUS_PATTERNS = [
     r'ALTER\s+.*\s+DROP',  # ALTER DROP operations
 
     # Shell/command injection
-    r'\$\(',              # Command substitution
-    r'\|.*\w',             # Pipe to command
-    r'&&\s*\w',            # Chained command execution
-    r';\s*\w',             # Sequential command execution
-    r'>>\s*\/',            # Append redirect to root
-    r'>\s*\/',             # Write redirect to root
+    r'\$\(',              # Command substitution - can be used for injection
 
-    # Destructive operations
-    r'mkfs',               # Filesystem creation (destructive)
-    r'dd\s+if=\/dev\/zero', # Disk writing with zero fill
+    # NOTE: Removed overly broad shell patterns that match normal commands:
+    # - r'\|.*\w' (matches: cat file.txt | grep pattern)
+    # - r'&&\s*\w' (matches: cmd1 && cmd2)
+    # - r';\s*\w' (matches: cmd1; cmd2)
+    # - r'>>\s*\/' (matches: echo "test" >> file)
+    # - r'>\s*\/' (matches: echo "test" > file)
 ]
 
 
@@ -237,10 +235,10 @@ class AutoRescuer:
             if success:
                 self._update_cooldown(window_name)
                 self._stats['total_rescues'] += 1
-                # Use broadcast_wait for auto-rescue events (internal status, not task start)
-                self.broadcaster.broadcast_wait(
+                # Use broadcast_done for auto-rescue events (auto-rescue completed)
+                self.broadcaster.broadcast_done(
                     task_id='',
-                    message=f'[AUTO-RESCUE] {window_name}: detected "{auto_pattern}"'
+                    message=f'[AUTO-RESCUE] {window_name}: auto-entered for "{auto_pattern}"'
                 )
                 return True, 'auto_enter', auto_pattern
             return False, 'rescue_failed', auto_pattern
