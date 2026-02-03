@@ -19,7 +19,7 @@
 |---|------|-----------|
 | 22-01 | 5 窗格布局脚本 | 创建 `scripts/swarm_layout_5.sh` 和文档 |
 
-### Phase 22-01: 5 窗格布局脚本
+### Phase 22-01: 5 窗格布局脚本 ✓
 
 **Requirements covered:** LAYOUT-01, LAYOUT-02
 
@@ -39,4 +39,10 @@
 ---
 
 *Roadmap created: 2026-02-03*
-*Last updated: 2026-02-03 after v1.7 plan created*
+
+**Completed:** 2026-02-03
+**Status:** All 7 must-haves verified, artifacts created
+
+---
+
+*Roadmap updated: 2026-02-03 after phase 22 completion*

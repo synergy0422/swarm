@@ -9,7 +9,7 @@ Requirements for 5 窗格布局 + Codex milestone. Single phase (22).
 
 ### Layout
 
-- [ ] **LAYOUT-01**: 5 窗格布局脚本 — 创建 `scripts/swarm_layout_5.sh`，支持：
+- [x] **LAYOUT-01**: 5 窗格布局脚本 — 创建 `scripts/swarm_layout_5.sh`，支持：
   - 单 tmux window 内 5 个窗格（panes）
   - 左侧 2 窗格上下 50/50（master + codex）
   - 右侧 3 窗格等分（worker-0 + worker-1 + worker-2）
@@ -18,7 +18,7 @@ Requirements for 5 窗格布局 + Codex milestone. Single phase (22).
   - 环境变量支持: CLAUDE_SESSION, SWARM_WORKDIR, CODEX_CMD
   - 继承 `_config.sh`/`_common.sh` 配置
 
-- [ ] **LAYOUT-02**: 文档更新 — 更新以下文档：
+- [x] **LAYOUT-02**: 文档更新 — 更新以下文档：
   - README.md: 新增"5 窗格布局"章节，说明和示例
   - docs/SCRIPTS.md: 补充 swarm_layout_5.sh 完整文档
   - docs/SCRIPTS.md 或 docs/MAINTENANCE.md: 说明如何修改布局比例和 codex 命令
@@ -40,8 +40,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LAYOUT-01 | Phase 22 | Pending |
-| LAYOUT-02 | Phase 22 | Pending |
+| LAYOUT-01 | Phase 22 | Complete | |
+| LAYOUT-02 | Phase 22 | Complete | |
 
 **Coverage:**
 - v1.7 requirements: 2 total
