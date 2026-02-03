@@ -107,14 +107,20 @@ _(No active requirements — start /gsd:new-milestone for v1.8)_
 - **实时交互场景** — 需要人工实时响应的场景
 - **修改 swarm/*.py** — v1.7 仅新增脚本，不改 Python 代码
 
-## Current State
+## Current Milestone: v1.8 诊断快照
 
-**v1.7 Complete** — 2026-02-03
+**Goal:** 一键采集 tmux swarm 运行状态，输出到时间戳目录用于诊断
 
-- **Milestone:** 5 窗格布局 + Codex (Phase 22)
-- **Script:** scripts/swarm_layout_5.sh (246 lines)
-- **Files:** 11 executable scripts + 3 docs updated
-- **Status:** Ready for v1.8 planning
+**Target features:**
+- `scripts/swarm_snapshot.sh` — 诊断快照脚本
+  - tmux 结构信息（sessions/windows/panes）
+  - 每个 pane 的最近 N 行输出（默认 50，可配置）
+  - 状态文件（`$SWARM_STATE_DIR/status.log`）
+  - 锁目录列表（`$SWARM_STATE_DIR/locks/`）
+  - 脚本版本信息（git short SHA）
+  - 只读操作，不修改任何状态文件
+- README.md — 新增"诊断快照"使用说明
+- docs/SCRIPTS.md — 增加 swarm_snapshot.sh 文档
 
 ## Context
 

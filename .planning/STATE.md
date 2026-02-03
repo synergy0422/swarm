@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** 多 Agent 并行推进，Master 协调去重，减少人作为瓶颈
-**Current focus:** v1.8 - 待规划
+**Current focus:** v1.8 诊断快照 — Defining requirements
 
 ## Phase Status
 
@@ -22,11 +22,11 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 ## Current Position
 
-**v1.7 Complete** — 2026-02-03
+**v1.8 In Progress** — 2026-02-03
 
-- **Milestone:** 5 窗格布局 + Codex (Phase 22)
-- **Focus:** Ready for v1.8 planning
-- **Status:** Run `/gsd:new-milestone` to start next cycle
+- **Milestone:** 诊断快照 (v1.8)
+- **Focus:** Defining requirements
+- **Status:** Creating REQUIREMENTS.md
 
 ## Session Continuity
 
