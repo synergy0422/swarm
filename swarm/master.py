@@ -435,6 +435,14 @@ class Master:
 
             summary.task_id = task_id
 
+            # Don't let stale worker ERROR/WAIT override a clean pane (IDLE)
+            # This prevents race conditions when pane scan resets to IDLE but
+            # worker status hasn't updated yet in the shared status.log
+            if summary.last_state == 'IDLE' and worker_state in ('ERROR', 'WAIT'):
+                # Pane is clean, worker hasn't updated yet - skip this update
+                # Worker will update correctly in next cycle
+                continue
+
             # Priority-based merge: only update if worker state has higher priority
             # ERROR(0) > WAIT(1) > RUNNING(2) > DONE(3) > IDLE(4)
             worker_priority = self._get_state_priority(worker_state)
