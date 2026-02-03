@@ -131,6 +131,14 @@ log_info "Left pane ratio: ${LEFT_RATIO}% master, $((100 - LEFT_RATIO))% codex"
 # Use pane_id capture to ensure correct pane assignment
 MASTER_PANE=$(tmux new-session -d -P -F '#{pane_id}' -s "$SESSION" -n layout -x 200 -y 60)
 
+# Get window height for calculating pane sizes
+WIN_HEIGHT=$(tmux display-message -t "$SESSION:0" -p '#{window_height}')
+# Calculate left pane height (master) based on LEFT_RATIO
+LEFT_HEIGHT=$((WIN_HEIGHT * LEFT_RATIO / 100))
+# Codex pane gets remaining height
+# Right workers: approximately 1/3 each (using -l for exact sizes)
+WORKER_HEIGHT=$((WIN_HEIGHT / 3))
+
 # Create panes using split-window commands with pane_id capture
 # This ensures stable pane assignment regardless of split order
 
@@ -138,16 +146,12 @@ MASTER_PANE=$(tmux new-session -d -P -F '#{pane_id}' -s "$SESSION" -n layout -x 
 # Capture the new pane's ID for worker-0
 RIGHT_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$MASTER_PANE")
 
-# Split right pane vertically twice for 3 workers (without -p to let select-layout handle)
-WORKER1_PANE=$(tmux split-window -v -P -F '#{pane_id}' -t "$RIGHT_PANE")
+# Split right pane vertically for workers using -l for equal sizes
+WORKER1_PANE=$(tmux split-window -v -l "$WORKER_HEIGHT" -P -F '#{pane_id}' -t "$RIGHT_PANE")
 WORKER2_PANE=$(tmux split-window -v -P -F '#{pane_id}' -t "$RIGHT_PANE")
 
-# Ensure right pane workers are equal height using select-layout on window
-tmux select-layout -t "$SESSION:0" even-vertical
-tmux select-pane -t "$MASTER_PANE"
-
-# Now split left pane vertically to create codex pane
-CODEX_PANE=$(tmux split-window -v -p "$LEFT_RATIO" -P -F '#{pane_id}' -t "$MASTER_PANE")
+# Now split left pane vertically to create codex pane using -l for master size
+CODEX_PANE=$(tmux split-window -v -l "$LEFT_HEIGHT" -P -F '#{pane_id}' -t "$MASTER_PANE")
 
 # Send startup commands to each pane
 tmux send-keys -t "$MASTER_PANE" "cd \"$WORKDIR\" && claude" Enter
