@@ -19,6 +19,7 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 | 15-17 | v1.5 维护性改进 | Complete | 3/3 plans |
 | 18-21 | v1.6 长期可维护性 + 流程闭环 | Complete | 4/4 plans |
 | 22 | v1.7 5 窗格布局 + Codex | Complete | 1/1 plans |
+| 23 | v1.8 诊断快照 | In Progress | 0/1 plans |
 
 ## Current Position
 
