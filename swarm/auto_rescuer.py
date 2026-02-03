@@ -51,22 +51,21 @@ AUTO_ENTER_PATTERNS = [
 # Priority: Second - returns manual_confirm_needed action
 MANUAL_CONFIRM_PATTERNS = [
     # y/n interactive patterns
-    (r'\[y[\/\]n\]', 2),
-    (r'\[Y[\/\]n\]', 2),
-    (r'\[y[\/\]N\]', 2),
-    (r'\[Y[\/\]N\]', 2),
-    (r'\(y[\/\]n\)', 2),
-    (r'y or n', 2),
-    (r'y\/n', 2),
+    (r'\[y/n\]', 2),
+    (r'\[Y/n\]', 2),
+    (r'\[y/N\]', 2),
+    (r'\[Y/N\]', 2),
+    (r'\(y/n\)', 2),
+    (r'\by or n\b', 2),
+    (r'y/n', 2),
     # Confirm prompts
-    (r'[Cc]onfirm', 3),
-    (r'[Aa]re you sure', 3),
+    (r'\bconfirm\b', 3),
+    (r'are you sure', 3),
     (r'确认', 3),
     (r'确定吗', 3),
     # Continue/Proceed prompts
-    (r'[Cc]ontinue', 4),
-    (r'[Pp]roceed', 4),
-    (r'[Yy]es[/\s]?[Nn]o', 4),
+    (r'\bcontinue\b', 4),
+    (r'\bproceed\b', 4),
     (r'ok to proceed', 4),
 ]
 
@@ -219,10 +218,9 @@ class AutoRescuer:
             if success:
                 self._update_cooldown(window_name)
                 self._stats['total_rescues'] += 1
-                self.broadcaster.broadcast_status(
-                    worker_id='master',
+                # Use broadcast with START state as generic status indicator
+                self.broadcaster.broadcast_start(
                     task_id='',
-                    state='RUNNING',
                     message=f'Auto-rescued {window_name}: detected "{auto_pattern}"'
                 )
                 return True, 'auto_enter', auto_pattern
@@ -232,10 +230,9 @@ class AutoRescuer:
         manual_pattern = self._detect_pattern(pane_output, MANUAL_CONFIRM_PATTERNS)
         if manual_pattern:
             self._stats['manual_confirms'] += 1
-            self.broadcaster.broadcast_status(
-                worker_id='master',
+            # Use broadcast_wait for manual confirmation needed
+            self.broadcaster.broadcast_wait(
                 task_id='',
-                state='WAIT',
                 message=f'Manual confirm needed {window_name}: "{manual_pattern}"'
             )
             return False, 'manual_confirm_needed', manual_pattern
