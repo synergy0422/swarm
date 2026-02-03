@@ -218,10 +218,10 @@ class AutoRescuer:
             if success:
                 self._update_cooldown(window_name)
                 self._stats['total_rescues'] += 1
-                # Use broadcast with START state as generic status indicator
-                self.broadcaster.broadcast_start(
+                # Use broadcast_wait for auto-rescue events (internal status, not task start)
+                self.broadcaster.broadcast_wait(
                     task_id='',
-                    message=f'Auto-rescued {window_name}: detected "{auto_pattern}"'
+                    message=f'[AUTO-RESCUE] {window_name}: detected "{auto_pattern}"'
                 )
                 return True, 'auto_enter', auto_pattern
             return False, 'rescue_failed', auto_pattern
