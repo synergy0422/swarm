@@ -89,15 +89,22 @@ if os.path.exists(lock_file):
         if lock_data.get('expires_at'):
             expires_at_dt = datetime.datetime.fromisoformat(lock_data['expires_at'].replace('Z', '+00:00'))
             if expires_at_dt > datetime.datetime.now(datetime.timezone.utc):
+                # Lock is active, cannot reclaim
                 print(f"Error: Lock already exists for '{task_id}'", file=sys.stderr)
                 sys.exit(1)
+            else:
+                # Lock is expired, delete it and allow reclaim
+                os.unlink(lock_file)
         else:
             # Lock never expires, still exists
             print(f"Error: Lock already exists for '{task_id}'", file=sys.stderr)
             sys.exit(1)
     except (json.JSONDecodeError, KeyError):
-        # Corrupted lock file, can be replaced
-        pass
+        # Corrupted lock file, delete and allow recreation
+        try:
+            os.unlink(lock_file)
+        except FileNotFoundError:
+            pass
 
 # Build lock data - all 4 fields present
 lock_data = {

@@ -75,8 +75,8 @@ EOF
 # =============================================================================
 validate_worker() {
     local worker="$1"
-    if [[ ! "$worker" =~ ^worker-[0-9]+$ ]]; then
-        echo "Error: Invalid worker '$worker'. Must match pattern worker-0, worker-1, etc." >&2
+    if [[ ! "$worker" =~ ^worker-(0|1|2)$ ]]; then
+        echo "Error: Invalid worker '$worker'. Must be one of: worker-0, worker-1, worker-2" >&2
         return 1
     fi
     return 0
@@ -84,11 +84,24 @@ validate_worker() {
 
 validate_lock_key() {
     local lock_key="$1"
+    if [[ -z "$lock_key" ]]; then
+        echo "Error: lock_key cannot be empty" >&2
+        return 1
+    fi
     if [[ "$lock_key" =~ [[:space:]] ]]; then
         echo "Error: lock_key must not contain spaces" >&2
         return 1
     fi
     return 0
+}
+
+append_status() {
+    # Only show append output in verbose/debug mode
+    if [[ "${LOG_LEVEL:-INFO}" == "DEBUG" ]]; then
+        "$SCRIPT_DIR/swarm_status_log.sh" append "$@"
+    else
+        "$SCRIPT_DIR/swarm_status_log.sh" append "$@" >/dev/null 2>&1
+    fi
 }
 
 # =============================================================================
@@ -105,6 +118,11 @@ cmd_claim() {
     local worker="$2"
     local lock_key="${3:-$task_id}"
 
+    if [[ -z "$task_id" ]]; then
+        echo "Error: task_id cannot be empty" >&2
+        exit 1
+    fi
+
     # Validate worker
     if ! validate_worker "$worker"; then
         exit 1
@@ -116,17 +134,32 @@ cmd_claim() {
     fi
 
     # Acquire lock
-    if ! "$SCRIPT_DIR/swarm_lock.sh" acquire "$lock_key" "$worker" 2>&1; then
-        # Check if it's a lock conflict (exit 1 from swarm_lock.sh)
-        # Extract holder information from the check output
-        local lock_holder
-        lock_holder=$("$SCRIPT_DIR/swarm_lock.sh" check "$lock_key" 2>/dev/null | grep -oP "Worker: \K[^ ]+" || echo "unknown")
-        echo "Error: Lock held by '$lock_holder' for '$lock_key' (exit 2)" >&2
-        exit 2
+    local acquire_output=""
+    if ! acquire_output=$("$SCRIPT_DIR/swarm_lock.sh" acquire "$lock_key" "$worker" 2>&1); then
+        # Determine if lock is held by someone else or if it doesn't exist
+        local check_output=""
+        if check_output=$("$SCRIPT_DIR/swarm_lock.sh" check "$lock_key" 2>/dev/null); then
+            if [[ "$check_output" == "No lock for "* ]]; then
+                # Lock doesn't exist - acquire failed for other reasons (permissions, etc.)
+                echo "Error: Failed to acquire lock for '$lock_key'" >&2
+                [[ -n "$acquire_output" ]] && echo "$acquire_output" >&2
+                exit 1
+            fi
+            # Lock exists - report conflict
+            local lock_holder="unknown"
+            lock_holder=$(echo "$check_output" | awk -F': ' '/^  Worker: /{print $2; exit}')
+            echo "Error: Lock held by '$lock_holder' for '$lock_key' (exit 2)" >&2
+            exit 2
+        fi
+
+        # Check failed for unknown reason
+        echo "Error: Failed to acquire lock for '$lock_key'" >&2
+        [[ -n "$acquire_output" ]] && echo "$acquire_output" >&2
+        exit 1
     fi
 
     # Log START status
-    "$SCRIPT_DIR/swarm_status_log.sh" append START "$worker" "$task_id" "" >/dev/null 2>&1
+    append_status START "$worker" "$task_id" ""
 
     echo "Claimed task '$task_id' (lock: '$lock_key')"
 }
@@ -145,6 +178,11 @@ cmd_done() {
     local worker="$2"
     local lock_key="${3:-$task_id}"
 
+    if [[ -z "$task_id" ]]; then
+        echo "Error: task_id cannot be empty" >&2
+        exit 1
+    fi
+
     # Validate worker
     if ! validate_worker "$worker"; then
         exit 1
@@ -156,13 +194,15 @@ cmd_done() {
     fi
 
     # Release lock
-    if ! "$SCRIPT_DIR/swarm_lock.sh" release "$lock_key" "$worker" 2>&1; then
+    local release_output=""
+    if ! release_output=$("$SCRIPT_DIR/swarm_lock.sh" release "$lock_key" "$worker" 2>&1); then
         echo "Error: Failed to release lock for '$lock_key'" >&2
+        [[ -n "$release_output" ]] && echo "$release_output" >&2
         exit 1
     fi
 
     # Log DONE status
-    "$SCRIPT_DIR/swarm_status_log.sh" append DONE "$worker" "$task_id" "Completed" >/dev/null 2>&1
+    append_status DONE "$worker" "$task_id" "Completed"
 
     echo "Completed task '$task_id' (lock: '$lock_key')"
 }
@@ -182,6 +222,11 @@ cmd_fail() {
     local reason="$3"
     local lock_key="${4:-$task_id}"
 
+    if [[ -z "$task_id" ]]; then
+        echo "Error: task_id cannot be empty" >&2
+        exit 1
+    fi
+
     # Validate worker
     if ! validate_worker "$worker"; then
         exit 1
@@ -199,13 +244,15 @@ cmd_fail() {
     fi
 
     # Release lock
-    if ! "$SCRIPT_DIR/swarm_lock.sh" release "$lock_key" "$worker" 2>&1; then
+    local release_output=""
+    if ! release_output=$("$SCRIPT_DIR/swarm_lock.sh" release "$lock_key" "$worker" 2>&1); then
         echo "Error: Failed to release lock for '$lock_key'" >&2
+        [[ -n "$release_output" ]] && echo "$release_output" >&2
         exit 1
     fi
 
     # Log ERROR status with reason
-    "$SCRIPT_DIR/swarm_status_log.sh" append ERROR "$worker" "$task_id" "$reason" >/dev/null 2>&1
+    append_status ERROR "$worker" "$task_id" "$reason"
 
     echo "Failed task '$task_id' (lock: '$lock_key'): $reason"
 }
