@@ -48,6 +48,12 @@ Current milestone: v1.90 - 统一任务入口 CLI
 
 None
 
+## Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | Test mode for swarm task (--dry-run, dangerous command detection) | 2026-02-04 | TBD | [001-test-mode-for-swarm-task](./quick/001-test-mode-for-swarm-task/) |
+
 ---
 
-*State updated: 2026-02-04 after v1.90 milestone initialization*
+*State updated: 2026-02-04 - Completed quick task 001: Test mode for swarm task*

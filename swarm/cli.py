@@ -13,8 +13,9 @@ Provides docker-compose-like interface for launching swarm clusters:
 
 import argparse
 import os
-import sys
 import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -503,10 +504,234 @@ def cmd_down(args):
         return 1
 
 
+def cmd_task(args):
+    """
+    Dispatch to task subcommand handlers.
+    args.task_command: the subcommand (claim, done, fail, run)
+    args.task_args: remaining arguments for the subcommand
+    """
+    import argparse as _argparse
+
+    if args.task_command is None:
+        # No subcommand specified, show task help with subcommands
+        print("usage: swarm task <command> [<args>]")
+        print("")
+        print("Task management commands:")
+        print("  claim <task_id> <worker> [lock_key]  Claim a task")
+        print("  done <task_id> <worker> [lock_key]   Mark task as done")
+        print("  fail <task_id> <worker> <reason> [lock_key]  Mark task as failed")
+        print("  run <task_id> <worker> <command...>  Run task command wrapper")
+        print("")
+        print("Use 'swarm task <command> --help' for more info on a command.")
+        return 0
+
+    # Parse task_args based on subcommand
+    task_cmd = args.task_command
+    task_args = args.task_args if args.task_args else []
+
+    if task_cmd == 'claim':
+        # claim <task_id> <worker> [lock_key]
+        # Check for --help before parsing
+        if '--help' in task_args or '-h' in task_args:
+            print("usage: swarm task claim <task_id> <worker> [lock_key]")
+            print("")
+            print("Claim a task:")
+            print("  <task_id>   Task ID to claim")
+            print("  <worker>   Worker name claiming the task")
+            print("  [lock_key] Optional lock key (defaults to task_id)")
+            return 0
+        parser = _argparse.ArgumentParser(prog=f'swarm task {task_cmd}', parents=[], add_help=False)
+        parser.add_argument('task_id', help='Task ID to claim')
+        parser.add_argument('worker', help='Worker name claiming the task')
+        parser.add_argument('lock_key', nargs='?', default=None, help='Optional lock key')
+        try:
+            parsed = parser.parse_args(task_args)
+        except SystemExit:
+            return 1
+        return cmd_task_claim(parsed)
+
+    elif task_cmd == 'done':
+        # done <task_id> <worker> [lock_key]
+        # Check for --help before parsing
+        if '--help' in task_args or '-h' in task_args:
+            print("usage: swarm task done <task_id> <worker> [lock_key]")
+            print("")
+            print("Mark task as done:")
+            print("  <task_id>   Task ID to complete")
+            print("  <worker>   Worker completing the task")
+            print("  [lock_key] Optional lock key (defaults to task_id)")
+            return 0
+        parser = _argparse.ArgumentParser(prog=f'swarm task {task_cmd}', parents=[], add_help=False)
+        parser.add_argument('task_id', help='Task ID to complete')
+        parser.add_argument('worker', help='Worker completing the task')
+        parser.add_argument('lock_key', nargs='?', default=None, help='Optional lock key')
+        try:
+            parsed = parser.parse_args(task_args)
+        except SystemExit:
+            return 1
+        return cmd_task_done(parsed)
+
+    elif task_cmd == 'fail':
+        # fail <task_id> <worker> <reason> [lock_key]
+        # Check for --help before parsing
+        if '--help' in task_args or '-h' in task_args:
+            print("usage: swarm task fail <task_id> <worker> <reason> [lock_key]")
+            print("")
+            print("Mark task as failed:")
+            print("  <task_id>   Task ID that failed")
+            print("  <worker>   Worker reporting failure")
+            print("  <reason>   Failure reason")
+            print("  [lock_key] Optional lock key (defaults to task_id)")
+            return 0
+        parser = _argparse.ArgumentParser(prog=f'swarm task {task_cmd}', parents=[], add_help=False)
+        parser.add_argument('task_id', help='Task ID that failed')
+        parser.add_argument('worker', help='Worker reporting failure')
+        parser.add_argument('reason', help='Failure reason')
+        parser.add_argument('lock_key', nargs='?', default=None, help='Optional lock key')
+        try:
+            parsed = parser.parse_args(task_args)
+        except SystemExit:
+            return 1
+        return cmd_task_fail(parsed)
+
+    elif task_cmd == 'run':
+        # run <task_id> <worker> <command...>
+        # Check for --help before parsing
+        if '--help' in task_args or '-h' in task_args:
+            print("usage: swarm task run <task_id> <worker> <command...>")
+            print("")
+            print("Run task command wrapper:")
+            print("  <task_id>   Task ID")
+            print("  <worker>   Worker name")
+            print("  <command...>  Command to execute")
+            return 0
+
+        # Manually parse task_id, worker, and command (to handle -rf, --flag etc.)
+        if len(task_args) < 3:
+            print("usage: swarm task run <task_id> <worker> <command...>", file=sys.stderr)
+            print("error: the following arguments are required: command", file=sys.stderr)
+            return 1
+
+        # Extract task_id (first arg) and worker (second arg)
+        task_id = task_args[0]
+        worker = task_args[1]
+        command = task_args[2:]  # All remaining args are the command
+
+        # Create a simple namespace-like object
+        class Args:
+            pass
+        parsed = Args()
+        parsed.task_id = task_id
+        parsed.worker = worker
+        parsed.command = command
+
+        # Preserve dry_run flag from main() args
+        parsed.dry_run = getattr(args, 'dry_run', False)
+        return cmd_task_run(parsed)
+
+    else:
+        print(f"[ERROR] Unknown task command: {task_cmd}", file=sys.stderr)
+        return 1
+
+
+def _get_script_path(script_name):
+    """
+    Get absolute path to script in scripts/ directory.
+    Works regardless of current working directory.
+    """
+    script_dir = os.path.join(os.path.dirname(__file__), '..', 'scripts')
+    script_dir = os.path.abspath(script_dir)
+    return os.path.join(script_dir, script_name)
+
+
+def cmd_task_claim(args):
+    """
+    Call swarm_tasks_bridge.sh claim with task_id, worker, [lock_key].
+    Exit codes: 0=success, 2=lock occupied, 1=other error
+    """
+    cmd = [_get_script_path('swarm_tasks_bridge.sh'), 'claim', args.task_id, args.worker]
+    if args.lock_key:
+        cmd.append(args.lock_key)
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.stdout:
+        print(result.stdout.strip())
+    if result.stderr:
+        print(result.stderr.strip(), file=sys.stderr)
+
+    return result.returncode
+
+
+def cmd_task_done(args):
+    """
+    Call swarm_tasks_bridge.sh done with task_id, worker, [lock_key].
+    Exit codes: 0=success, 1=failure
+    """
+    cmd = [_get_script_path('swarm_tasks_bridge.sh'), 'done', args.task_id, args.worker]
+    if args.lock_key:
+        cmd.append(args.lock_key)
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.stdout:
+        print(result.stdout.strip())
+    if result.stderr:
+        print(result.stderr.strip(), file=sys.stderr)
+
+    return result.returncode
+
+
+def cmd_task_fail(args):
+    """
+    Call swarm_tasks_bridge.sh fail with task_id, worker, reason, [lock_key].
+    Exit codes: 0=success, 1=failure
+    """
+    cmd = [_get_script_path('swarm_tasks_bridge.sh'), 'fail', args.task_id, args.worker, args.reason]
+    if args.lock_key:
+        cmd.append(args.lock_key)
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.stdout:
+        print(result.stdout.strip())
+    if result.stderr:
+        print(result.stderr.strip(), file=sys.stderr)
+
+    return result.returncode
+
+
+def cmd_task_run(args):
+    """
+    Call swarm_task_wrap.sh run with task_id, worker, command....
+    Exit codes: command exit code
+
+    Supports --dry-run flag (passed via command args):
+    - When --dry-run is present, prints command without executing
+    """
+    # If dry_run flag was passed (extracted from argv by main())
+    dry_run = getattr(args, 'dry_run', False)
+
+    if dry_run:
+        cmd_str = ' '.join(args.command)
+        print(f"[DRY-RUN] Would execute: {cmd_str}")
+        print(f"[DRY-RUN] Task: {args.task_id} on {args.worker}")
+        return 0
+
+    # Normal execution
+    cmd = [_get_script_path('swarm_task_wrap.sh'), 'run', args.task_id, args.worker] + args.command
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.stdout:
+        print(result.stdout.strip())
+    if result.stderr:
+        print(result.stderr.strip(), file=sys.stderr)
+
+    return result.returncode
+
+
 def main():
     """Main CLI entry point"""
     # Pre-parse --cluster-id to allow it before subcommand
     cluster_id = DEFAULT_CLUSTER_ID
+    dry_run = False
     argv_copy = sys.argv[1:]
 
     # Look for --cluster-id and extract its value
@@ -524,6 +749,10 @@ def main():
             else:
                 print("[ERROR] --cluster-id requires a value", file=sys.stderr)
                 return 1
+        elif argv_copy[i] == '--dry-run':
+            dry_run = True
+            argv_copy = argv_copy[:i] + argv_copy[i + 1:]
+            continue  # Don't increment i, just continue with same index
         else:
             i += 1
 
@@ -579,8 +808,31 @@ def main():
     # down command
     subparsers.add_parser('down', parents=[parent_parser], help='Terminate swarm session')
 
+    # task command - use a simpler parser for the main subcommand
+    task_parser = subparsers.add_parser('task', parents=[parent_parser], help='Task management commands (claim, done, fail, run)')
+    task_parser.add_argument('task_command', nargs='?', default=None, help='Task subcommand (claim, done, fail, run)')
+    task_parser.add_argument('task_args', nargs=argparse.REMAINDER, help='Arguments for task subcommand')
+
+    # Override task_parser's _get_formatter to show custom help
+    def _custom_help(self):
+        print("usage: swarm task <command> [<args>]")
+        print("")
+        print("Task management commands:")
+        print("  claim <task_id> <worker> [lock_key]  Claim a task")
+        print("  done <task_id> <worker> [lock_key]   Mark task as done")
+        print("  fail <task_id> <worker> <reason> [lock_key]  Mark task as failed")
+        print("  run <task_id> <worker> <command...>  Run task command wrapper")
+        print("")
+        print("Use 'swarm task <command> --help' for more info on a command.")
+        sys.exit(0)
+
+    task_parser.print_help = lambda: _custom_help(task_parser)
+
     # Parse args with modified argv (--cluster-id already extracted)
     args = parser.parse_args(argv_copy)
+
+    # Add dry_run flag to args object
+    args.dry_run = dry_run
 
     # Route to command handler
     if args.command == 'init':
@@ -595,6 +847,8 @@ def main():
         return cmd_status(args)
     elif args.command == 'down':
         return cmd_down(args)
+    elif args.command == 'task':
+        return cmd_task(args)
     else:
         parser.print_help()
         return 1

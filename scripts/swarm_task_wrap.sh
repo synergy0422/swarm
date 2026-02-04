@@ -15,6 +15,50 @@ LOCK_TASK_ID=""
 LOCK_WORKER=""
 SKIP_STATUS=0
 TTL_SECONDS=""
+DRY_RUN=0
+
+# =============================================================================
+# Dangerous command patterns (for safety warnings)
+# =============================================================================
+DANGEROUS_PATTERNS=(
+    "rm -rf"
+    "rm -rf /"
+    "dd if=/dev"
+    "mkfs"
+    "shred"
+    "format"
+    ":(){:|:&}"
+    ">$"
+    "dd of=/dev"
+)
+
+# =============================================================================
+# Check if a command contains dangerous patterns
+# =============================================================================
+is_command_safe() {
+    local cmd="$*"
+    for pattern in "${DANGEROUS_PATTERNS[@]}"; do
+        if [[ "$cmd" == *"$pattern"* ]]; then
+            echo "$pattern"
+            return 1
+        fi
+    done
+    return 0
+}
+
+# =============================================================================
+# Log warning for dangerous commands
+# =============================================================================
+warn_dangerous() {
+    local cmd="$*"
+    local pattern
+    pattern=$(is_command_safe "$cmd" || echo "$pattern")
+    if [[ -n "$pattern" ]]; then
+        log_warn "DANGEROUS COMMAND DETECTED: contains '$pattern'"
+        log_warn "Command: $cmd"
+        log_warn "This command may cause data loss or system damage!"
+    fi
+}
 
 # =============================================================================
 # Usage function
@@ -43,7 +87,9 @@ Commands:
 
 Options:
     --ttl SECONDS    Lock TTL in seconds (default: no expiry)
-    --no-status      Skip status logging (for testing)
+    --no-status     Skip status logging (for testing)
+    --dry-run       Show command without executing (safe testing)
+    --help, -h      Show this help message
 
 Environment:
     SWARM_STATE_DIR  Override state directory (default: from _config.sh)
@@ -51,6 +97,7 @@ Environment:
 
 Examples:
     $(basename "$0") run task-001 worker-0 echo hello
+    $(basename "$0") run --dry-run task-002 worker-1 echo "Would execute"
     $(basename "$0") run --ttl 3600 task-002 worker-1 python process.py arg1
     $(basename "$0") skip task-003 "Dependency not ready"
     $(basename "$0") wait task-004 "Waiting for upstream"
@@ -158,6 +205,21 @@ cmd_run() {
     # Usage: ./wrap.sh run task-001 worker-0 echo hello
     # NOT:   ./wrap.sh run task-001 worker-0 "echo hello"
 
+    # Build the command string for display/dry-run
+    local cmd_str="$*"
+
+    # Check for dangerous commands
+    if ! is_command_safe "$cmd_str"; then
+        warn_dangerous "$cmd_str"
+    fi
+
+    # Dry-run mode: show command without executing
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+        log_info "[DRY-RUN] Would execute: $cmd_str"
+        log_info "[DRY-RUN] Task: $task_id on $worker"
+        return 0
+    fi
+
     # Set global state for trap callbacks
     LOCK_ACQUIRED=0
     LOCK_TASK_ID="$task_id"
@@ -209,9 +271,10 @@ cmd_run() {
 # Main entry point
 # =============================================================================
 main() {
-    # Parse global options first (--ttl, --no-status)
+    # Parse global options first (--ttl, --no-status, --dry-run)
     TTL_SECONDS=""
     SKIP_STATUS=0
+    DRY_RUN=0
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -230,6 +293,14 @@ main() {
             --no-status)
                 SKIP_STATUS=1
                 shift
+                ;;
+            --dry-run)
+                DRY_RUN=1
+                shift
+                ;;
+            --help|-h)
+                usage
+                exit 0
                 ;;
             *)
                 # Not a global option, stop parsing
