@@ -12,35 +12,36 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 | # | Milestone | Status |
 |---|-----------|--------|
 | v1.0-v1.85 | All shipped | Complete |
-| v1.86 | 主控自动救援闭环 + 状态汇总表 | Complete |
+| v1.86 | 主控自动救援闭环 + 状态汇总表 | In Progress |
 
 ## Current Position
 
-**v1.86 - Phase 26: 集成与配置验证**
+**v1.86 - Phase 27: 状态汇总增强**
 
 | Plan | Name | Status |
 |------|------|--------|
-| 26-01 | 集成与配置验证 | Complete |
+| 27-01 | 状态汇总字段增强 | Complete |
 
-**Last activity:** 2026-02-04 - Completed v1.86 milestone (all 3 phases complete)
+**Last activity:** 2026-02-04 - Completed 27-01 (status summary enhancement)
 
 ## Progress
 
 ```
 v1.0-v1.85 Complete: ████████████████████ 100%
-v1.86 Complete:      ████████████████████ 100%
+v1.86 Complete:      ████░░░░░░░░░░░░░░░░░░░ 20%
                     └── Phase 24: Complete ✓
                     └── Phase 25: Complete ✓
                     └── Phase 26: Complete ✓
+                    └── Phase 27: In Progress ▌
 ```
 
 ## Session Continuity
 
 Last session: 2026-02-04
-Completed: 24-fix-issues - All 4 bug fixes applied to Phase 24
+Completed: 27-01 - Enhanced PaneSummary with timestamp fields (last_update_ts, wait_since_ts, error_streak)
 
 Previous milestone: v1.85 - Claude Tasks 集成 (archived)
-Current milestone: v1.86 - 主控自动救援闭环 + 状态汇总表 (24-01 complete, 24-fix-issues complete)
+Current milestone: v1.86 - 主控自动救援闭环 + 状态汇总表
 
 ## Decisions Made
 
@@ -54,6 +55,7 @@ Current milestone: v1.86 - 主控自动救援闭环 + 状态汇总表 (24-01 com
 | IDLE reset on 'none' action (fix issue 3) | State cleanup | Implemented |
 | broadcast_wait for internal events (fix issue 2) | Status semantics | Implemented |
 | Expanded DANGEROUS_PATTERNS (fix issue 4) | Security coverage | Implemented |
+| ERROR preserves wait_since_ts (consecutive errors don't clear wait time) | UX | Implemented |
 
 ## Issues / Blockers
 
@@ -61,4 +63,4 @@ None
 
 ---
 
-*State updated: 2026-02-04 after Phase 24 verified*
+*State updated: 2026-02-04 after Phase 27-01 complete*
