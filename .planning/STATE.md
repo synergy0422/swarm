@@ -52,7 +52,7 @@ None
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 001 | Test mode for swarm task (--dry-run, dangerous command detection) | 2026-02-04 | TBD | [001-test-mode-for-swarm-task](./quick/001-test-mode-for-swarm-task/) |
+| 001 | Test mode for swarm task (--dry-run, dangerous command detection) | 2026-02-04 | ad3690e | [001-test-mode-for-swarm-task](./quick/001-test-mode-for-swarm-task/) |
 
 ---
 
