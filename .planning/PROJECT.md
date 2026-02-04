@@ -128,6 +128,19 @@
 - [x] **DOCS-01**: README.md "诊断快照"章节
 - [x] **DOCS-02**: docs/SCRIPTS.md 完整文档
 
+**v1.88 - 一键启动配置 (Shipped 2026-02-04)**
+
+- [x] **DOCS-01**: README.md 新增"快速启动"小节 — 一行命令示例
+- [x] **CODEX-01**: 默认 codex 命令为 `codex --yolo` — swarm_layout_5.sh 第 32 行
+
+**v1.89 - 测试重写 Bug Fix (Shipped 2026-02-04)**
+
+- [x] **TEST-01**: 重写 test_auto_rescuer.py — 适配新 AutoRescuer API
+- [x] **TEST-02**: 重写 test_auto_rescuer_patterns.py — 模式常量测试
+- [x] **TEST-03**: 重写 test_e2e_auto_rescue.py — E2E 测试
+- [x] **FIX-01**: 环境变量处理优化 — 原值保存/恢复
+- [x] **FIX-02**: 移除未使用 import — lint 优化
+
 ### Active
 
 **v1.87 - 强化指挥官可感知能力 (Shipped 2026-02-04)**
@@ -216,4 +229,4 @@
 
 ---
 
-*Last updated: 2026-02-04 after v1.87 milestone*
+*Last updated: 2026-02-04 after v1.89 milestone*
