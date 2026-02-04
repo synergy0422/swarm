@@ -226,10 +226,11 @@ class AutoRescuer:
 
         This method:
         1. Checks for empty content
-        2. Detects dangerous patterns (blocks all actions)
-        3. Detects auto-enter patterns (executes rescue)
-        4. Detects manual confirm patterns (returns manual_needed)
-        5. Returns none if no pattern matches
+        2. Config-based evaluation (ENABLED, ALLOW, BLOCK)
+        3. Detects dangerous patterns (blocks all actions)
+        4. Detects auto-enter patterns (executes rescue)
+        5. Detects manual confirm patterns (returns manual_needed)
+        6. Returns none if no pattern matches
 
         Args:
             pane_output: Text content from tmux pane
@@ -239,7 +240,7 @@ class AutoRescuer:
         Returns:
             Tuple of (should_rescue, action, pattern):
             - should_rescue: bool - Whether action was executed
-            - action: str - 'auto_enter' | 'manual_confirm' | 'dangerous_blocked' | 'cooldown' | 'rescue_failed' | 'none'
+            - action: str - 'auto_enter' | 'manual_confirm' | 'dangerous_blocked' | 'cooldown' | 'rescue_failed' | 'none' | 'disabled' | 'blocked_by_config' | 'allowlist_missed'
             - pattern: str - Detected pattern text, or '' if none
         """
         self._stats['total_checks'] += 1
@@ -247,6 +248,32 @@ class AutoRescuer:
         # Step 0: Empty content check
         if not pane_output or not pane_output.strip():
             return False, 'none', ''
+
+        # Step 0.5: Config-based evaluation (highest priority after empty check)
+        if not self.enabled:
+            self._stats['disabled_skipped'] += 1
+            return False, 'disabled', 'auto-rescue disabled by AI_SWARM_AUTO_RESCUE_ENABLED'
+
+        if self.block_pattern and pane_output:
+            block_match = re.search(self.block_pattern, pane_output, re.IGNORECASE)
+            if block_match:
+                self._stats['blocklist_blocked'] += 1
+                self.broadcaster.broadcast_error(
+                    task_id='',
+                    message=f'Content blocked by AI_SWARM_AUTO_RESCUE_BLOCK pattern in {window_name}',
+                    meta={'window_name': window_name, 'action': 'blocked', 'pattern': block_match.group(0)}
+                )
+                return False, 'blocked_by_config', f'BLOCK pattern matched: {block_match.group(0)}'
+
+        if self.allow_pattern and pane_output:
+            allow_match = re.search(self.allow_pattern, pane_output, re.IGNORECASE)
+            if not allow_match:
+                self._stats['allowlist_missed'] += 1
+                self.broadcaster.broadcast_wait(
+                    task_id='',
+                    message=f'Content not matching ALLOW pattern in {window_name}, manual confirm needed'
+                )
+                return False, 'allowlist_missed', ''
 
         # Step 1: Dangerous pattern detection (highest priority - block immediately)
         dangerous_match = self._match_dangerous(pane_output)
@@ -398,7 +425,8 @@ class AutoRescuer:
 
         Returns:
             Dict with: total_checks, total_rescues, manual_confirms,
-                       dangerous_blocked, cooldown_skipped
+                       dangerous_blocked, cooldown_skipped, disabled_skipped,
+                       blocklist_blocked, allowlist_missed
         """
         return self._stats.copy()
 
@@ -410,6 +438,10 @@ class AutoRescuer:
             'manual_confirms': 0,
             'dangerous_blocked': 0,
             'cooldown_skipped': 0,
+            'disabled_skipped': 0,
+            'blocklist_blocked': 0,
+            'allowlist_missed': 0,
+        }
         }
 
     def get_cooldown_time(self, window_name: str) -> float:
