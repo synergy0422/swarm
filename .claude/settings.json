@@ -1,4 +1,11 @@
 {
+  "permissions": {
+    "allow": [
+      "Write(.planning/**/*)",
+      "Write(.planning/**/22-*.md)",
+      "Write(*.md)"
+    ]
+  },
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true,

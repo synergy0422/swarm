@@ -150,8 +150,10 @@ RIGHT_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$MASTER_PANE")
 WORKER1_PANE=$(tmux split-window -v -l "$WORKER_HEIGHT" -P -F '#{pane_id}' -t "$RIGHT_PANE")
 WORKER2_PANE=$(tmux split-window -v -P -F '#{pane_id}' -t "$RIGHT_PANE")
 
-# Now split left pane vertically to create codex pane using -l for master size
-CODEX_PANE=$(tmux split-window -v -l "$LEFT_HEIGHT" -P -F '#{pane_id}' -t "$MASTER_PANE")
+# Now split left pane vertically to create codex pane using -l for codex size
+# NOTE: split-window -v creates pane BELOW, and -l sets the NEW pane's size
+# LEFT_HEIGHT is master height, so codex gets remaining height
+CODEX_PANE=$(tmux split-window -v -l "$((WIN_HEIGHT - LEFT_HEIGHT))" -P -F '#{pane_id}' -t "$MASTER_PANE")
 
 # Send startup commands to each pane
 tmux send-keys -t "$MASTER_PANE" "cd \"$WORKDIR\" && claude" Enter
