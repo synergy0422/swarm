@@ -56,7 +56,7 @@
 <details>
 <summary>🔵 v1.90 统一任务入口 CLI (IN PROGRESS)</summary>
 
-- [ ] Phase 32: CLI task 子命令实现 (1/1 plan)
+- [x] Phase 32: CLI task 子命令实现 (1/1 plan) - 32-01-PLAN.md created
 - [ ] Phase 33: 文档更新 (1/1 plan)
 
 **Goal:** 新增 `swarm task` 子命令，统一调用任务管理脚本
