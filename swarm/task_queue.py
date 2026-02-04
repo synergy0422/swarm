@@ -160,6 +160,25 @@ class TaskQueue:
 
         self._save_tasks(tasks)
 
+    def mark_done(self, task_id, result_file):
+        """
+        Mark task as DONE (uppercase) for master/worker pipeline.
+
+        Args:
+            task_id: Task ID to complete
+            result_file: Path to result file
+        """
+        tasks = self.load_tasks()
+
+        for task in tasks:
+            if task['id'] == task_id:
+                task['status'] = 'DONE'
+                task['result_file'] = result_file
+                task['completed_at'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                break
+
+        self._save_tasks(tasks)
+
     def fail_task(self, task_id, error_message):
         """
         Mark task as failed

@@ -353,6 +353,13 @@ class SmartWorker:
                 output_tokens
             )
 
+            # Update tasks.json to DONE
+            try:
+                tq = task_queue.TaskQueue()
+                tq.mark_done(task_id, result_file)
+            except Exception as e:
+                print(f"[{self.name}] Failed to update tasks.json to DONE: {e}")
+
             # Calculate and log cost
             model = task.get('model', config.DEFAULT_MODEL)
             cost = config.calculate_cost(model, input_tokens, output_tokens)

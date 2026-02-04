@@ -277,6 +277,19 @@ def cmd_up(args):
     env.pop('TMUX_PANE', None)
 
     try:
+        # Inject environment variables BEFORE creating windows (before master starts)
+        # Using tmux set-environment -g (global session variable)
+        # This must be done BEFORE new-session, so we set via environment to subprocess
+        llm_base_url = os.environ.get('LLM_BASE_URL', '')
+        api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+
+        # Pass environment variables to subprocess env (will be inherited by tmux session)
+        env['AI_SWARM_DIR'] = ai_swarm_dir
+        if llm_base_url:
+            env['LLM_BASE_URL'] = llm_base_url
+        if api_key:
+            env['ANTHROPIC_API_KEY'] = api_key
+
         # Create master window with master command
         master_cmd = f'python3 -m swarm.cli --cluster-id {cluster_id} master'
         subprocess.run([
@@ -284,6 +297,25 @@ def cmd_up(args):
             '-n', 'master', '-x', '80', '-y', '24',
             master_cmd
         ], check=True, env=env)
+
+        # Also set environment in tmux session for any new windows created
+        # This ensures child processes via tmux also see these vars
+        subprocess.run([
+            'tmux', 'set-environment', '-t', session_name,
+            'AI_SWARM_DIR', ai_swarm_dir
+        ], check=False)
+
+        if llm_base_url:
+            subprocess.run([
+                'tmux', 'set-environment', '-t', session_name,
+                'LLM_BASE_URL', llm_base_url
+            ], check=False)
+
+        if api_key:
+            subprocess.run([
+                'tmux', 'set-environment', '-t', session_name,
+                'ANTHROPIC_API_KEY', api_key
+            ], check=False)
 
         # Create worker windows
         for i in range(workers):

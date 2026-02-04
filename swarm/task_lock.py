@@ -255,7 +255,10 @@ class TaskLockManager:
                         # Lock might have been deleted by another worker
                         pass
                 else:
-                    # Lock is held by another worker
+                    # Lock is held by another worker (or self)
+                    if lock_info.worker_id == self.worker_id:
+                        # Idempotent acquire: already owned by this worker
+                        return True
                     return False
             except (json.JSONDecodeError, KeyError, FileNotFoundError):
                 # Corrupted or missing lock file, try to create new one

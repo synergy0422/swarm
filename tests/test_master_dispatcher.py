@@ -150,7 +150,7 @@ class TestMasterDispatcher(unittest.TestCase):
         self.assertTrue(is_idle)
 
     def test_is_worker_idle_busy_start(self):
-        """Test: START state = not idle"""
+        """Test: START state with task_id = not idle"""
         status = master_scanner.WorkerStatus(
             worker_id='worker-1',
             state='START',
@@ -162,6 +162,34 @@ class TestMasterDispatcher(unittest.TestCase):
         is_idle = self.dispatcher.is_worker_idle(status)
 
         self.assertFalse(is_idle)
+
+    def test_is_worker_idle_start_no_task_id(self):
+        """Test: START state with no task_id = idle (waiting for first task)"""
+        status = master_scanner.WorkerStatus(
+            worker_id='worker-1',
+            state='START',
+            task_id=None,
+            timestamp='2026-01-31T12:00:00.000Z',
+            message='Worker started, waiting for task'
+        )
+
+        is_idle = self.dispatcher.is_worker_idle(status)
+
+        self.assertTrue(is_idle)
+
+    def test_is_worker_idle_start_empty_task_id(self):
+        """Test: START state with empty string task_id = idle (task_id='' in status.log)"""
+        status = master_scanner.WorkerStatus(
+            worker_id='worker-1',
+            state='START',
+            task_id='',  # Empty string as seen in status.log
+            timestamp='2026-01-31T12:00:00.000Z',
+            message='Worker started, waiting for task'
+        )
+
+        is_idle = self.dispatcher.is_worker_idle(status)
+
+        self.assertTrue(is_idle)
 
     def test_is_worker_idle_busy_wait(self):
         """Test: WAIT state = not idle"""

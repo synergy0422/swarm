@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Treat START workers without a task_id as idle to allow initial task dispatch.
+- Inject AI_SWARM_DIR, LLM_BASE_URL, and ANTHROPIC_API_KEY into tmux session on `swarm up`.
+- Update tasks.json to DONE when worker completes task.
+
 ## v1.6 (2026-02-XX) - 长期可维护性 + 流程闭环
 
 **Delivered:** Phase 18 统一配置入口、Phase 20 自检

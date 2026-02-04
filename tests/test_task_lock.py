@@ -48,6 +48,19 @@ class TestTaskLockManager(unittest.TestCase):
 
         self.assertFalse(result)
 
+    def test_acquire_lock_idempotent_for_same_worker(self):
+        """Test: acquire_lock returns True if lock already owned by same worker"""
+        tl = task_lock.TaskLockManager('worker-1')
+
+        first = tl.acquire_lock('task-001')
+        second = tl.acquire_lock('task-001')
+
+        self.assertTrue(first)
+        self.assertTrue(second)
+
+        info = tl.get_lock_info('task-001')
+        self.assertEqual(info.worker_id, 'worker-1')
+
     def test_acquire_lock_allows_reacquire_after_expired(self):
         """Test: acquire_lock allows reacquisition after lock expires"""
         tl1 = task_lock.TaskLockManager('worker-1')

@@ -115,6 +115,21 @@ class TestTaskQueue(unittest.TestCase):
         self.assertEqual(task['status'], 'completed')
         self.assertEqual(task['result_file'], '/tmp/ai_swarm/results/task_001.md')
 
+    def test_mark_done_sets_done_status(self):
+        """Test: Should mark task as DONE with result file"""
+        with open(self.tasks_file, 'w') as f:
+            json.dump(self.sample_tasks, f)
+
+        tq = task_queue.TaskQueue(self.tasks_file)
+        tq.mark_done('task_001', '/tmp/ai_swarm/results/task_001.md')
+
+        tasks = tq.load_tasks()
+        task = [t for t in tasks if t['id'] == 'task_001'][0]
+
+        self.assertEqual(task['status'], 'DONE')
+        self.assertEqual(task['result_file'], '/tmp/ai_swarm/results/task_001.md')
+        self.assertIn('completed_at', task)
+
     def test_fail_task(self):
         """Test: Should mark task as failed with error message"""
         with open(self.tasks_file, 'w') as f:
