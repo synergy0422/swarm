@@ -2,8 +2,9 @@
 
 ## Milestones
 
-- ✅ **v1.88** — 一键启动配置 (2026-02-04)
+- ✅ **v1.90** — 统一任务入口 CLI (Active)
 - ✅ **v1.89** — 测试重写 (2026-02-04) - Bug fix
+- ✅ **v1.88** — 一键启动配置 (2026-02-04)
 - ✅ **v1.87** — 强化指挥官可感知能力 (2026-02-04)
 - ✅ **v1.86** — 主控自动救援闭环 + 状态汇总表 (2026-02-04)
 - ✅ **v1.85** — Claude Tasks 集成 + 自动锁闭环 (2026-02-04)
@@ -53,6 +54,33 @@
 </details>
 
 <details>
+<summary>🔵 v1.90 统一任务入口 CLI (IN PROGRESS)</summary>
+
+- [ ] Phase 32: CLI task 子命令实现 (1/1 plan)
+- [ ] Phase 33: 文档更新 (1/1 plan)
+
+**Goal:** 新增 `swarm task` 子命令，统一调用任务管理脚本
+
+**Requirements mapped:**
+- CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, EXIT-01 → Phase 32
+- DOCS-01, DOCS-02 → Phase 33
+
+**Success Criteria:**
+
+**Phase 32: CLI task 子命令实现**
+1. `swarm task --help` 显示 task 子命令帮助
+2. `swarm task claim <task_id> <worker>` 调用脚本并透传退出码
+3. `swarm task done <task_id> <worker>` 调用脚本并透传退出码
+4. `swarm task fail <task_id> <worker> <reason>` 调用脚本并透传退出码
+5. `swarm task run <task_id> <worker> <command...>` 调用脚本并透传退出码
+
+**Phase 33: 文档更新**
+1. README.md 包含 swarm task 用法示例
+2. docs/SCRIPTS.md 包含完整参数说明
+
+</details>
+
+<details>
 <summary>✅ v1.87 强化指挥官可感知能力 (SHIPPED 2026-02-04)</summary>
 
 - [x] Phase 27: 状态汇总表增强 (1/1 plan)
@@ -86,4 +114,4 @@ _For detailed v1.86 scope, see `.planning/milestones/v1.86-ROADMAP.md`_
 ---
 
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 after v1.88 milestone completion*
+*Last updated: 2026-02-04 after v1.90 milestone initialization*

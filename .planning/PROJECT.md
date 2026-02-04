@@ -143,41 +143,48 @@
 
 ### Active
 
-**v1.87 - 强化指挥官可感知能力 (Shipped 2026-02-04)**
+**v1.90 - 统一任务入口 CLI (Active)**
 
-- [x] **ENH-01**: 状态汇总表增强 — 新增 last_update, wait_for, error_streak 字段
-- [x] **ENH-02**: WAIT 时长准确累计
-- [x] **ENH-03**: ERROR 连续次数正确计数
-- [x] **CONFIG-01**: AI_SWARM_AUTO_RESCUE_ENABLED — 启用/关闭开关
-- [x] **CONFIG-02**: AI_SWARM_AUTO_RESCUE_BLOCK — 黑名单模式匹配
-- [x] **CONFIG-03**: AI_SWARM_AUTO_RESCUE_ALLOW — 白名单模式匹配
-- [x] **CONFIG-04**: 配置优先级 — ENABLED > BLOCK > ALLOW > 内置模式
-- [x] **STATE-01**: ASSIGNED 状态广播 — Master dispatch 时广播 ASSIGNED
-- [x] **STATE-02**: 状态链 — ASSIGNED → START → DONE/ERROR
-- [x] **STATE-03**: ASSIGNED 优先级 — 在 START 和 DONE 之间 (priority=4)
+- [ ] **CLI-01**: 新增 `swarm task` 子命令入口
+- [ ] **CLI-02**: `swarm task claim` → swarm_tasks_bridge.sh claim
+- [ ] **CLI-03**: `swarm task done` → swarm_tasks_bridge.sh done
+- [ ] **CLI-04**: `swarm task fail` → swarm_tasks_bridge.sh fail
+- [ ] **CLI-05**: `swarm task run` → swarm_task_wrap.sh run
+- [ ] **CLI-06**: 退出码透传
+- [ ] **DOCS-01**: README.md 新增 swarm task 用法示例
+- [ ] **DOCS-02**: docs/SCRIPTS.md 增加 swarm task 说明
 
 ### Out of Scope
 
 - **自动调度系统** — 本版本不引入任务自动调度
 - **修改核心协议** — 不改动现有 CLI 行为
 
-## Current Milestone: v1.88
+## Current Milestone: v1.90 统一任务入口 CLI
 
-**Goal:** 一条命令在 WSL 任意目录启动 5 窗格布局 + 代理配置 + 当前目录 + codex 默认 yolo 模式
+**Goal:** 新增 `swarm task` 子命令，统一调用任务管理脚本，减少脚本碎片
 
 **Target features:**
-- 默认 codex 启动命令已为 `codex --yolo`（v1.87 完成）
-- 文档添加"一键启动命令"示例
+- CLI 新增 `task` 子命令
+- `swarm task claim <task_id> <worker> [lock_key]`
+- `swarm task done <task_id> <worker> [lock_key]`
+- `swarm task fail <task_id> <worker> <reason> [lock_key]`
+- `swarm task run <task_id> <worker> <command...>`
+- 透传底层脚本退出码
+- 更新 README.md 和 docs/SCRIPTS.md 文档
 
 ### Acceptance Criteria
-- [ ] README.md 或 docs/SCRIPTS.md 有一行命令示例
-- [ ] 示例包含：LLM_BASE_URL、SWARM_WORKDIR=$PWD、CODEX_CMD=codex --yolo、--attach
-- [ ] 不破坏现有脚本参数
+- [ ] `swarm task claim/done/fail/run` 均可工作
+- [ ] 退出码与底层脚本一致
+- [ ] README.md 有 swarm task 用法示例
+- [ ] docs/SCRIPTS.md 有完整说明
+- [ ] 不破坏现有 `swarm up/down/status` 等命令
 
 ### Out of Scope
-- 不改 CLI 架构（不新增 swarm 子命令）
-- 不做 Web/跨机器
-- 不合并其它功能
+- 不做 codex 联动
+- 不改任务锁逻辑
+- 不改变现有脚本行为
+
+---
 
 ## Context
 
@@ -229,4 +236,4 @@
 
 ---
 
-*Last updated: 2026-02-04 after v1.89 milestone*
+*Last updated: 2026-02-04 after v1.90 milestone initialization*

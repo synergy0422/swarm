@@ -15,16 +15,17 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 ## Current Position
 
-**v1.89 shipped**
+**v1.90 started**
 
-**Status:** Complete
+**Status:** Defining requirements
 
-**Last activity:** 2026-02-04 — Bug fix: AutoRescuer tests rewritten (19 tests pass)
+**Last activity:** 2026-02-04 — Milestone v1.90 initialized (unified task CLI)
 
 ## Progress
 
 ```
 v1.0-v1.89 Complete: ████████████████████ 100%
+v1.90 In Progress: ░░░░░░░░░░░░░░░░░░░░░ 0%
 ```
 
 ## Session Continuity
@@ -32,8 +33,8 @@ v1.0-v1.89 Complete: ███████████████████�
 Last session: 2026-02-04
 Completed: v1.89 milestone - 测试重写 Bug Fix
 
-Previous milestone: v1.89 - 测试重写 (shipped)
-Current milestone: None (ready for next)
+Previous milestone: v1.89 (shipped)
+Current milestone: v1.90 - 统一任务入口 CLI
 
 ## Decisions Made
 
@@ -49,4 +50,4 @@ None
 
 ---
 
-*State updated: 2026-02-04 after v1.89 milestone completion*
+*State updated: 2026-02-04 after v1.90 milestone initialization*
