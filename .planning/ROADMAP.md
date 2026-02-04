@@ -3,6 +3,7 @@
 ## Milestones
 
 - ✅ **v1.88** — 一键启动配置 (2026-02-04)
+- ✅ **v1.89** — 测试重写 (2026-02-04) - Bug fix
 - ✅ **v1.87** — 强化指挥官可感知能力 (2026-02-04)
 - ✅ **v1.86** — 主控自动救援闭环 + 状态汇总表 (2026-02-04)
 - ✅ **v1.85** — Claude Tasks 集成 + 自动锁闭环 (2026-02-04)
@@ -30,6 +31,24 @@
 **Stats:**
 - 1 phase, 1 plan
 - 7/7 verification criteria passed
+
+</details>
+
+<details>
+<summary>✅ v1.89 测试重写 (SHIPPED 2026-02-04)</summary>
+
+- [x] Phase 31: 测试重写 (1/1 plan)
+
+**Delivered:** 重写 3 个测试文件，适配新的 AutoRescuer API
+
+**Key accomplishments:**
+1. test_auto_rescuer.py - 9 个测试（模式检测、冷却机制、配置）
+2. test_auto_rescuer_patterns.py - 6 个测试（模式常量）
+3. test_e2e_auto_rescue.py - 4 个测试（E2E 工作流）
+
+**Stats:**
+- 1 phase, 1 plan
+- 19/19 tests passed
 
 </details>
 
