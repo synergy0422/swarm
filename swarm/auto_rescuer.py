@@ -15,12 +15,18 @@ Features:
 import os
 import re
 import time
+import logging
 from typing import Dict, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 # Environment variable names
 ENV_AUTO_RESCUE_COOLING = 'AI_SWARM_AUTO_RESCUE_COOLING'
 ENV_AUTO_RESCUE_DRY_RUN = 'AI_SWARM_AUTO_RESCUE_DRY_RUN'
+ENV_AUTO_RESCUE_ENABLED = 'AI_SWARM_AUTO_RESCUE_ENABLED'
+ENV_AUTO_RESCUE_ALLOW = 'AI_SWARM_AUTO_RESCUE_ALLOW'
+ENV_AUTO_RESCUE_BLOCK = 'AI_SWARM_AUTO_RESCUE_BLOCK'
 
 # Default cooling time in seconds
 DEFAULT_COOLING_TIME = 30.0
@@ -157,6 +163,32 @@ class AutoRescuer:
         if dry_run is None:
             dry_run = os.environ.get(ENV_AUTO_RESCUE_DRY_RUN, '').lower() in ('1', 'true', 'yes')
 
+        # Auto-rescue enable/disable (default: enabled)
+        self.enabled = True
+        enabled_str = os.environ.get(ENV_AUTO_RESCUE_ENABLED)
+        if enabled_str is not None:
+            self.enabled = enabled_str.lower() not in ('0', 'false', 'no', '')
+
+        # Allowlist pattern (optional - if set, only rescue matching patterns)
+        self.allow_pattern = None
+        allow_str = os.environ.get(ENV_AUTO_RESCUE_ALLOW)
+        if allow_str:
+            try:
+                re.compile(allow_str)
+                self.allow_pattern = allow_str
+            except re.error:
+                logger.warning(f"Invalid regex pattern in AI_SWARM_AUTO_RESCUE_ALLOW: {allow_str}")
+
+        # Blocklist pattern (optional - if set, never rescue matching patterns)
+        self.block_pattern = None
+        block_str = os.environ.get(ENV_AUTO_RESCUE_BLOCK)
+        if block_str:
+            try:
+                re.compile(block_str)
+                self.block_pattern = block_str
+            except re.error:
+                logger.warning(f"Invalid regex pattern in AI_SWARM_AUTO_RESCUE_BLOCK: {block_str}")
+
         self.tmux = tmux_manager
         self.cooling_time = cooling_time
         self.dry_run = dry_run
@@ -178,6 +210,9 @@ class AutoRescuer:
             'manual_confirms': 0,
             'dangerous_blocked': 0,
             'cooldown_skipped': 0,
+            'disabled_skipped': 0,
+            'blocklist_blocked': 0,
+            'allowlist_missed': 0,
         }
 
     def check_and_rescue(
