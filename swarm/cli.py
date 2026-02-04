@@ -725,10 +725,10 @@ def cmd_task_run(args):
             ('dd of=/dev', 'dd of=/dev'),
         ]
 
-        # Warn about dangerous commands
+        # Warn about dangerous commands (case-insensitive matching)
         cmd_lower = cmd_str.lower()
         for pattern, display in dangerous_patterns:
-            if pattern in cmd_str:
+            if pattern.lower() in cmd_lower:
                 print(f"[WARNING] DANGEROUS COMMAND DETECTED: contains '{display}'", file=sys.stderr)
                 print(f"[WARNING] Command: {cmd_str}", file=sys.stderr)
                 print(f"[WARNING] This command may cause data loss or system damage!", file=sys.stderr)
