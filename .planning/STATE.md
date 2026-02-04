@@ -16,28 +16,30 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 ## Current Position
 
-**v1.87 - Phase 27: 状态汇总表增强**
+**v1.87 - Phase 28: AutoRescuer环境变量配置**
 
 | Plan | Name | Status |
 |------|------|--------|
-| 27-01 | 状态汇总表增强 | Complete |
+| 28-01 | 环境变量配置支持 | Complete |
+| 28-02 | 待规划 | Pending |
+| 28-03 | 待规划 | Pending |
 
-**Last activity:** 2026-02-04 - Phase 27 complete (enhanced status summary with last_update, wait_for, error_streak)
+**Last activity:** 2026-02-04 - Completed 28-01 (environment variable configuration for AutoRescuer)
 
 ## Progress
 
 ```
 v1.0-v1.86 Complete: ████████████████████ 100%
-v1.87 In Progress:    █░░░░░░░░░░░░░░░░░░░░ 33%
+v1.87 In Progress:    ████████░░░░░░░░░░░░ 67%
                     └── Phase 27: Complete ✓
-                    └── Phase 28: Pending ▢
+                    └── Phase 28: 33% (1/3 plans) ✓
                     └── Phase 29: Pending ▢
 ```
 
 ## Session Continuity
 
 Last session: 2026-02-04
-Completed: Phase 27 - Status summary enhancement with last_update, wait_for, error_streak
+Completed: Phase 28-01 - Environment variable configuration (ENABLED, ALLOW, BLOCK patterns)
 
 Previous milestone: v1.86 - 主控自动救援闭环 + 状态汇总表 (archived)
 Current milestone: v1.87 - 强化指挥官可感知能力 (in progress)
@@ -56,6 +58,7 @@ Current milestone: v1.87 - 强化指挥官可感知能力 (in progress)
 | Expanded DANGEROUS_PATTERNS | Security coverage | Implemented |
 | ERROR preserves wait_since_ts | UX | Implemented |
 | HH:MM:SS absolute timestamp format | Consistency | Implemented |
+| Config priority: ENABLED > BLOCK > ALLOW > existing patterns | Configuration | Implemented |
 
 ## Issues / Blockers
 
@@ -63,4 +66,4 @@ None
 
 ---
 
-*State updated: 2026-02-04 after Phase 27 complete*
+*State updated: 2026-02-04 after Phase 28-01 complete*
