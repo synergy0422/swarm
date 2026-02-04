@@ -372,7 +372,9 @@ class TestMasterDispatcher(unittest.TestCase):
             status='pending'
         )
 
-        # Create dispatcher normally
+        # Use the dispatcher from setUp which has proper isolation
+        # Ensure AI_SWARM_DIR is set to temp directory for isolation
+        os.environ['AI_SWARM_DIR'] = self.base_dir
         dispatcher = master_dispatcher.MasterDispatcher(cluster_id='test-cluster')
 
         # Create a mock broadcaster and replace _broadcaster
@@ -411,8 +413,9 @@ class TestMasterDispatcher(unittest.TestCase):
         # Verify old 'event' key is NOT present in meta
         self.assertNotIn('event', call_kwargs['meta'])
 
-        # Cleanup
-        dispatcher._lock_manager.release_lock('task-test-001')
+        # Cleanup using worker's lock manager (same pattern as other tests)
+        worker_lock_mgr = task_lock.TaskLockManager(worker_id='worker-1')
+        worker_lock_mgr.release_lock('task-test-001')
 
 
 if __name__ == '__main__':
