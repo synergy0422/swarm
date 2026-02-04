@@ -45,8 +45,19 @@ Plans:
 
 Plans:
 - [x] 28-01: 自动救援策略配置实现 (Verification passed)
+- [ ] 28-02: Master 状态联动修复
 
 **Details:**
+
+### Phase 28-02: Master 状态联动修复
+
+**验收标准:**
+- [ ] blocked_by_config action 在 summary 中显示 WAIT 状态 + note
+- [ ] allowlist_missed action 在 summary 中显示 WAIT 状态 + note
+- [ ] disabled action 在 summary 中显示 IDLE 状态 + [AUTO-RESCUE DISABLED] note
+
+**技术路径:**
+- 复用 _handle_pane_wait_states() 增加对 blocked_by_config/allowlist_missed/disabled 的处理
 
 ### Phase 28: 自动救援策略可配置化
 

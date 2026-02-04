@@ -21,8 +21,9 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 | Plan | Name | Status |
 |------|------|--------|
 | 28-01 | 自动救援策略配置 | Complete |
+| 28-02 | AutoRescuer action handling | Complete |
 
-**Last activity:** 2026-02-04 - Completed 28-01 (environment variable configuration)
+**Last activity:** 2026-02-04 - Completed 28-02 (new AutoRescuer action handling in Master)
 
 ## Progress
 
@@ -64,4 +65,4 @@ None
 
 ---
 
-*State updated: 2026-02-04 after Phase 28-01 complete*
+*State updated: 2026-02-04 after Phase 28-02 complete*
