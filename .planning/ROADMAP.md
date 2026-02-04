@@ -45,16 +45,16 @@ Plans:
 
 Plans:
 - [x] 28-01: 自动救援策略配置实现 (Verification passed)
-- [ ] 28-02: Master 状态联动修复
+- [x] 28-02: Master 状态联动修复 (Complete)
 
 **Details:**
 
 ### Phase 28-02: Master 状态联动修复
 
 **验收标准:**
-- [ ] blocked_by_config action 在 summary 中显示 WAIT 状态 + note
-- [ ] allowlist_missed action 在 summary 中显示 WAIT 状态 + note
-- [ ] disabled action 在 summary 中显示 IDLE 状态 + [AUTO-RESCUE DISABLED] note
+- [x] blocked_by_config action 在 summary 中显示 WAIT 状态 + note
+- [x] allowlist_missed action 在 summary 中显示 WAIT 状态 + note
+- [x] disabled action 在 summary 中显示 IDLE 状态 + [AUTO-RESCUE DISABLED] note
 
 **技术路径:**
 - 复用 _handle_pane_wait_states() 增加对 blocked_by_config/allowlist_missed/disabled 的处理
@@ -72,6 +72,34 @@ Plans:
 - BLOCK 命中 → dangerous_blocked
 - ALLOW 设置且未命中 → manual_confirm_needed
 - 环境变量读取集中在 AutoRescuer.__init__
+
+---
+
+### Phase 29: 任务指派回执闭环
+
+**Goal:** Master 分配任务时写 ASSIGNED，形成状态链 ASSIGNED → START → DONE/ERROR
+
+**Depends on:** Phase 28
+
+**Plans:** 1 plan
+
+Plans:
+- [x] 29-01: 任务指派状态广播 (Complete)
+
+**Details:**
+
+### Phase 29-01: 任务指派状态广播
+
+**验收标准:**
+- [x] dispatch_one() 广播 ASSIGNED 状态（而非 START）
+- [x] status.log 显示纯 ASSIGNED 状态（无 meta.event）
+- [x] 状态链：ASSIGNED (master) → START (worker) → DONE/ERROR (worker)
+- [x] ASSIGNED 在状态优先级中位于 START 和 DONE 之间
+
+**技术路径:**
+- 修改 master_dispatcher.py dispatch_one() 使用 BroadcastState.ASSIGNED
+- 在 master.py STATE_PRIORITY 添加 ASSIGNED: 4
+- 添加测试验证 ASSIGNED 状态广播
 
 ---
 
