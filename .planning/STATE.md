@@ -16,23 +16,21 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 ## Current Position
 
-**v1.87 - Phase 28: AutoRescuer环境变量配置**
+**v1.87 - Phase 28: 自动救援策略可配置化**
 
 | Plan | Name | Status |
 |------|------|--------|
-| 28-01 | 环境变量配置支持 | Complete |
-| 28-02 | 待规划 | Pending |
-| 28-03 | 待规划 | Pending |
+| 28-01 | 自动救援策略配置 | Complete |
 
-**Last activity:** 2026-02-04 - Completed 28-01 (environment variable configuration for AutoRescuer)
+**Last activity:** 2026-02-04 - Completed 28-01 (environment variable configuration)
 
 ## Progress
 
 ```
 v1.0-v1.86 Complete: ████████████████████ 100%
-v1.87 In Progress:    ████████░░░░░░░░░░░░ 67%
+v1.87 In Progress:    ████████░░░░░░░░░░░░░░░░ 67%
                     └── Phase 27: Complete ✓
-                    └── Phase 28: 33% (1/3 plans) ✓
+                    └── Phase 28: Complete ✓
                     └── Phase 29: Pending ▢
 ```
 
