@@ -446,7 +446,6 @@ class AutoRescuer:
             'blocklist_blocked': 0,
             'allowlist_missed': 0,
         }
-        }
 
     def get_cooldown_time(self, window_name: str) -> float:
         """
