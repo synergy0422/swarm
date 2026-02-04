@@ -105,6 +105,15 @@
 - [x] Documentation: README.md "Claude Tasks 协作流程" section
 - [x] Documentation: docs/SCRIPTS.md complete script documentation
 
+**v1.86 - 主控自动救援闭环 + 状态汇总表 (Shipped 2026-02-04)**
+
+- [x] **RESCUE-01**: Master 自动救援 — 扫描 pane 时自动判断 WAIT/confirm/press-enter 状态
+- [x] **RESCUE-02**: 自动 send-keys Enter — 冷却时间 30s/窗口
+- [x] **RESCUE-03**: 危险命令黑名单 — rm -rf, DROP 等立即告警不确认
+- [x] **RESCUE-04**: 状态汇总表 — window/state/task_id/note 格式
+- [x] **RESCUE-05**: 状态优先级 — ERROR > WAIT > RUNNING > DONE/IDLE
+- [x] **RESCUE-06-13**: 集成验证 — PaneScanner/WaitDetector 复用, status_broadcaster 统一, 环境变量配置
+
 **v1.8 - 诊断快照 (Shipped 2026-02-03)**
 
 - [x] **SNAP-01**: `--session` / `CLAUDE_SESSION` 参数
@@ -121,33 +130,30 @@
 
 ### Active
 
-**v1.86 - 主控自动救援闭环 + 状态汇总表**
+**v1.87 - 待规划**
 
-**目标**: 把"主控自动救援闭环 + 状态汇总表"产品化，与现有脚本/日志系统一致，便于长期维护。
+**目标**: 待定义
 
 **Target features:**
-- **RESCUE-01**: Master 自动救援闭环 — 扫描 pane 时自动判断 WAIT/confirm/press-enter 等状态
-- **RESCUE-02**: 安全确认机制 — 冷却时间 30s/窗口，危险命令白名单
-- **RESCUE-03**: 状态汇总表 — 每轮扫描生成简表：window/state/task_id/note
-- **RESCUE-04**: 状态优先级 — ERROR > WAIT > RUNNING > DONE/IDLE
+- (待定义)
 
 ### Out of Scope
 
 - **自动调度系统** — 本版本不引入任务自动调度
-- **修改 swarm/*.py** — 不修改 Python 代码
-- **自动重试执行** — 仅提供手动重试流程说明
+- **修改核心协议** — 不改动现有 CLI 行为
 
-## Current Milestone: v1.86
+## Current Milestone: v1.87
 
-**Status:** Defining requirements
+**Status:** Ready to plan
 
-**Goal:** 把"主控自动救援闭环 + 状态汇总表"产品化
+**Goal:** 待定义
 
 **Next steps:**
+- Define requirements with `/gsd:new-milestone`
 - Create REQUIREMENTS.md
 - Create ROADMAP.md
 
-See: `.planning/milestones/v1.85-ROADMAP.md` for completed milestone details.
+See: `.planning/milestones/v1.86-ROADMAP.md` for completed milestone details.
 
 ## Context
 
@@ -191,8 +197,11 @@ See: `.planning/milestones/v1.85-ROADMAP.md` for completed milestone details.
 | 5-step emergency procedure | 备份 → 优雅停 → 强杀 → 清锁 → 复验 | ✅ Documented |
 | scripts/ directory | Consistent with other swarm scripts | ✅ Validated |
 | 5-pane single window | Left: master/codex, Right: 3 workers | ✅ Validated |
-| CLAUDE_CODE_TASK_LIST_ID | Unified task list ID for multi-window sharing | ⏳ Pending |
+| CLAUDE_CODE_TASK_LIST_ID | Unified task list ID for multi-window sharing | ✅ Validated |
+| 三模式优先级 | DANGEROUS > MANUAL_CONFIRM > AUTO_ENTER > NONE | ✅ Validated |
+| 状态优先级合并 | ERROR(0) > WAIT(1) > RUNNING(2) > DONE(3) > IDLE(4) | ✅ Validated |
+| Python AutoRescuer | Python 实现复用 shell 脚本安全理念 | ✅ Validated |
 
 ---
 
-*Last updated: 2026-02-04 after v1.86 milestone started*
+*Last updated: 2026-02-04 after v1.86 milestone complete*

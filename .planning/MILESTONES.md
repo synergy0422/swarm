@@ -1,5 +1,51 @@
 # Project Milestones: AI Swarm
 
+## v1.86 主控自动救援闭环 + 状态汇总表 (Shipped: 2026-02-04)
+
+**Delivered:** Master 自动救援系统，支持 WAIT/confirm/press-enter 状态自动检测和安全确认；窗口状态汇总表输出，优先级排序。
+
+**Phases completed:** 24-26 (5 plans total)
+
+**Key accomplishments:**
+
+1. **AutoRescuer 核心** — Created `swarm/auto_rescuer.py` (644 lines) with:
+   - AUTO_ENTER_PATTERNS: 自动 Enter 模式
+   - MANUAL_CONFIRM_PATTERNS: 手动确认模式
+   - DANGEROUS_PATTERNS: 危险操作黑名单
+   - 30s 冷却机制防止重复确认
+   - 环境变量: `AI_SWARM_AUTO_RESCUE_COOLING`, `AI_SWARM_AUTO_RESCUE_DRY_RUN`
+
+2. **状态汇总表** — Implemented `_format_summary_table()` in `swarm/master.py`:
+   - 格式: `window | state | task_id | note`
+   - 状态优先级: ERROR > WAIT > RUNNING > DONE/IDLE
+   - 每 30 秒周期性输出
+
+3. **Bug 修复** — During execution, fixed 4 critical issues:
+   - Priority-based state merging (Issue 1)
+   - IDLE reset for 'none' action (Issue 3)
+   - broadcast_wait for internal events (Issue 2)
+   - Expanded DANGEROUS_PATTERNS (Issue 4)
+
+4. **集成验证** — Phase 25 & 26 verified:
+   - PaneScanner/WaitDetector 复用
+   - status_broadcaster.py 统一日志
+   - Clean function encapsulation
+   - Environment variable configuration
+
+**Stats:**
+
+- 2 files created/modified: swarm/auto_rescuer.py (644 lines), swarm/master.py (365 lines)
+- 3 phases, 5 plans, 18 commits
+- 1 day from start to ship (2026-02-04)
+- 13/13 v1.86 requirements complete
+
+**Git range:** `docs(24): create phase plan - Master 自动救援核心 + 状态汇总表` → `docs(26): complete Phase 26 integration & configuration validation`
+
+**What's next:**
+- v1.87: 待规划
+
+---
+
 ## v1.8 诊断快照 (Shipped: 2026-02-03)
 
 **Delivered:** 一键采集 tmux swarm 运行状态的诊断快照脚本，支持 `--session`/`--lines`/`--out` 参数，只读操作不修改状态文件。
