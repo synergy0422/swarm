@@ -299,12 +299,11 @@ class MasterDispatcher:
             import time
             ts_ms = int(time.time() * 1000)
             self._broadcaster._broadcast(
-                state=status_broadcaster.BroadcastState.START,
+                state=status_broadcaster.BroadcastState.ASSIGNED,
                 task_id=task.task_id,
                 message=f'Task assigned to {worker_id}',
                 meta={
-                    'assigned_worker_id': worker_id,
-                    'event': 'ASSIGNED'
+                    'assigned_worker_id': worker_id
                 }
             )
 

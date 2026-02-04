@@ -11,6 +11,7 @@ import os
 import unittest
 import tempfile
 import shutil
+from unittest.mock import MagicMock
 
 from swarm import master_dispatcher
 from swarm import master_scanner
@@ -358,6 +359,60 @@ class TestMasterDispatcher(unittest.TestCase):
 
         self.assertIsInstance(dispatcher, master_dispatcher.MasterDispatcher)
         self.assertEqual(dispatcher.cluster_id, 'test-cluster-2')
+
+    def test_dispatch_one_broadcasts_assigned_state(self):
+        """Test: dispatch_one() broadcasts ASSIGNED state (not START)"""
+        from unittest.mock import MagicMock, patch
+
+        # Create task first
+        task = master_dispatcher.TaskInfo(
+            task_id='task-test-001',
+            command='Test command',
+            priority=1,
+            status='pending'
+        )
+
+        # Create dispatcher normally
+        dispatcher = master_dispatcher.MasterDispatcher(cluster_id='test-cluster')
+
+        # Create a mock broadcaster and replace _broadcaster
+        mock_broadcaster = MagicMock()
+        dispatcher._broadcaster = mock_broadcaster
+
+        # Dispatch the task
+        result = dispatcher.dispatch_one(task, 'worker-1')
+
+        # Verify dispatch returned success
+        self.assertTrue(result)
+
+        # Verify _broadcast was called
+        mock_broadcaster._broadcast.assert_called_once()
+
+        # Get the call arguments
+        call_kwargs = mock_broadcaster._broadcast.call_args.kwargs
+
+        # Verify ASSIGNED state was broadcast (not START)
+        self.assertEqual(
+            call_kwargs['state'],
+            status_broadcaster.BroadcastState.ASSIGNED,
+            "dispatch_one() should broadcast ASSIGNED state, not START"
+        )
+
+        # Verify task_id is correct
+        self.assertEqual(call_kwargs['task_id'], 'task-test-001')
+
+        # Verify message mentions assignment
+        self.assertIn('worker-1', call_kwargs['message'])
+
+        # Verify assigned_worker_id is in meta
+        self.assertIn('assigned_worker_id', call_kwargs['meta'])
+        self.assertEqual(call_kwargs['meta']['assigned_worker_id'], 'worker-1')
+
+        # Verify old 'event' key is NOT present in meta
+        self.assertNotIn('event', call_kwargs['meta'])
+
+        # Cleanup
+        dispatcher._lock_manager.release_lock('task-test-001')
 
 
 if __name__ == '__main__':

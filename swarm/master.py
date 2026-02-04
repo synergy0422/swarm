@@ -56,8 +56,9 @@ STATE_PRIORITY = {
     'WAIT': 1,
     'RUNNING': 2,
     'START': 3,
-    'DONE': 4,
-    'SKIP': 5,
+    'ASSIGNED': 4,  # Tasks assigned but not yet started by worker
+    'DONE': 5,
+    'SKIP': 6,
 }
 
 
