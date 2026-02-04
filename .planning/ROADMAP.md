@@ -13,7 +13,7 @@
 **Plans:** 1 plan
 
 Plans:
-- [x] 27-01-PLAN.md: 状态汇总表增强实现
+- [x] 27-01: 状态汇总表增强实现 (Verification passed)
 
 **Details:**
 
@@ -32,6 +32,35 @@ Plans:
 - 进入 ERROR 时 error_streak += 1，其他状态重置为 0
 - 汇总表格式化时显示：last_update 为 YYYY-MM-DD HH:MM:SS 或 ago
 - wait_for 显示持续等待时长（秒或分钟）
+
+---
+
+### Phase 28: 自动救援策略可配置化
+
+**Goal:** 通过环境变量配置自动救援行为，支持启用开关、白名单、黑名单
+
+**Depends on:** Phase 27
+
+**Plans:** 1 plan
+
+Plans:
+- [x] 28-01-PLAN.md — 自动救援策略配置实现
+
+**Details:**
+
+### Phase 28: 自动救援策略可配置化
+
+**验收标准:**
+- [ ] AI_SWARM_AUTO_RESCUE_ENABLED=false 关闭后不会 send-keys
+- [ ] ALLOW/BLOCK 正则生效且优先级正确
+- [ ] 默认行为不变（不设置时仍用内置模式）
+
+**技术路径:**
+- 复用 AutoRescuer 读取环境变量
+- AI_SWARM_AUTO_RESCUE_ENABLED=false → 返回 (False,'disabled','')
+- BLOCK 命中 → dangerous_blocked
+- ALLOW 设置且未命中 → manual_confirm_needed
+- 环境变量读取集中在 AutoRescuer.__init__
 
 ---
 
