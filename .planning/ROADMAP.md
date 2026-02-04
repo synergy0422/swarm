@@ -44,7 +44,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [x] 28-01-PLAN.md — 自动救援策略配置实现
+- [x] 28-01: 自动救援策略配置实现 (Verification passed)
 
 **Details:**
 
