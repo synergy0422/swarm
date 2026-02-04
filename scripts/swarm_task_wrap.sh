@@ -33,13 +33,13 @@ DANGEROUS_PATTERNS=(
 )
 
 # =============================================================================
-# Check if a command contains dangerous patterns
+# Check if a command is safe (no dangerous patterns)
+# Returns: 0 if safe, 1 if dangerous
 # =============================================================================
 is_command_safe() {
     local cmd="$*"
     for pattern in "${DANGEROUS_PATTERNS[@]}"; do
         if [[ "$cmd" == *"$pattern"* ]]; then
-            echo "$pattern"
             return 1
         fi
     done
@@ -47,12 +47,26 @@ is_command_safe() {
 }
 
 # =============================================================================
+# Find and return the dangerous pattern in a command
+# Returns: pattern on stdout if found, nothing if safe
+# =============================================================================
+find_dangerous_pattern() {
+    local cmd="$*"
+    for pattern in "${DANGEROUS_PATTERNS[@]}"; do
+        if [[ "$cmd" == *"$pattern"* ]]; then
+            echo "$pattern"
+            return
+        fi
+    done
+}
+
+# =============================================================================
 # Log warning for dangerous commands
+# Usage: warn_dangerous "command" "pattern"
 # =============================================================================
 warn_dangerous() {
-    local cmd="$*"
-    local pattern
-    pattern=$(is_command_safe "$cmd" || echo "$pattern")
+    local cmd="$1"
+    local pattern="$2"
     if [[ -n "$pattern" ]]; then
         log_warn "DANGEROUS COMMAND DETECTED: contains '$pattern'"
         log_warn "Command: $cmd"
@@ -208,9 +222,11 @@ cmd_run() {
     # Build the command string for display/dry-run
     local cmd_str="$*"
 
-    # Check for dangerous commands
+    # Check for dangerous commands (capture stderr, don't pollute stdout)
+    local dangerous_pattern
     if ! is_command_safe "$cmd_str"; then
-        warn_dangerous "$cmd_str"
+        dangerous_pattern=$(find_dangerous_pattern "$cmd_str")
+        warn_dangerous "$cmd_str" "$dangerous_pattern"
     fi
 
     # Dry-run mode: show command without executing

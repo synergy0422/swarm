@@ -711,6 +711,29 @@ def cmd_task_run(args):
 
     if dry_run:
         cmd_str = ' '.join(args.command)
+
+        # Check for dangerous commands (mirrors wrap.sh detection)
+        dangerous_patterns = [
+            ('rm -rf', 'rm -rf'),
+            ('rm -rf /', 'rm -rf /'),
+            ('dd if=/dev', 'dd if=/dev'),
+            ('mkfs', 'mkfs'),
+            ('shred', 'shred'),
+            ('format', 'format'),
+            (':(){:|:&}', ':(){:|:&}'),
+            ('>$', '>$'),
+            ('dd of=/dev', 'dd of=/dev'),
+        ]
+
+        # Warn about dangerous commands
+        cmd_lower = cmd_str.lower()
+        for pattern, display in dangerous_patterns:
+            if pattern in cmd_str:
+                print(f"[WARNING] DANGEROUS COMMAND DETECTED: contains '{display}'", file=sys.stderr)
+                print(f"[WARNING] Command: {cmd_str}", file=sys.stderr)
+                print(f"[WARNING] This command may cause data loss or system damage!", file=sys.stderr)
+                break
+
         print(f"[DRY-RUN] Would execute: {cmd_str}")
         print(f"[DRY-RUN] Task: {args.task_id} on {args.worker}")
         return 0
