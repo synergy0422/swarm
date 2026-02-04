@@ -9,6 +9,10 @@ Features:
 - Pattern classification: AUTO_ENTER, MANUAL_CONFIRM, DANGEROUS
 - Per-window cooldown mechanism (30 seconds default)
 - Dangerous operation blocking (rm -rf, DROP, TRUNCATE, etc.)
+- Environment variable configuration:
+  - AI_SWARM_AUTO_RESCUE_ENABLED=false - Disable auto-rescue
+  - AI_SWARM_AUTO_RESCUE_ALLOW=<regex> - Only rescue matching content
+  - AI_SWARM_AUTO_RESCUE_BLOCK=<regex> - Never rescue matching content
 - Dry-run mode for testing
 """
 
