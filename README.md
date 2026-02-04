@@ -156,6 +156,14 @@ v1.7 引入了新的 5 窗格布局脚本，将所有窗格集中在单个 tmux 
 | `--codex-cmd, -c` | codex 窗格执行的命令 |
 | `--attach, -a` | 创建后附加到会话 |
 
+### 快速启动
+
+在任意目录执行以下命令，即可使用本地代理启动 5 窗格布局，并让 codex 默认使用 --yolo：
+
+```bash
+LLM_BASE_URL="http://127.0.0.1:15721" SWARM_WORKDIR="$PWD" CODEX_CMD="codex --yolo" ./scripts/swarm_layout_5.sh --attach
+```
+
 ### 环境变量
 
 | 变量 | 说明 |
