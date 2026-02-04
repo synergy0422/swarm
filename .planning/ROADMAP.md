@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- ⏳ **v1.88** — 待规划
+- ⏳ **v1.88** — 一键启动配置 (2026-02-04)
 - ✅ **v1.87** — 强化指挥官可感知能力 (2026-02-04)
 - ✅ **v1.86** — 主控自动救援闭环 + 状态汇总表 (2026-02-04)
 - ✅ **v1.85** — Claude Tasks 集成 + 自动锁闭环 (2026-02-04)
@@ -15,6 +15,22 @@
 - ✅ **v1.2** — Claude Code CLI 多窗口 (2026-02-01)
 - ✅ **v1.1** — UAT & CLI 增强 (2026-02-01)
 - ✅ **v1.0** — MVP (2026-01-31)
+
+<details>
+<summary>⏳ v1.88 一键启动配置 (2026-02-04)</summary>
+
+- [ ] Phase 30: 文档更新 — 添加一键启动命令示例 (1/1 plan)
+
+**Goal:** 文档添加一行命令启动示例
+
+**Requirements:** DOCS-01
+
+**Success Criteria:**
+1. README.md 或 docs/SCRIPTS.md 包含完整一行命令示例
+2. 示例命令可在任意目录执行
+3. 包含 LLM_BASE_URL、SWARM_WORKDIR=$PWD、CODEX_CMD、--attach
+
+</details>
 
 <details>
 <summary>✅ v1.87 强化指挥官可感知能力 (SHIPPED 2026-02-04)</summary>
@@ -50,4 +66,4 @@ _For detailed v1.86 scope, see `.planning/milestones/v1.86-ROADMAP.md`_
 ---
 
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 after v1.87 milestone completion*
+*Last updated: 2026-02-04 after v1.88 milestone initialization*

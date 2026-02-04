@@ -16,14 +16,13 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 ## Current Position
 
-**v1.88 - Ready to plan**
+**v1.88 - 一键启动配置**
 
-**Status:** Ready to start next milestone
+**Status:** Ready to plan
 
-**Goal:** 待定义
+**Goal:** 文档添加一键启动命令示例
 
-**Next steps:**
-- Run `/gsd:new-milestone` to define requirements for v1.88
+**Last activity:** 2026-02-04 — Milestone v1.88 initialized
 
 ## Progress
 

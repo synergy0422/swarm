@@ -150,16 +150,21 @@
 
 ## Current Milestone: v1.88
 
-**Status:** Ready to plan
+**Goal:** 一条命令在 WSL 任意目录启动 5 窗格布局 + 代理配置 + 当前目录 + codex 默认 yolo 模式
 
-**Goal:** 待定义
+**Target features:**
+- 默认 codex 启动命令已为 `codex --yolo`（v1.87 完成）
+- 文档添加"一键启动命令"示例
 
-**Next steps:**
-- Define requirements with `/gsd:new-milestone`
-- Create REQUIREMENTS.md
-- Create ROADMAP.md
+### Acceptance Criteria
+- [ ] README.md 或 docs/SCRIPTS.md 有一行命令示例
+- [ ] 示例包含：LLM_BASE_URL、SWARM_WORKDIR=$PWD、CODEX_CMD=codex --yolo、--attach
+- [ ] 不破坏现有脚本参数
 
-See: `.planning/milestones/v1.87-ROADMAP.md` for completed milestone details.
+### Out of Scope
+- 不改 CLI 架构（不新增 swarm 子命令）
+- 不做 Web/跨机器
+- 不合并其它功能
 
 ## Context
 
