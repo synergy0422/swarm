@@ -417,6 +417,21 @@ class Master:
                 summary.update_state('WAIT', now)
                 summary.last_action = 'FAILED'
                 summary.note = f'Rescue failed: "{pattern}"'
+            elif action == 'blocked_by_config':
+                # Config blocks auto-rescue - show as WAIT with config block note
+                summary.update_state('WAIT', now)
+                summary.last_action = 'BLOCKED'
+                summary.note = '[BLOCKED BY CONFIG]'
+            elif action == 'allowlist_missed':
+                # Content doesn't match allowlist - requires manual confirm
+                summary.update_state('WAIT', now)
+                summary.last_action = 'ALLOWLIST'
+                summary.note = '[ALLOWLIST MISSED]'
+            elif action == 'disabled':
+                # Auto-rescue is disabled - show as IDLE with disabled note
+                summary.update_state('IDLE', now)
+                summary.last_action = 'DISABLED'
+                summary.note = '[AUTO-RESCUE DISABLED]'
             elif action == 'none':
                 # Reset to IDLE when no patterns detected
                 summary.update_state('IDLE', now)
