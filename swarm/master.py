@@ -207,6 +207,9 @@ class PaneSummary:
         last_action: Last auto-rescue action taken
         task_id: Associated task ID (if any)
         note: Additional notes (pattern detected, etc.)
+        last_update_ts: Unix timestamp of last state update
+        wait_since_ts: Unix timestamp when entered WAIT state (None when not in WAIT)
+        error_streak: Consecutive ERROR count
     """
 
     def __init__(self, window_name: str):
@@ -215,6 +218,86 @@ class PaneSummary:
         self.last_action = ''
         self.task_id = '-'
         self.note = ''
+        self.last_update_ts = time.time()
+        self.wait_since_ts = None
+        self.error_streak = 0
+
+    def update_state(self, new_state: str, timestamp: float):
+        """Update state and maintain tracking fields.
+
+        Args:
+            new_state: The new state value
+            timestamp: Current timestamp from time.time()
+
+        Behavior:
+        - last_update_ts: ALWAYS updates regardless of whether state changed
+          (consecutive ERROR should update timestamp to show "still failing")
+        - wait_since_ts:
+          - On WAIT entry: set to timestamp (if not already set)
+          - On ERROR: does NOT clear wait_since_ts
+          - On other non-WAIT states: set to None (cleared on exit)
+        - error_streak:
+          - On ERROR: increment by 1
+          - On other states: reset to 0
+        """
+        self.last_update_ts = timestamp
+
+        # Handle WAIT state
+        if new_state == 'WAIT':
+            if self.wait_since_ts is None:
+                self.wait_since_ts = timestamp
+        elif new_state == 'ERROR':
+            # ERROR does NOT clear wait_since_ts
+            pass
+        else:
+            # Clear wait_since_ts when leaving WAIT for other states
+            self.wait_since_ts = None
+
+        # Handle ERROR streak
+        if new_state == 'ERROR':
+            self.error_streak += 1
+        else:
+            # Reset error streak when leaving ERROR
+            self.error_streak = 0
+
+        self.last_state = new_state
+
+    def _format_timestamp(self, ts: float) -> str:
+        """Format timestamp as HH:MM:SS (absolute time).
+
+        Args:
+            ts: Unix timestamp
+
+        Returns:
+            Formatted time string "HH:MM:SS"
+        """
+        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        return dt.strftime('%H:%M:%S')
+
+    def _format_wait_duration(self, wait_ts: float, now: float) -> str:
+        """Format wait duration as human-readable string.
+
+        Args:
+            wait_ts: Unix timestamp when WAIT started
+            now: Current Unix timestamp
+
+        Returns:
+            Duration string like "30s", "2m", "1h" or "-" if invalid
+        """
+        # Check for invalid timestamps (0 or negative are not valid Unix timestamps)
+        if wait_ts <= 0:
+            return '-'
+
+        duration = now - wait_ts
+        if duration <= 0:
+            return '-'
+
+        if duration < 60:
+            return f"{int(duration)}s"
+        elif duration < 3600:
+            return f"{int(duration / 60)}m"
+        else:
+            return f"{int(duration / 3600)}h"
 
 
 class Master:
@@ -296,6 +379,7 @@ class Master:
         4. Manages per-window cooldown internally
         """
         pane_contents = self.pane_scanner.scan_all(self.session_name)
+        now = time.time()
 
         for window_name, content in pane_contents.items():
             # Initialize summary if needed
@@ -312,28 +396,30 @@ class Master:
 
             # Update summary based on action
             if action == 'auto_enter':
-                summary.last_state = 'RUNNING'
+                summary.update_state('RUNNING', now)
                 summary.last_action = 'AUTO_ENTER'
                 summary.note = f'"{pattern}"'
             elif action == 'manual_confirm_needed':
-                summary.last_state = 'WAIT'
+                summary.update_state('WAIT', now)
                 summary.last_action = 'MANUAL'
                 summary.note = f'"{pattern}"'
             elif action == 'dangerous_blocked':
-                summary.last_state = 'ERROR'
+                summary.update_state('ERROR', now)
                 summary.last_action = 'BLOCKED'
                 summary.note = f'[DANGEROUS] {pattern}'
             elif action == 'cooldown':
                 summary.last_action = 'COOLDOWN'
                 remaining = self.auto_rescuer.get_cooldown_time(window_name)
                 summary.note = f'Wait {remaining:.1f}s'
+                # Update timestamp but don't change state
+                summary.last_update_ts = now
             elif action == 'rescue_failed':
-                summary.last_state = 'WAIT'
+                summary.update_state('WAIT', now)
                 summary.last_action = 'FAILED'
                 summary.note = f'Rescue failed: "{pattern}"'
             elif action == 'none':
                 # Reset to IDLE when no patterns detected
-                summary.last_state = 'IDLE'
+                summary.update_state('IDLE', now)
                 summary.last_action = ''
                 summary.note = ''
 
@@ -377,7 +463,7 @@ class Master:
         """
         Format status summary table for output.
 
-        Format: window | state | task_id | note
+        Format: window | state | task_id | last_update | wait_for | err | note
         Sorted by state priority (ERROR > WAIT > RUNNING > DONE/IDLE)
 
         Returns:
@@ -392,21 +478,41 @@ class Master:
         # Sort by state priority, then by window name
         summaries.sort(key=lambda s: (self._get_state_priority(s.last_state), s.window_name))
 
+        # Get current time for duration calculations
+        now = time.time()
+
         # Format output
         lines = []
         lines.append("")
-        lines.append("=" * 70)
-        lines.append("WINDOW         STATE    TASK_ID    NOTE")
-        lines.append("-" * 70)
+        lines.append("=" * 90)
+        lines.append("WINDOW         STATE    TASK_ID    LAST_UPDATE  WAIT_FOR   ERR  NOTE")
+        lines.append("-" * 90)
 
         for summary in summaries:
             window = summary.window_name[:12].ljust(12)
             state = summary.last_state.ljust(8)
             task_id = summary.task_id.ljust(10)
-            note = summary.note if summary.note else '-'
-            lines.append(f"{window} {state} {task_id} {note}")
 
-        lines.append("=" * 70)
+            # Format last_update as HH:MM:SS
+            last_update = summary._format_timestamp(summary.last_update_ts)
+
+            # Format wait_for duration
+            if summary.last_state == 'WAIT' and summary.wait_since_ts is not None:
+                wait_for = summary._format_wait_duration(summary.wait_since_ts, now)
+            else:
+                wait_for = '-'
+
+            # Format error streak
+            if summary.last_state == 'ERROR' and summary.error_streak > 0:
+                err = str(summary.error_streak)
+            else:
+                err = '-'
+
+            note = summary.note if summary.note else '-'
+
+            lines.append(f"{window} {state} {task_id} {last_update}  {wait_for:<8} {err:<3} {note}")
+
+        lines.append("=" * 90)
         lines.append(f"Total windows: {len(summaries)}")
         lines.append("")
 
@@ -422,6 +528,8 @@ class Master:
         Args:
             workers: Dict of worker_id -> status dict
         """
+        now = time.time()
+
         for worker_id, status in workers.items():
             # Map worker_id to window_name (usually same as worker_id)
             window_name = worker_id
@@ -449,7 +557,7 @@ class Master:
             pane_priority = self._get_state_priority(summary.last_state)
 
             if worker_priority < pane_priority:
-                summary.last_state = worker_state
+                summary.update_state(worker_state, now)
 
     def output_status_summary(self) -> None:
         """Output status summary table to stdout."""
