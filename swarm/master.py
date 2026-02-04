@@ -263,15 +263,15 @@ class PaneSummary:
         self.last_state = new_state
 
     def _format_timestamp(self, ts: float) -> str:
-        """Format timestamp as HH:MM:SS (absolute time).
+        """Format timestamp as HH:MM:SS (local time).
 
         Args:
             ts: Unix timestamp
 
         Returns:
-            Formatted time string "HH:MM:SS"
+            Formatted time string "HH:MM:SS" in local timezone
         """
-        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+        dt = datetime.fromtimestamp(ts)
         return dt.strftime('%H:%M:%S')
 
     def _format_wait_duration(self, wait_ts: float, now: float) -> str:
