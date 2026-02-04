@@ -372,50 +372,58 @@ class TestMasterDispatcher(unittest.TestCase):
             status='pending'
         )
 
-        # Use the dispatcher from setUp which has proper isolation
-        # Ensure AI_SWARM_DIR is set to temp directory for isolation
+        # Set AI_SWARM_DIR to temp directory for isolation (restored in tearDown)
+        original_ai_swarm_dir = os.environ.get('AI_SWARM_DIR')
         os.environ['AI_SWARM_DIR'] = self.base_dir
-        dispatcher = master_dispatcher.MasterDispatcher(cluster_id='test-cluster')
+        try:
+            # Create a new dispatcher for this specific test
+            dispatcher = master_dispatcher.MasterDispatcher(cluster_id='test-cluster')
 
-        # Create a mock broadcaster and replace _broadcaster
-        mock_broadcaster = MagicMock()
-        dispatcher._broadcaster = mock_broadcaster
+            # Create a mock broadcaster and replace _broadcaster
+            mock_broadcaster = MagicMock()
+            dispatcher._broadcaster = mock_broadcaster
 
-        # Dispatch the task
-        result = dispatcher.dispatch_one(task, 'worker-1')
+            # Dispatch the task
+            result = dispatcher.dispatch_one(task, 'worker-1')
 
-        # Verify dispatch returned success
-        self.assertTrue(result)
+            # Verify dispatch returned success
+            self.assertTrue(result)
 
-        # Verify _broadcast was called
-        mock_broadcaster._broadcast.assert_called_once()
+            # Verify _broadcast was called
+            mock_broadcaster._broadcast.assert_called_once()
 
-        # Get the call arguments
-        call_kwargs = mock_broadcaster._broadcast.call_args.kwargs
+            # Get the call arguments
+            call_kwargs = mock_broadcaster._broadcast.call_args.kwargs
 
-        # Verify ASSIGNED state was broadcast (not START)
-        self.assertEqual(
-            call_kwargs['state'],
-            status_broadcaster.BroadcastState.ASSIGNED,
-            "dispatch_one() should broadcast ASSIGNED state, not START"
-        )
+            # Verify ASSIGNED state was broadcast (not START)
+            self.assertEqual(
+                call_kwargs['state'],
+                status_broadcaster.BroadcastState.ASSIGNED,
+                "dispatch_one() should broadcast ASSIGNED state, not START"
+            )
 
-        # Verify task_id is correct
-        self.assertEqual(call_kwargs['task_id'], 'task-test-001')
+            # Verify task_id is correct
+            self.assertEqual(call_kwargs['task_id'], 'task-test-001')
 
-        # Verify message mentions assignment
-        self.assertIn('worker-1', call_kwargs['message'])
+            # Verify message mentions assignment
+            self.assertIn('worker-1', call_kwargs['message'])
 
-        # Verify assigned_worker_id is in meta
-        self.assertIn('assigned_worker_id', call_kwargs['meta'])
-        self.assertEqual(call_kwargs['meta']['assigned_worker_id'], 'worker-1')
+            # Verify assigned_worker_id is in meta
+            self.assertIn('assigned_worker_id', call_kwargs['meta'])
+            self.assertEqual(call_kwargs['meta']['assigned_worker_id'], 'worker-1')
 
-        # Verify old 'event' key is NOT present in meta
-        self.assertNotIn('event', call_kwargs['meta'])
+            # Verify old 'event' key is NOT present in meta
+            self.assertNotIn('event', call_kwargs['meta'])
 
-        # Cleanup using worker's lock manager (same pattern as other tests)
-        worker_lock_mgr = task_lock.TaskLockManager(worker_id='worker-1')
-        worker_lock_mgr.release_lock('task-test-001')
+            # Cleanup using worker's lock manager
+            worker_lock_mgr = task_lock.TaskLockManager(worker_id='worker-1')
+            worker_lock_mgr.release_lock('task-test-001')
+        finally:
+            # Restore original AI_SWARM_DIR
+            if original_ai_swarm_dir is None:
+                os.environ.pop('AI_SWARM_DIR', None)
+            else:
+                os.environ['AI_SWARM_DIR'] = original_ai_swarm_dir
 
 
 if __name__ == '__main__':
