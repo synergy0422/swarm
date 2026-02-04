@@ -23,11 +23,11 @@ Requirements for this milestone: 主控自动救援闭环 + 状态汇总表
 
 ### 技术集成
 
-- [ ] **RESCUE-09**: 复用 swarm/master.py 中的 PaneScanner 与 WaitDetector
-- [ ] **RESCUE-10**: 复用 scripts/claude_auto_rescue.sh 的"安全确认"理念
-- [ ] **RESCUE-11**: 统一走 swarm/status_broadcaster.py 输出状态日志
-- [ ] **RESCUE-12**: 所有新增逻辑必须有清晰函数封装，避免在主循环里写过多内联逻辑
-- [ ] **RESCUE-13**: 冷却时间、扫描频率可配置（用环境变量）
+- [x] **RESCUE-09**: 复用 swarm/master.py 中的 PaneScanner 与 WaitDetector
+- [x] **RESCUE-10**: 复用 scripts/claude_auto_rescue.sh 的"安全确认"理念
+- [x] **RESCUE-11**: 统一走 swarm/status_broadcaster.py 输出状态日志
+- [x] **RESCUE-12**: 所有新增逻辑必须有清晰函数封装，避免在主循环里写过多内联逻辑
+- [x] **RESCUE-13**: 冷却时间、扫描频率可配置（用环境变量）
 
 ## v2 Requirements
 
@@ -56,16 +56,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RESCUE-06 | 25 | Complete |
 | RESCUE-07 | 25 | Complete |
 | RESCUE-08 | 25 | Complete |
-| RESCUE-09 | 26 | Pending |
-| RESCUE-10 | 26 | Pending |
-| RESCUE-11 | 26 | Pending |
-| RESCUE-12 | 26 | Pending |
-| RESCUE-13 | 26 | Pending |
+| RESCUE-09 | 26 | Complete |
+| RESCUE-10 | 26 | Complete |
+| RESCUE-11 | 26 | Complete |
+| RESCUE-12 | 26 | Complete |
+| RESCUE-13 | 26 | Complete |
 
 **Coverage:**
 - v1.86 requirements: 13 total
-- Complete: 8 (RESCUE-01~08)
-- Pending: 5 (RESCUE-09~13)
+- Complete: 13 (RESCUE-01~13)
 
 ---
 *Requirements defined: 2026-02-04*

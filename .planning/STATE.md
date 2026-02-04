@@ -12,28 +12,26 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 | # | Milestone | Status |
 |---|-----------|--------|
 | v1.0-v1.85 | All shipped | Complete |
-| v1.86 | 主控自动救援闭环 + 状态汇总表 | In Progress |
+| v1.86 | 主控自动救援闭环 + 状态汇总表 | Complete |
 
 ## Current Position
 
-**v1.86 - Phase 24: Master 自动救援核心**
+**v1.86 - Phase 26: 集成与配置验证**
 
 | Plan | Name | Status |
 |------|------|--------|
-| 24-01 | AutoRescuer 核心 + 状态汇总表 | Complete |
-| 24-fix-issues | Bug Fixes | Complete |
+| 26-01 | 集成与配置验证 | Complete |
 
-**Last activity:** 2026-02-04 - Completed 24-fix-issues (all 4 fixes applied)
+**Last activity:** 2026-02-04 - Completed v1.86 milestone (all 3 phases complete)
 
 ## Progress
 
 ```
 v1.0-v1.85 Complete: ████████████████████ 100%
-v1.86 In Progress: ████████░░░░░░░░░░░░░ 50%
-                   └── Phase 24: Complete ✓
-                       └── Bug Fixes: Complete ✓
-                       Phase 25: Pending
-                       Phase 26: Pending
+v1.86 Complete:      ████████████████████ 100%
+                    └── Phase 24: Complete ✓
+                    └── Phase 25: Complete ✓
+                    └── Phase 26: Complete ✓
 ```
 
 ## Session Continuity
