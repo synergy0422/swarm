@@ -2,107 +2,8 @@
 
 ## Milestones
 
-- ⏳ **v1.87** — 强化指挥官可感知能力
-
-### Phase 27: 状态汇总表增强
-
-**Goal:** 增强状态汇总表，新增 last_update / wait_for / error_streak 字段，提升指挥官感知能力
-
-**Depends on:** Phase 26
-
-**Plans:** 1 plan
-
-Plans:
-- [x] 27-01: 状态汇总表增强实现 (Verification passed)
-
-**Details:**
-
-### Phase 27: 状态汇总表增强
-
-**验收标准:**
-- [ ] 状态汇总表包含新增 3 个字段（last_update, wait_for, error_streak）
-- [ ] WAIT 时长准确累计
-- [ ] ERROR 连续次数正确计数
-- [ ] 输出格式仍在 stdout（非 UI）
-
-**技术路径:**
-- 复用 PaneSummary 增加字段：last_update_ts, wait_since_ts, error_streak
-- 状态变化时维护时间戳
-- 进入 WAIT 时记录 wait_since_ts
-- 进入 ERROR 时 error_streak += 1，其他状态重置为 0
-- 汇总表格式化时显示：last_update 为 YYYY-MM-DD HH:MM:SS 或 ago
-- wait_for 显示持续等待时长（秒或分钟）
-
----
-
-### Phase 28: 自动救援策略可配置化
-
-**Goal:** 通过环境变量配置自动救援行为，支持启用开关、白名单、黑名单
-
-**Depends on:** Phase 27
-
-**Plans:** 1 plan
-
-Plans:
-- [x] 28-01: 自动救援策略配置实现 (Verification passed)
-- [x] 28-02: Master 状态联动修复 (Complete)
-
-**Details:**
-
-### Phase 28-02: Master 状态联动修复
-
-**验收标准:**
-- [x] blocked_by_config action 在 summary 中显示 WAIT 状态 + note
-- [x] allowlist_missed action 在 summary 中显示 WAIT 状态 + note
-- [x] disabled action 在 summary 中显示 IDLE 状态 + [AUTO-RESCUE DISABLED] note
-
-**技术路径:**
-- 复用 _handle_pane_wait_states() 增加对 blocked_by_config/allowlist_missed/disabled 的处理
-
-### Phase 28: 自动救援策略可配置化
-
-**验收标准:**
-- [ ] AI_SWARM_AUTO_RESCUE_ENABLED=false 关闭后不会 send-keys
-- [ ] ALLOW/BLOCK 正则生效且优先级正确
-- [ ] 默认行为不变（不设置时仍用内置模式）
-
-**技术路径:**
-- 复用 AutoRescuer 读取环境变量
-- AI_SWARM_AUTO_RESCUE_ENABLED=false → 返回 (False,'disabled','')
-- BLOCK 命中 → dangerous_blocked
-- ALLOW 设置且未命中 → manual_confirm_needed
-- 环境变量读取集中在 AutoRescuer.__init__
-
----
-
-### Phase 29: 任务指派回执闭环
-
-**Goal:** Master 分配任务时写 ASSIGNED，形成状态链 ASSIGNED → START → DONE/ERROR
-
-**Depends on:** Phase 28
-
-**Plans:** 1 plan
-
-Plans:
-- [x] 29-01: 任务指派状态广播 (Complete)
-
-**Details:**
-
-### Phase 29-01: 任务指派状态广播
-
-**验收标准:**
-- [x] dispatch_one() 广播 ASSIGNED 状态（而非 START）
-- [x] status.log 显示纯 ASSIGNED 状态（无 meta.event）
-- [x] 状态链：ASSIGNED (master) → START (worker) → DONE/ERROR (worker)
-- [x] ASSIGNED 在状态优先级中位于 START 和 DONE 之间
-
-**技术路径:**
-- 修改 master_dispatcher.py dispatch_one() 使用 BroadcastState.ASSIGNED
-- 在 master.py STATE_PRIORITY 添加 ASSIGNED: 4
-- 添加测试验证 ASSIGNED 状态广播
-
----
-
+- ⏳ **v1.88** — 待规划
+- ✅ **v1.87** — 强化指挥官可感知能力 (2026-02-04)
 - ✅ **v1.86** — 主控自动救援闭环 + 状态汇总表 (2026-02-04)
 - ✅ **v1.85** — Claude Tasks 集成 + 自动锁闭环 (2026-02-04)
 - ✅ **v1.8** — 诊断快照 (2026-02-03)
@@ -116,11 +17,27 @@ Plans:
 - ✅ **v1.0** — MVP (2026-01-31)
 
 <details>
+<summary>✅ v1.87 强化指挥官可感知能力 (SHIPPED 2026-02-04)</summary>
+
+- [x] Phase 27: 状态汇总表增强 (1/1 plan)
+- [x] Phase 28: 自动救援策略可配置化 (2/2 plans)
+- [x] Phase 29: 任务指派回执闭环 (1/1 plan)
+
+**Key accomplishments:**
+- 状态汇总表增强 (last_update, wait_for, error_streak)
+- 自动救援策略可配置化 (ENABLED, ALLOW, BLOCK)
+- 任务指派状态广播 (ASSIGNED → START → DONE/ERROR)
+
+See: `.planning/milestones/v1.87-ROADMAP.md` for full details.
+
+</details>
+
+<details>
 <summary>✅ v1.86 主控自动救援闭环 + 状态汇总表 (SHIPPED 2026-02-04)</summary>
 
-- [x] Phase 24: Master 救援核心 (2 plans) — AutoRescuer + Bug Fixes
-- [x] Phase 25: 状态汇总表 (1 plan) — Verification passed
-- [x] Phase 26: 集成与配置 (1 plan) — 验证通过
+- [x] Phase 24: Master 救援核心 (2 plans)
+- [x] Phase 25: 状态汇总表 (1 plan)
+- [x] Phase 26: 集成与配置 (1 plan)
 
 **13/13 requirements complete**
 
@@ -133,4 +50,4 @@ _For detailed v1.86 scope, see `.planning/milestones/v1.86-ROADMAP.md`_
 ---
 
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 after v1.86 milestone completion*
+*Last updated: 2026-02-04 after v1.87 milestone completion*

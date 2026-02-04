@@ -130,19 +130,25 @@
 
 ### Active
 
-**v1.87 - 待规划**
+**v1.87 - 强化指挥官可感知能力 (Shipped 2026-02-04)**
 
-**目标**: 待定义
-
-**Target features:**
-- (待定义)
+- [x] **ENH-01**: 状态汇总表增强 — 新增 last_update, wait_for, error_streak 字段
+- [x] **ENH-02**: WAIT 时长准确累计
+- [x] **ENH-03**: ERROR 连续次数正确计数
+- [x] **CONFIG-01**: AI_SWARM_AUTO_RESCUE_ENABLED — 启用/关闭开关
+- [x] **CONFIG-02**: AI_SWARM_AUTO_RESCUE_BLOCK — 黑名单模式匹配
+- [x] **CONFIG-03**: AI_SWARM_AUTO_RESCUE_ALLOW — 白名单模式匹配
+- [x] **CONFIG-04**: 配置优先级 — ENABLED > BLOCK > ALLOW > 内置模式
+- [x] **STATE-01**: ASSIGNED 状态广播 — Master dispatch 时广播 ASSIGNED
+- [x] **STATE-02**: 状态链 — ASSIGNED → START → DONE/ERROR
+- [x] **STATE-03**: ASSIGNED 优先级 — 在 START 和 DONE 之间 (priority=4)
 
 ### Out of Scope
 
 - **自动调度系统** — 本版本不引入任务自动调度
 - **修改核心协议** — 不改动现有 CLI 行为
 
-## Current Milestone: v1.87
+## Current Milestone: v1.88
 
 **Status:** Ready to plan
 
@@ -153,7 +159,7 @@
 - Create REQUIREMENTS.md
 - Create ROADMAP.md
 
-See: `.planning/milestones/v1.86-ROADMAP.md` for completed milestone details.
+See: `.planning/milestones/v1.87-ROADMAP.md` for completed milestone details.
 
 ## Context
 
@@ -199,9 +205,10 @@ See: `.planning/milestones/v1.86-ROADMAP.md` for completed milestone details.
 | 5-pane single window | Left: master/codex, Right: 3 workers | ✅ Validated |
 | CLAUDE_CODE_TASK_LIST_ID | Unified task list ID for multi-window sharing | ✅ Validated |
 | 三模式优先级 | DANGEROUS > MANUAL_CONFIRM > AUTO_ENTER > NONE | ✅ Validated |
-| 状态优先级合并 | ERROR(0) > WAIT(1) > RUNNING(2) > DONE(3) > IDLE(4) | ✅ Validated |
+| 状态优先级合并 | ERROR(0) > WAIT(1) > RUNNING(2) > ASSIGNED(3) > DONE(4) | ✅ Validated |
 | Python AutoRescuer | Python 实现复用 shell 脚本安全理念 | ✅ Validated |
+| 纯 ASSIGNED 状态 | 不使用 meta.event='ASSIGNED'，直接用 BroadcastState.ASSIGNED | ✅ Validated |
 
 ---
 
-*Last updated: 2026-02-04 after v1.86 milestone complete*
+*Last updated: 2026-02-04 after v1.87 milestone*
