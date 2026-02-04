@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- ⏳ **v1.88** — 一键启动配置 (2026-02-04)
+- ✅ **v1.88** — 一键启动配置 (2026-02-04)
 - ✅ **v1.87** — 强化指挥官可感知能力 (2026-02-04)
 - ✅ **v1.86** — 主控自动救援闭环 + 状态汇总表 (2026-02-04)
 - ✅ **v1.85** — Claude Tasks 集成 + 自动锁闭环 (2026-02-04)
@@ -17,18 +17,19 @@
 - ✅ **v1.0** — MVP (2026-01-31)
 
 <details>
-<summary>⏳ v1.88 一键启动配置 (2026-02-04)</summary>
+<summary>✅ v1.88 一键启动配置 (SHIPPED 2026-02-04)</summary>
 
-- [ ] Phase 30: 文档更新 — 添加一键启动命令示例 (1/1 plan)
+- [x] Phase 30: 文档更新 (1/1 plan)
 
-**Goal:** 文档添加一行命令启动示例
+**Delivered:** README.md 新增"快速启动"小节，一行命令即可在任意目录启动 5 窗格布局
 
-**Requirements:** DOCS-01
+**Key accomplishments:**
+1. 默认 codex 命令已为 `codex --yolo` (v1.87 期间完成)
+2. README.md 新增"快速启动"小节
 
-**Success Criteria:**
-1. README.md 或 docs/SCRIPTS.md 包含完整一行命令示例
-2. 示例命令可在任意目录执行
-3. 包含 LLM_BASE_URL、SWARM_WORKDIR=$PWD、CODEX_CMD、--attach
+**Stats:**
+- 1 phase, 1 plan
+- 7/7 verification criteria passed
 
 </details>
 
@@ -66,4 +67,4 @@ _For detailed v1.86 scope, see `.planning/milestones/v1.86-ROADMAP.md`_
 ---
 
 *Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 after v1.88 milestone initialization*
+*Last updated: 2026-02-04 after v1.88 milestone completion*
