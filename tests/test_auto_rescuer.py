@@ -4,7 +4,6 @@ Tests for AutoRescuer main class.
 import os
 import time
 import unittest
-from unittest.mock import patch
 
 
 class TestAutoRescuer(unittest.TestCase):
@@ -72,28 +71,37 @@ class TestAutoRescuer(unittest.TestCase):
     def test_disabled_via_env(self):
         """Test environment variable disable."""
         from swarm.auto_rescuer import AutoRescuer
+        original = os.environ.get('AI_SWARM_AUTO_RESCUE_ENABLED')
         os.environ['AI_SWARM_AUTO_RESCUE_ENABLED'] = 'false'
         try:
             rescuer = AutoRescuer(dry_run=True)
             rescue, action, _ = rescuer.check_and_rescue("Press ENTER", 'test', 'session')
             self.assertEqual(action, 'disabled')
         finally:
-            del os.environ['AI_SWARM_AUTO_RESCUE_ENABLED']
+            if original is None:
+                os.environ.pop('AI_SWARM_AUTO_RESCUE_ENABLED', None)
+            else:
+                os.environ['AI_SWARM_AUTO_RESCUE_ENABLED'] = original
 
     def test_blocklist_config(self):
         """Test AI_SWARM_AUTO_RESCUE_BLOCK config."""
         from swarm.auto_rescuer import AutoRescuer
+        original = os.environ.get('AI_SWARM_AUTO_RESCUE_BLOCK')
         os.environ['AI_SWARM_AUTO_RESCUE_BLOCK'] = 'special'
         try:
             rescuer = AutoRescuer(dry_run=True)
             rescue, action, _ = rescuer.check_and_rescue("special content here", 'test', 'session')
             self.assertEqual(action, 'blocked_by_config')
         finally:
-            del os.environ['AI_SWARM_AUTO_RESCUE_BLOCK']
+            if original is None:
+                os.environ.pop('AI_SWARM_AUTO_RESCUE_BLOCK', None)
+            else:
+                os.environ['AI_SWARM_AUTO_RESCUE_BLOCK'] = original
 
     def test_allowlist_config(self):
         """Test AI_SWARM_AUTO_RESCUE_ALLOW config."""
         from swarm.auto_rescuer import AutoRescuer
+        original = os.environ.get('AI_SWARM_AUTO_RESCUE_ALLOW')
         os.environ['AI_SWARM_AUTO_RESCUE_ALLOW'] = 'special.*'
         try:
             rescuer = AutoRescuer(dry_run=True)
@@ -104,7 +112,10 @@ class TestAutoRescuer(unittest.TestCase):
             rescue2, action2, _ = rescuer.check_and_rescue("other content", 'test', 'session')
             self.assertEqual(action2, 'allowlist_missed')
         finally:
-            del os.environ['AI_SWARM_AUTO_RESCUE_ALLOW']
+            if original is None:
+                os.environ.pop('AI_SWARM_AUTO_RESCUE_ALLOW', None)
+            else:
+                os.environ['AI_SWARM_AUTO_RESCUE_ALLOW'] = original
 
     def test_stats_tracking(self):
         """Test statistics tracking."""

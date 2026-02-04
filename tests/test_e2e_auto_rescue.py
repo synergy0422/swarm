@@ -2,7 +2,7 @@
 End-to-end tests for AutoRescuer workflow.
 """
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 
 class TestAutoRescuerE2E(unittest.TestCase):
