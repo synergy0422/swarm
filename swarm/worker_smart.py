@@ -225,6 +225,34 @@ class SmartWorker:
             self.broadcaster.broadcast_error(task_id="", message=error_msg)
             raise Exception(error_msg)
 
+    def _extract_response_text(self, response):
+        """
+        Extract text content from various response schemas.
+
+        Supports Anthropic-style content blocks and proxy variants.
+        """
+        content = response.get('content')
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict):
+                    if 'text' in item:
+                        return item['text']
+                    if 'content' in item:
+                        return item['content']
+                    if 'thinking' in item:
+                        return item['thinking']
+        if isinstance(content, str):
+            return content
+
+        # Fallback: OpenAI-like schema
+        choices = response.get('choices')
+        if isinstance(choices, list) and choices:
+            msg = choices[0].get('message', {})
+            if isinstance(msg, dict) and 'content' in msg:
+                return msg['content']
+
+        raise KeyError("No text content found in response")
+
     def save_result(self, task_id, content, task_params, input_tokens, output_tokens):
         """
         Save result to markdown file with metadata
@@ -321,7 +349,7 @@ class SmartWorker:
             response = self.call_claude_api(prompt, system, max_tokens, model)
 
             # Extract content and usage
-            content = response['content'][0]['text']
+            content = self._extract_response_text(response)
             usage = response['usage']
             input_tokens = usage['input_tokens']
             output_tokens = usage['output_tokens']

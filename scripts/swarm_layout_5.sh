@@ -30,6 +30,7 @@ SESSION="${CLAUDE_SESSION:-${SESSION_NAME:-swarm-claude-default}}"
 WORKDIR="${SWARM_WORKDIR:-$PWD}"
 LEFT_RATIO="${LEFT_RATIO:-50}"
 CODEX_CMD="${CODEX_CMD:-codex --yolo}"
+AI_SWARM_DIR="${AI_SWARM_DIR:-/tmp/ai_swarm}"
 ATTACH=true
 
 # Parse arguments
@@ -125,11 +126,21 @@ fi
 log_info "Creating 5-pane tmux session '$SESSION'..."
 log_info "Working directory: $WORKDIR"
 log_info "Left pane ratio: ${LEFT_RATIO}% master, $((100 - LEFT_RATIO))% codex"
+log_info "AI_SWARM_DIR: $AI_SWARM_DIR"
 
 # Create new detached session with window name "layout"
 # Layout: master/codex on left, 3 workers on right
 # Use pane_id capture to ensure correct pane assignment
 MASTER_PANE=$(tmux new-session -d -P -F '#{pane_id}' -s "$SESSION" -n layout -x 200 -y 60)
+
+# Inject environment for this tmux session so all panes share the same swarm dir
+tmux set-environment -t "$SESSION" AI_SWARM_DIR "$AI_SWARM_DIR"
+if [[ -n "${LLM_BASE_URL:-}" ]]; then
+    tmux set-environment -t "$SESSION" LLM_BASE_URL "$LLM_BASE_URL"
+fi
+if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    tmux set-environment -t "$SESSION" ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
+fi
 
 # Get window height for calculating pane sizes
 WIN_HEIGHT=$(tmux display-message -t "$SESSION:0" -p '#{window_height}')
@@ -156,11 +167,11 @@ WORKER2_PANE=$(tmux split-window -v -P -F '#{pane_id}' -t "$RIGHT_PANE")
 CODEX_PANE=$(tmux split-window -v -l "$((WIN_HEIGHT - LEFT_HEIGHT))" -P -F '#{pane_id}' -t "$MASTER_PANE")
 
 # Send startup commands to each pane
-tmux send-keys -t "$MASTER_PANE" "cd \"$WORKDIR\" && claude" Enter
-tmux send-keys -t "$CODEX_PANE" "cd \"$WORKDIR\" && $CODEX_CMD" Enter
-tmux send-keys -t "$RIGHT_PANE" "cd \"$WORKDIR\" && claude" Enter
-tmux send-keys -t "$WORKER1_PANE" "cd \"$WORKDIR\" && claude" Enter
-tmux send-keys -t "$WORKER2_PANE" "cd \"$WORKDIR\" && claude" Enter
+tmux send-keys -t "$MASTER_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && claude" Enter
+tmux send-keys -t "$CODEX_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && $CODEX_CMD" Enter
+tmux send-keys -t "$RIGHT_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && claude" Enter
+tmux send-keys -t "$WORKER1_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && claude" Enter
+tmux send-keys -t "$WORKER2_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && claude" Enter
 
 # Select master pane as starting point
 tmux select-pane -t "$MASTER_PANE"

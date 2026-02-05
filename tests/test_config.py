@@ -20,6 +20,7 @@ class TestConfig(unittest.TestCase):
         """Set up test environment"""
         # Save original env var if exists
         self.original_key = os.environ.get('ANTHROPIC_API_KEY', None)
+        self.original_base_url = os.environ.get('LLM_BASE_URL', None)
 
     def tearDown(self):
         """Clean up test environment"""
@@ -28,6 +29,10 @@ class TestConfig(unittest.TestCase):
             os.environ['ANTHROPIC_API_KEY'] = self.original_key
         elif 'ANTHROPIC_API_KEY' in os.environ:
             del os.environ['ANTHROPIC_API_KEY']
+        if self.original_base_url is not None:
+            os.environ['LLM_BASE_URL'] = self.original_base_url
+        elif 'LLM_BASE_URL' in os.environ:
+            del os.environ['LLM_BASE_URL']
 
     def test_load_api_key_from_environment(self):
         """Test: Should load API key from environment variable"""
@@ -78,6 +83,18 @@ class TestConfig(unittest.TestCase):
         """Test: Should have correct default model constants"""
         self.assertEqual(config.DEFAULT_MODEL, 'claude-3-haiku-20240307')
         self.assertEqual(config.DEFAULT_MAX_TOKENS, 1024)
+
+    def test_get_api_endpoint_with_base_url(self):
+        """Test: Should append /v1/messages when LLM_BASE_URL has no path"""
+        os.environ['LLM_BASE_URL'] = 'http://127.0.0.1:15721'
+        endpoint = config.get_api_endpoint()
+        self.assertEqual(endpoint, 'http://127.0.0.1:15721/v1/messages')
+
+    def test_get_api_endpoint_with_path(self):
+        """Test: Should use LLM_BASE_URL as-is when path exists"""
+        os.environ['LLM_BASE_URL'] = 'http://127.0.0.1:15721/v1/messages'
+        endpoint = config.get_api_endpoint()
+        self.assertEqual(endpoint, 'http://127.0.0.1:15721/v1/messages')
 
     def test_model_pricing_dictionary(self):
         """Test: Should have pricing for all Claude 3 models"""

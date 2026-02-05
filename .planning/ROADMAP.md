@@ -40,9 +40,32 @@
 </details>
 
 <details>
-<summary>🔵 v1.9 自然语言任务入口 (IN PROGRESS)</summary>
+<summary>✅ v1.9 Phase 34: FIFO 输入通道 + 指令解析 (SHIPPED 2026-02-05)</summary>
 
-- [ ] Phase 34: FIFO 输入通道 + 指令解析 (1/1 plan) - 34-01-PLAN.md created
+- [x] Phase 34: FIFO 输入通道 + 指令解析 (1/1 plan)
+
+**Delivered:** FIFO input channel for natural language task entry
+
+**Key accomplishments:**
+1. FifoInputHandler class with non-blocking read/write using O_NONBLOCK + select.poll()
+2. /task, /help, /quit command parsing
+3. Master integration with daemon thread
+4. `swarm task add` CLI command with FIFO write
+5. swarm_fifo_write.sh bash helper
+6. 23 unit tests with proper isolation
+7. Documentation updated (CHANGELOG, README, SCRIPTS.md)
+
+**Stats:**
+- 1 phase, 1 plan
+- 22/22 implementation requirements complete
+- 10/10 must-haves verified
+
+</details>
+
+<details>
+<summary>✅ v1.9 自然语言任务入口 (IN PROGRESS)</summary>
+
+- [x] Phase 34: FIFO 输入通道 + 指令解析 (1/1 plan) - COMPLETED
 - [ ] Phase 35: 测试覆盖 (1/1 plan)
 - [ ] Phase 36: 文档更新 (1/1 plan)
 

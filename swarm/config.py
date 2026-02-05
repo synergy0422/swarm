@@ -34,7 +34,15 @@ def get_api_endpoint():
     Returns:
         str: API endpoint URL
     """
-    return os.environ.get('LLM_BASE_URL', ANTHROPIC_API_ENDPOINT)
+    base_url = os.environ.get('LLM_BASE_URL')
+    if base_url:
+        from urllib.parse import urlsplit
+        parsed = urlsplit(base_url)
+        if not parsed.path or parsed.path == '/':
+            base_url = base_url.rstrip('/')
+            return f"{base_url}/v1/messages"
+        return base_url
+    return ANTHROPIC_API_ENDPOINT
 
 
 def is_proxy_mode():

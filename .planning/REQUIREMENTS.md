@@ -60,28 +60,28 @@ Requirements for "自然语言任务入口" milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIFO-01 | Phase 34 | Pending |
-| FIFO-02 | Phase 34 | Pending |
-| FIFO-03 | Phase 34 | Pending |
-| FIFO-04 | Phase 34 | Pending |
-| FIFO-05 | Phase 34 | Pending |
-| FIFO-06 | Phase 34 | Pending |
-| CMD-01 | Phase 34 | Pending |
-| CMD-02 | Phase 34 | Pending |
-| CMD-03 | Phase 34 | Pending |
-| CMD-04 | Phase 34 | Pending |
-| CMD-05 | Phase 34 | Pending |
-| TASK-01 | Phase 34 | Pending |
-| TASK-02 | Phase 34 | Pending |
-| TASK-03 | Phase 34 | Pending |
-| TASK-04 | Phase 34 | Pending |
-| CFG-01 | Phase 34 | Pending |
-| CLI-01 | Phase 34 | Pending |
-| CLI-02 | Phase 34 | Pending |
-| CLI-03 | Phase 34 | Pending |
-| TEST-01 | Phase 34 | Pending |
-| TEST-02 | Phase 34 | Pending |
-| TEST-03 | Phase 34 | Pending |
+| FIFO-01 | Phase 34 | Complete |
+| FIFO-02 | Phase 34 | Complete |
+| FIFO-03 | Phase 34 | Complete |
+| FIFO-04 | Phase 34 | Complete |
+| FIFO-05 | Phase 34 | Complete |
+| FIFO-06 | Phase 34 | Complete |
+| CMD-01 | Phase 34 | Complete |
+| CMD-02 | Phase 34 | Complete |
+| CMD-03 | Phase 34 | Complete |
+| CMD-04 | Phase 34 | Complete |
+| CMD-05 | Phase 34 | Complete |
+| TASK-01 | Phase 34 | Complete |
+| TASK-02 | Phase 34 | Complete |
+| TASK-03 | Phase 34 | Complete |
+| TASK-04 | Phase 34 | Complete |
+| CFG-01 | Phase 34 | Complete |
+| CLI-01 | Phase 34 | Complete |
+| CLI-02 | Phase 34 | Complete |
+| CLI-03 | Phase 34 | Complete |
+| TEST-01 | Phase 34 | Complete |
+| TEST-02 | Phase 34 | Complete |
+| TEST-03 | Phase 34 | Complete |
 | TEST-04 | Phase 35 | Pending |
 | TEST-05 | Phase 35 | Pending |
 | DOCS-01 | Phase 36 | Pending |
@@ -98,4 +98,4 @@ Requirements for "自然语言任务入口" milestone.
 ---
 
 *Requirements defined: 2026-02-05*
-*Last updated: 2026-02-05 after requirements clarification*
+*Last updated: 2026-02-05 - Phase 34 complete*

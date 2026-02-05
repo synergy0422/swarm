@@ -44,6 +44,23 @@
 
 此命令显示所有 4 个窗口（master, worker-0, worker-1, worker-2）的最后 10 行输出。
 
+### 端到端验证（cc-switch）
+
+使用 cc-switch 本地代理完成一次完整端到端测试：
+
+```bash
+export LLM_BASE_URL="http://127.0.0.1:15721/v1/messages"
+export ANTHROPIC_API_KEY="dummy"
+python3 scripts/swarm_e2e_ccswitch_test.py --timeout 120
+```
+
+输出说明：
+1) 结果文件与任务状态完整链路验证（START → ASSIGNED → WAIT → DONE）
+2) status.log / tasks.json / mailbox / results 证据可追踪
+3) 失败时脚本返回非 0 并输出诊断信息
+
+报告归档建议：将 `/tmp/swarm_e2e_report.jsonl` 复制到 `docs/reports/` 便于审计留痕。
+
 ### 持续监控
 
 持续监控 Worker 窗口状态变化：

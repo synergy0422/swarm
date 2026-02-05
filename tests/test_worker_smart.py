@@ -58,6 +58,26 @@ class TestSmartWorker(unittest.TestCase):
         self.assertEqual(worker.name, 'test-worker')
         self.assertEqual(worker.base_dir, self.test_dir)
 
+    def test_extract_response_text_variants(self):
+        """Test: Should extract text from multiple response schemas"""
+        original = os.environ.get('LLM_BASE_URL')
+        try:
+            os.environ['LLM_BASE_URL'] = 'http://127.0.0.1:15721'
+            worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+            anthropic = {'content': [{'text': 'Hello'}]}
+            thinking = {'content': [{'thinking': 'Thoughts'}]}
+            openai = {'choices': [{'message': {'content': 'Chat'}}]}
+
+            self.assertEqual(worker._extract_response_text(anthropic), 'Hello')
+            self.assertEqual(worker._extract_response_text(thinking), 'Thoughts')
+            self.assertEqual(worker._extract_response_text(openai), 'Chat')
+        finally:
+            if original is None:
+                os.environ.pop('LLM_BASE_URL', None)
+            else:
+                os.environ['LLM_BASE_URL'] = original
+
     @patch('swarm.worker_smart.requests.post')
     def test_api_call_with_system_prompt(self, mock_post):
         """Test: Should include system parameter in API call"""
