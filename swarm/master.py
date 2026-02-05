@@ -15,6 +15,7 @@ import json
 import time
 import signal
 import re
+import threading
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, List, Tuple
 
@@ -23,6 +24,7 @@ from swarm.task_lock import TaskLockManager
 from swarm.status_broadcaster import get_ai_swarm_dir, StatusBroadcaster
 from swarm.master_dispatcher import MasterDispatcher
 from swarm.auto_rescuer import AutoRescuer
+from swarm.fifo_input import FifoInputHandler, get_interactive_mode
 
 
 # Default configuration
@@ -360,6 +362,14 @@ class Master:
         # Pane summary tracking {window_name: PaneSummary}
         self._pane_summaries: Dict[str, PaneSummary] = {}
 
+        # FIFO input handler for interactive mode
+        self.fifo_handler: Optional[FifoInputHandler] = None
+
+        # Create FIFO handler if interactive mode enabled
+        if get_interactive_mode():
+            self.fifo_handler = FifoInputHandler()
+            self.fifo_handler._ensure_fifo_exists()
+
         # Register signal handlers
         signal.signal(signal.SIGINT, self._shutdown)
         signal.signal(signal.SIGTERM, self._shutdown)
@@ -367,6 +377,8 @@ class Master:
     def _shutdown(self, signum, frame):
         """Handle shutdown signals"""
         print(f"\n[Master] Received signal {signum}, shutting down...")
+        if self.fifo_handler:
+            self.fifo_handler._shutdown()
         self.running = False
 
     def _handle_pane_wait_states(self) -> None:
@@ -598,6 +610,20 @@ class Master:
         6. Sleep for poll_interval
         """
         print(f"[Master] Starting Master loop (poll_interval={self.poll_interval}s)")
+
+        # Start FIFO input thread if interactive mode enabled
+        fifo_thread = None
+        if self.fifo_handler:
+            # Set broadcaster for logging
+            self.fifo_handler._broadcaster = self.broadcaster
+
+            fifo_thread = threading.Thread(
+                target=self.fifo_handler.run,
+                daemon=True,
+                name='FifoInputHandler'
+            )
+            fifo_thread.start()
+            print(f"[Master] FIFO input thread started (interactive mode)")
 
         last_pane_scan_time = 0.0
         last_summary_time = 0.0
