@@ -3,8 +3,8 @@ set -euo pipefail
 
 # Claude Bridge Launch Script
 # Environment variables:
-#   AI_SWARM_BRIDGE_SESSION    tmux session name
-#   AI_SWARM_BRIDGE_WINDOW      tmux window name
+#   AI_SWARM_BRIDGE_SESSION    tmux session name (default: swarm-claude-default)
+#   AI_SWARM_BRIDGE_WINDOW      tmux window name (default: codex-master)
 #   AI_SWARM_BRIDGE_PANE        tmux pane_id (highest priority)
 #   AI_SWARM_BRIDGE_POLL_INTERVAL   poll interval in seconds
 #   AI_SWARM_BRIDGE_LINES      capture-pane lines
@@ -29,9 +29,9 @@ Commands:
 
 Environment:
   AI_SWARM_DIR                   swarm state directory (default: /tmp/ai_swarm)
-  AI_SWARM_BRIDGE_SESSION       tmux session (default: swarm-default)
-  AI_SWARM_BRIDGE_WINDOW        tmux window running Claude Code (default: master)
-  AI_SWARM_BRIDGE_PANE         tmux pane_id (highest priority, must be Claude Code pane)
+  AI_SWARM_BRIDGE_SESSION       tmux session (default: swarm-claude-default)
+  AI_SWARM_BRIDGE_WINDOW        tmux window running Claude Code (default: codex-master)
+  AI_SWARM_BRIDGE_PANE         tmux pane_id (highest priority, recommended)
   AI_SWARM_BRIDGE_LINES        capture-pane lines (default: 200)
   AI_SWARM_BRIDGE_POLL_INTERVAL   poll interval seconds (default: 1.0)
   AI_SWARM_INTERACTIVE         must be "1"
@@ -42,15 +42,15 @@ to the window running "python3 -m swarm.cli master" - that would inject
 keystrokes into the master process input.
 
 Examples:
-  # Start with default config (assumes 'master' window runs Claude Code)
-  AI_SWARM_INTERACTIVE=1 ./swarm_bridge.sh start
+  # Start with default config (assumes 'codex-master' window runs Claude Code)
+  AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 
   # Specify session and Claude Code window
-  AI_SWARM_BRIDGE_SESSION=my-swarm AI_SWARM_BRIDGE_WINDOW=claude \\
-    AI_SWARM_INTERACTIVE=1 ./swarm_bridge.sh start
+  AI_SWARM_BRIDGE_SESSION=my-swarm AI_SWARM_BRIDGE_WINDOW=main \\
+    AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 
-  # Use current tmux pane (recommended - auto-detects Claude Code)
-  AI_SWARM_BRIDGE_PANE=$TMUX_PANE AI_SWARM_INTERACTIVE=1 ./swarm_bridge.sh start
+  # Use specific pane ID (recommended - most reliable)
+  AI_SWARM_BRIDGE_PANE=$TMUX_PANE AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 
 EOF
 }

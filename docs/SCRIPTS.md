@@ -20,17 +20,40 @@
 
 ### swarm_layout_5.sh
 
-**用途：** 5 窗格 tmux 布局脚本，在单个窗口中创建 5 个窗格。
+**用途：** 2 窗口 tmux 布局脚本（V1.92 已升级）。
 
 **布局结构：**
+
+**窗口 1 (codex-master)：**
 ```
-┌─────────────────┬────────────────────┐
-│      master     │      worker-0      │
-│                 ├────────────────────┤
-│      codex      │      worker-1      │
-│                 ├────────────────────┤
-│                 │      worker-2      │
-└─────────────────┴────────────────────┘
+┌─────────────────────┬────────────────────────────┐
+│                     │                            │
+│        codex        │          master            │
+│                     │                            │
+└─────────────────────┴────────────────────────────┘
+```
+
+**窗口 2 (workers)：**
+```
+┌───────────────┬───────────────┬───────────────┐
+│               │               │               │
+│    worker-0   │    worker-1   │    worker-2   │
+│               │               │               │
+└───────────────┴───────────────┴───────────────┘
+```
+
+**注意：** 此脚本已从原始的 5 窗格单窗口布局升级为 2 窗口布局（V1.92）。原始布局可在 git 历史中查看。
+
+**Bridge 配置：**
+
+脚本执行后会输出 codex pane ID，需设置环境变量：
+```bash
+export AI_SWARM_BRIDGE_PANE=<pane_id>
+```
+
+然后启动 Bridge：
+```bash
+AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 ```
 
 **参数：**
@@ -39,9 +62,9 @@
 |------|------|
 | `--session, -s NAME` | tmux 会话名称 |
 | `--workdir, -d DIR` | 工作目录 |
-| `--left-ratio, -l PCT` | 左侧垂直分割比例 (50-80) |
 | `--codex-cmd, -c CMD` | codex 窗格执行的命令 |
 | `--attach, -a` | 创建后附加到会话 |
+| `--no-attach` | 创建但不附加 |
 | `--help, -h` | 显示帮助信息 |
 
 **环境变量：**
@@ -51,6 +74,8 @@
 | `CLAUDE_SESSION` | 会话名称覆盖 |
 | `SWARM_WORKDIR` | 工作目录覆盖（默认当前目录） |
 | `CODEX_CMD` | codex 命令覆盖（默认 "codex --yolo"） |
+
+**注意：** `--left-ratio` 参数已移除（2 窗口布局使用固定 50/50 分割）。
 
 **示例：**
 
@@ -70,32 +95,9 @@
 # 自定义 codex 命令
 ./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --model o1"
 
-# 调整左侧比例
-./scripts/swarm_layout_5.sh --left-ratio 60
-
 # 使用环境变量
 SWARM_WORKDIR=/my/project ./scripts/swarm_layout_5.sh
 CODEX_CMD="codex --yolo" ./scripts/swarm_layout_5.sh
-```
-
-**自定义布局比例：**
-
-```bash
-# 左侧 60% master，40% codex
-./scripts/swarm_layout_5.sh --left-ratio 60
-
-# 左侧 70% master，30% codex
-./scripts/swarm_layout_5.sh --left-ratio 70
-```
-
-**自定义 codex 命令：**
-
-```bash
-# 使用特定模型
-./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --model o1"
-
-# 添加额外参数
-./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --system 'You are an expert'"
 ```
 
 **依赖：** `_config.sh`, `_common.sh`, tmux

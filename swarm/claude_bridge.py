@@ -11,8 +11,8 @@ Do NOT point to the window running "python3 -m swarm.cli master" -
 send-keys would inject keystrokes into the master process input.
 
 Environment:
-    AI_SWARM_BRIDGE_SESSION    tmux session name (default: swarm-default)
-    AI_SWARM_BRIDGE_WINDOW     tmux window running Claude Code (default: master)
+    AI_SWARM_BRIDGE_SESSION    tmux session name (default: swarm-claude-default)
+    AI_SWARM_BRIDGE_WINDOW     tmux window running Claude Code (default: codex-master)
     AI_SWARM_BRIDGE_PANE       tmux pane_id (highest priority, must be Claude Code pane)
     AI_SWARM_DIR               swarm state dir (default: /tmp/ai_swarm)
     AI_SWARM_BRIDGE_POLL_INTERVAL  poll interval (default: 1.0)
@@ -258,8 +258,8 @@ class ClaudeBridge:
         self.running = True
 
         # Configuration
-        self.session = os.environ.get('AI_SWARM_BRIDGE_SESSION', 'swarm-default')
-        self.window = os.environ.get('AI_SWARM_BRIDGE_WINDOW', 'master')
+        self.session = os.environ.get('AI_SWARM_BRIDGE_SESSION', 'swarm-claude-default')
+        self.window = os.environ.get('AI_SWARM_BRIDGE_WINDOW', 'codex-master')
         self.pane_id = os.environ.get('AI_SWARM_BRIDGE_PANE')  # Highest priority
         self.poll_interval = float(os.environ.get(
             'AI_SWARM_BRIDGE_POLL_INTERVAL', '1.0'))
@@ -292,6 +292,59 @@ class ClaudeBridge:
             return self.pane_id
         return f"{self.session}:{self.window}"
 
+    def _get_pane_count(self) -> int:
+        """
+        Get the number of panes in the target window.
+
+        Returns:
+            Number of panes, or 0 on error
+        """
+        pane_spec = f"{self.session}:{self.window}"
+        try:
+            result = subprocess.run(
+                ['tmux', 'list-panes', '-t', pane_spec, '-F', '#{pane_id}'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                # Count non-empty lines (each line is a pane index)
+                panes = [line for line in result.stdout.strip().split('\n') if line]
+                return len(panes)
+        except Exception:
+            pass
+        return 0
+
+    def _check_pane_config(self) -> bool:
+        """
+        Check pane configuration when window has multiple panes.
+
+        If AI_SWARM_BRIDGE_PANE is not set and window has >1 pane,
+        exit with error and instructions.
+
+        Returns:
+            True if config is valid, False if should exit
+        """
+        if self.pane_id:
+            return True  # Already configured
+
+        pane_count = self._get_pane_count()
+        if pane_count > 1:
+            sys.stderr.write(
+                "[Bridge] ERROR: Target window has multiple panes but "
+                "AI_SWARM_BRIDGE_PANE is not set.\n"
+            )
+            sys.stderr.write(
+                "[Bridge] Set the environment variable: "
+                "export AI_SWARM_BRIDGE_PANE=<pane_id>\n"
+            )
+            sys.stderr.write(
+                "[Bridge] Find pane ID with: tmux list-panes -t "
+                f"{self.session}:{self.window}\n"
+            )
+            return False
+        return True
+
     def _get_broadcaster(self):
         """Lazy-load StatusBroadcaster"""
         from swarm.status_broadcaster import StatusBroadcaster
@@ -310,6 +363,8 @@ class ClaudeBridge:
         This provides visual feedback to Claude Code in the master window
         confirming the task has been dispatched.
 
+        Uses literal mode (-l) to avoid character escaping issues.
+
         Args:
             text: Text to send
 
@@ -319,10 +374,9 @@ class ClaudeBridge:
         pane_spec = self._get_pane_spec()
 
         try:
-            # Escape special characters for send-keys
-            escaped = text.replace('"', '\\"')
+            # Use literal mode (-l) to avoid escaping issues
             subprocess.run(
-                ['tmux', 'send-keys', '-t', pane_spec, escaped, 'Enter'],
+                ['tmux', 'send-keys', '-l', '-t', pane_spec, text, 'Enter'],
                 capture_output=True,
                 timeout=5
             )
@@ -468,6 +522,10 @@ class ClaudeBridge:
         if not get_interactive_mode():
             sys.stderr.write("[Bridge] AI_SWARM_INTERACTIVE=1 required\n")
             return 1
+
+        # Check pane configuration for multi-pane windows
+        if not self._check_pane_config():
+            return 2
 
         pane_spec = self._get_pane_spec()
         sys.stdout.write(

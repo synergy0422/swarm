@@ -21,7 +21,16 @@
   - **V1.91 增强**：
     - LineFilter 过滤 Bridge 输出和 Claude 回显
     - send-keys 派发确认到 Claude Code 主脑窗口
-    - DISPATCHED 状态广播（HELP + meta.type=BRIDGE）
+  - DISPATCHED 状态广播（HELP + meta.type=BRIDGE）
+
+### Changed
+
+- `swarm up` 现在通过 tmux `-e` 注入 AI_SWARM_DIR / AI_SWARM_INTERACTIVE / LLM_BASE_URL / ANTHROPIC_API_KEY，确保已有 tmux server 时环境一致。
+- `scripts/swarm_layout_5.sh` 调整为左侧 codex + master 的顺序，并在 pane 启动时显式传递 AI_SWARM_INTERACTIVE。
+
+### Documentation
+
+- README 增补 Claude Bridge 的使用说明、环境变量和排错提示，并补充脚本索引条目。
 
 ### Deleted
 

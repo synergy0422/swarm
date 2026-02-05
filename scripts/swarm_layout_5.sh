@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # =============================================================================
-# AI Swarm - 5-Pane Layout Script
-# Creates a single tmux window with 5 panes:
-#   Left: master (top) + codex (bottom) with configurable vertical split
-#   Right: worker-0 + worker-1 + worker-2 equal horizontal split
+# AI Swarm - 2-Window Layout Script (V1.92)
+# Creates 2 tmux windows:
+#   Window 1 (codex-master): codex (50%) + master (50%) - horizontal split
+#   Window 2 (workers): worker-0 + worker-1 + worker-2 - equal horizontal split
 #
 # Usage:
 #   ./scripts/swarm_layout_5.sh              # Create session and attach
@@ -19,18 +19,21 @@ set -euo pipefail
 #   SWARM_WORKDIR     - Default working directory (default: current directory)
 #   CODEX_CMD         - Codex command override (default: "codex --yolo")
 # =============================================================================
+# NOTE: This script has been upgraded to 2-window layout (V1.92).
+# The original 5-pane single-window layout is available in git history.
+# =============================================================================
 
 # Source configuration and common utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/_config.sh"
 source "${SCRIPT_DIR}/_common.sh"
 
-# Default values (can be overridden by parameters or environment variables)
+# Default values
 SESSION="${CLAUDE_SESSION:-${SESSION_NAME:-swarm-claude-default}}"
 WORKDIR="${SWARM_WORKDIR:-$PWD}"
-LEFT_RATIO="${LEFT_RATIO:-50}"
 CODEX_CMD="${CODEX_CMD:-codex --yolo}"
 AI_SWARM_DIR="${AI_SWARM_DIR:-/tmp/ai_swarm}"
+AI_SWARM_INTERACTIVE="${AI_SWARM_INTERACTIVE:-}"
 ATTACH=true
 
 # Parse arguments
@@ -50,14 +53,6 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             WORKDIR="$2"
-            shift 2
-            ;;
-        --left-ratio|-l)
-            if [[ -z "${2:-}" ]]; then
-                log_error "--left-ratio requires a percentage argument (50-80)"
-                exit 1
-            fi
-            LEFT_RATIO="$2"
             shift 2
             ;;
         --codex-cmd|-c)
@@ -105,13 +100,13 @@ if [[ ! -d "$WORKDIR" ]]; then
     exit 1
 fi
 
-# Validate left ratio (must be numeric first, then in range)
-if [[ ! "$LEFT_RATIO" =~ ^[0-9]+$ ]]; then
-    log_error "LEFT_RATIO must be a number (50-80)"
-    exit 1
-fi
-if [[ "$LEFT_RATIO" -lt 50 ]] || [[ "$LEFT_RATIO" -gt 80 ]]; then
-    log_error "LEFT_RATIO must be between 50 and 80"
+# =============================================================================
+# Validate session name (must start with 'swarm-' for tmux collaboration)
+# =============================================================================
+if [[ ! "$SESSION" =~ ^swarm- ]]; then
+    log_error "Session name must start with 'swarm-' for tmux collaboration."
+    log_error "Current: $SESSION"
+    log_error "Example: --session swarm-my-session"
     exit 1
 fi
 
@@ -123,18 +118,27 @@ if tmux has-session -t "$SESSION" 2>/dev/null; then
     exit 1
 fi
 
-log_info "Creating 5-pane tmux session '$SESSION'..."
+log_info "Creating 2-window tmux session '$SESSION' (V1.92)..."
 log_info "Working directory: $WORKDIR"
-log_info "Left pane ratio: ${LEFT_RATIO}% master, $((100 - LEFT_RATIO))% codex"
 log_info "AI_SWARM_DIR: $AI_SWARM_DIR"
 
-# Create new detached session with window name "layout"
-# Layout: master/codex on left, 3 workers on right
-# Use pane_id capture to ensure correct pane assignment
-MASTER_PANE=$(tmux new-session -d -P -F '#{pane_id}' -s "$SESSION" -n layout -x 200 -y 60)
+# Extract cluster_id from session name (format: swarm-{cluster_id})
+CLUSTER_ID="${SESSION#swarm-}"
 
-# Inject environment for this tmux session so all panes share the same swarm dir
+# =============================================================================
+# Window 1: codex-master (horizontal split, 50% each)
+# =============================================================================
+# Create session with first window named "codex-master"
+CODEX_PANE=$(tmux new-session -d -P -F '#{pane_id}' -s "$SESSION" -n codex-master -x 200 -y 60)
+
+# =============================================================================
+# Environment setup (session-level, after creating session)
+# =============================================================================
+# Set environment at session level (will be inherited by all windows)
 tmux set-environment -t "$SESSION" AI_SWARM_DIR "$AI_SWARM_DIR"
+if [[ -n "${AI_SWARM_INTERACTIVE:-}" ]]; then
+    tmux set-environment -t "$SESSION" AI_SWARM_INTERACTIVE "$AI_SWARM_INTERACTIVE"
+fi
 if [[ -n "${LLM_BASE_URL:-}" ]]; then
     tmux set-environment -t "$SESSION" LLM_BASE_URL "$LLM_BASE_URL"
 fi
@@ -142,56 +146,78 @@ if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
     tmux set-environment -t "$SESSION" ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
 fi
 
-# Get window height for calculating pane sizes
-WIN_HEIGHT=$(tmux display-message -t "$SESSION:0" -p '#{window_height}')
-# Calculate left pane height (master) based on LEFT_RATIO
-LEFT_HEIGHT=$((WIN_HEIGHT * LEFT_RATIO / 100))
-# Codex pane gets remaining height
-# Right workers: approximately 1/3 each (using -l for exact sizes)
-WORKER_HEIGHT=$((WIN_HEIGHT / 3))
+# Split horizontally to create master pane (50% width each)
+MASTER_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$CODEX_PANE")
 
-# Create panes using split-window commands with pane_id capture
-# This ensures stable pane assignment regardless of split order
+# Send startup commands (use --cluster-id for consistency with CLI)
+tmux send-keys -t "$CODEX_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && $CODEX_CMD" Enter
+tmux send-keys -t "$MASTER_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && python3 -m swarm.cli --cluster-id $CLUSTER_ID master" Enter
 
-# Split horizontally to create right side (worker area)
-# Capture the new pane's ID for worker-0
-RIGHT_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$MASTER_PANE")
+# =============================================================================
+# Window 2: workers (3 equal horizontal panes)
+# =============================================================================
+WORKER0_PANE=$(tmux new-window -P -F '#{pane_id}' -t "$SESSION" -n workers -x 200 -y 60)
 
-# Split right pane vertically for workers using -l for equal sizes
-WORKER1_PANE=$(tmux split-window -v -l "$WORKER_HEIGHT" -P -F '#{pane_id}' -t "$RIGHT_PANE")
-WORKER2_PANE=$(tmux split-window -v -P -F '#{pane_id}' -t "$RIGHT_PANE")
+# Split for worker-1 and worker-2 (equal 33% each)
+WORKER1_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$WORKER0_PANE")
+WORKER2_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$WORKER1_PANE")
 
-# Now split left pane vertically to create codex pane using -l for codex size
-# NOTE: split-window -v creates pane BELOW, and -l sets the NEW pane's size
-# LEFT_HEIGHT is master height, so codex gets remaining height
-CODEX_PANE=$(tmux split-window -v -l "$((WIN_HEIGHT - LEFT_HEIGHT))" -P -F '#{pane_id}' -t "$MASTER_PANE")
+# Apply even-horizontal layout to ensure equal distribution
+tmux select-layout -t "$SESSION:workers" even-horizontal
 
-# Send startup commands to each pane
-tmux send-keys -t "$MASTER_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && claude" Enter
-tmux send-keys -t "$CODEX_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && $CODEX_CMD" Enter
-tmux send-keys -t "$RIGHT_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && claude" Enter
-tmux send-keys -t "$WORKER1_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && claude" Enter
-tmux send-keys -t "$WORKER2_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\" && claude" Enter
+# Send startup commands (use --cluster-id and --id for consistency with CLI)
+tmux send-keys -t "$WORKER0_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && python3 -m swarm.cli --cluster-id $CLUSTER_ID worker --id 0" Enter
+tmux send-keys -t "$WORKER1_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && python3 -m swarm.cli --cluster-id $CLUSTER_ID worker --id 1" Enter
+tmux send-keys -t "$WORKER2_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && python3 -m swarm.cli --cluster-id $CLUSTER_ID worker --id 2" Enter
 
-# Select master pane as starting point
-tmux select-pane -t "$MASTER_PANE"
+# Select codex pane as starting point
+tmux select-pane -t "$CODEX_PANE"
 
-# Verify layout
-PANE_COUNT=$(tmux list-panes -t "$SESSION:0" 2>/dev/null | wc -l)
-if [[ "$PANE_COUNT" -eq 5 ]]; then
-    log_info "Layout verified: 5 panes created successfully"
+# =============================================================================
+# Layout verification
+# =============================================================================
+log_info "Verifying layout..."
+
+# Check window 1 (codex-master) has 2 panes
+WINDOW1_PANES=$(tmux list-panes -t "$SESSION:codex-master" 2>/dev/null | wc -l)
+if [[ "$WINDOW1_PANES" -eq 2 ]]; then
+    log_info "Window 1 (codex-master): 2 panes verified"
 else
-    log_warn "Expected 5 panes, but found $PANE_COUNT"
+    log_warn "Window 1 expected 2 panes, found $WINDOW1_PANES"
 fi
 
+# Check window 2 (workers) has 3 panes
+WINDOW2_PANES=$(tmux list-panes -t "$SESSION:workers" 2>/dev/null | wc -l)
+if [[ "$WINDOW2_PANES" -eq 3 ]]; then
+    log_info "Window 2 (workers): 3 panes verified"
+else
+    log_warn "Window 2 expected 3 panes, found $WINDOW2_PANES"
+fi
+
+# =============================================================================
+# Output for Bridge configuration
+# =============================================================================
+log_info ""
+log_info "=============================================="
+log_info "Bridge Configuration (IMPORTANT):"
+log_info "=============================================="
+log_info "Codex pane ID: $CODEX_PANE"
+log_info ""
+log_info "To run Bridge, set the environment variable:"
+log_info "  export AI_SWARM_BRIDGE_PANE=$CODEX_PANE"
+log_info ""
+log_info "Then start Bridge:"
+log_info "  AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start"
+log_info "=============================================="
+log_info ""
+
 log_info "Session created successfully!"
-log_info "5 panes: master + codex + 3 workers"
+log_info "2 windows: codex-master (2 panes) + workers (3 panes)"
 log_info ""
 log_info "Commands:"
 log_info "  Attach:   tmux attach -t $SESSION"
-log_info "  Status:   tmux list-panes -t $SESSION:layout"
+log_info "  Status:   tmux list-panes -t $SESSION:codex-master"
 log_info "  Kill:     tmux kill-session -t $SESSION"
-log_info ""
 
 # Attach or exit
 if [[ "$ATTACH" == true ]]; then
@@ -207,19 +233,17 @@ fi
 # =============================================================================
 show_help() {
     cat << EOF
-AI Swarm - 5-Pane Layout Script
+AI Swarm - 2-Window Layout Script (V1.92)
 
-Creates a single tmux window with 5 panes:
-  - Left: master (top) + codex (bottom) with configurable split
-  - Right: worker-0 + worker-1 + worker-2 equal horizontal split
+Creates 2 tmux windows:
+  - Window 1 (codex-master): codex (50%) + master (50%) - horizontal split
+  - Window 2 (workers): worker-0 + worker-1 + worker-2 - equal horizontal split
 
 Usage: $0 [OPTIONS]
 
 Options:
   --session, -s NAME     tmux session name (default: swarm-claude-default)
   --workdir, -d DIR      working directory (default: current directory)
-                         默认工作目录为当前目录，可用 --workdir 或 SWARM_WORKDIR 覆盖
-  --left-ratio, -l PCT   left pane vertical split percentage 50-80 (default: 50)
   --codex-cmd, -c CMD    codex command to run in codex pane (default: "codex --yolo")
   --attach, -a           attach to tmux session after creation (default)
   --no-attach            create session but don't attach
@@ -231,7 +255,7 @@ Environment variables:
   CODEX_CMD              codex command override
 
 Examples:
-  # Basic usage (default workdir is current directory)
+  # Basic usage
   $0
 
   # Create and attach
@@ -243,23 +267,23 @@ Examples:
   # Custom working directory
   $0 --workdir /path/to/project
 
-  # Custom codex command
-  $0 --codex-cmd "codex --yolo --model o1"
+Window layout:
+  Window 1 (codex-master):
+    ┌─────────────────────┬────────────────────────────┐
+    │                     │                            │
+    │        codex        │          master            │
+    │                     │                            │
+    └─────────────────────┴────────────────────────────┘
 
-  # Adjust left pane ratio (60% master, 40% codex)
-  $0 --left-ratio 60
+  Window 2 (workers):
+    ┌───────────────┬───────────────┬───────────────┐
+    │               │               │               │
+    │    worker-0   │    worker-1   │    worker-2   │
+    │               │               │               │
+    └───────────────┴───────────────┴───────────────┘
 
-  # Using environment variables
-  SWARM_WORKDIR=/my/project $0
-  CODEX_CMD="codex --yolo" $0
-
-Pane layout:
-  ┌─────────────────┬────────────────────┐
-  │      master     │      worker-0      │
-  │                 ├────────────────────┤
-  │      codex      │      worker-1      │
-  │                 ├────────────────────┤
-  │                 │      worker-2      │
-  └─────────────────┴────────────────────┘
+Bridge Setup:
+  After running this script, set AI_SWARM_BRIDGE_PANE to the codex pane ID
+  (output at the end of script execution), then start Bridge.
 EOF
 }

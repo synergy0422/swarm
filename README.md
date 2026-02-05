@@ -140,6 +140,89 @@ echo "Task description" > $AI_SWARM_DIR/master_inbox
 
 **注意:** 需要 master 运行并设置 `AI_SWARM_INTERACTIVE=1`
 
+## 主脑窗口任务发布
+
+从 Claude Code 主脑窗口（codex 窗口）直接发布任务到 swarm（自动监控 + 派发）。
+
+### 重要说明
+
+**Bridge 监控的是 codex 窗口的输出，不是 master 进程窗口。**
+
+必须在 **codex 窗口**（运行 Claude Code 的窗口）输入 `/task` 或 `TASK:` 开头的行，Bridge 才能捕获到。
+
+```
+codex 窗口                    Bridge 进程
+    │                            │
+    │  输入: /task ...           │
+    │  ────────────────────────────────▶
+    │  回显到 pane              │
+    │  ────────────────────────────────▶ capture-pane
+    │                              parse → dedupe → FIFO
+    │                                   │
+    ▼                                   ▼
+```
+
+### 使用方式
+
+```bash
+# 1. 启动 tmux session（使用 2 窗口布局脚本）
+./scripts/swarm_layout_5.sh --no-attach
+
+# 2. 查看输出获取 codex pane ID
+# 脚本会输出类似：export AI_SWARM_BRIDGE_PANE=%3
+
+# 3. 设置环境变量（根据脚本输出）
+export AI_SWARM_BRIDGE_PANE=<pane_id>
+
+# 4. 新终端启动 bridge
+AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
+
+# 5. 在 codex 窗口输入（以下内容必须回显到 pane）：
+/task Review PR #123 and leave comments
+TASK: Fix authentication bug in login module
+```
+
+**重要：** Bridge 指向的是 codex 窗口（你输入 /task 的地方），不是 master 进程窗口！
+
+### 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `AI_SWARM_BRIDGE_SESSION` | tmux session 名称 | `swarm-claude-default` |
+| `AI_SWARM_BRIDGE_WINDOW` | tmux window 名称（codex 窗口） | `codex-master` |
+| `AI_SWARM_BRIDGE_PANE` | tmux pane_id（最高优先级，推荐使用） | - |
+| `AI_SWARM_BRIDGE_LINES` | capture-pane 行数 | `200` |
+| `AI_SWARM_BRIDGE_POLL_INTERVAL` | 轮询间隔（秒） | `1.0` |
+| `AI_SWARM_INTERACTIVE` | 启用交互模式（必须为 `1`） | `0` |
+
+### 命令
+
+```bash
+./scripts/swarm_bridge.sh start    # 启动 bridge
+./scripts/swarm_bridge.sh stop     # 停止 bridge
+./scripts/swarm_bridge.sh status   # 检查状态
+```
+
+### 日志查看
+
+```bash
+# Bridge 调试日志
+tail -f $AI_SWARM_DIR/bridge.log
+
+# 状态日志（JSONL）
+tail -f $AI_SWARM_DIR/status.log
+
+# 任务是否被派发
+grep "BRIDGE" $AI_SWARM_DIR/status.log
+```
+
+### 故障排查
+
+- **tmux session 不存在**: 先创建 tmux session 或设置 `AI_SWARM_BRIDGE_SESSION`
+- **FIFO 无 reader**: 确认 master 已启动（`AI_SWARM_INTERACTIVE=1`）
+- **任务未发送**: 检查 `bridge.log` 和 `status.log`
+- **Claude 不回显**: 确认 Claude Code 配置为回显命令到终端
+
 ## Architecture
 
 ```
@@ -163,18 +246,44 @@ echo "Task description" > $AI_SWARM_DIR/master_inbox
 └─────────────────────────────────────┘
 ```
 
-## 5 窗格布局
+## 2 窗口布局 (V1.92)
 
-v1.7 引入了新的 5 窗格布局脚本，将所有窗格集中在单个 tmux 窗口中：
+V1.92 引入了新的 2 窗口布局，将窗格分离到两个独立窗口：
 
+**窗口 1 (codex-master):**
 ```
-┌─────────────────┬────────────────────┐
-│      master     │      worker-0      │
-│                 ├────────────────────┤
-│      codex      │      worker-1      │
-│                 ├────────────────────┤
-│                 │      worker-2      │
-└─────────────────┴────────────────────┘
+┌─────────────────────┬────────────────────────────┐
+│                     │                            │
+│        codex        │          master            │
+│                     │                            │
+└─────────────────────┴────────────────────────────┘
+```
+
+**窗口 2 (workers):**
+```
+┌───────────────┬───────────────┬───────────────┐
+│               │               │               │
+│    worker-0   │    worker-1   │    worker-2   │
+│               │               │               │
+└───────────────┴───────────────┴───────────────┘
+```
+
+**注意：** 此布局需要配置 Bridge 才能监控 codex 窗口。
+
+### Bridge 配置
+
+运行布局脚本后，需要设置 `AI_SWARM_BRIDGE_PANE` 环境变量：
+
+```bash
+# 运行布局脚本后，查看输出：
+./scripts/swarm_layout_5.sh
+# 输出类似：export AI_SWARM_BRIDGE_PANE=%3
+
+# 设置环境变量
+export AI_SWARM_BRIDGE_PANE=<pane_id>
+
+# 启动 Bridge
+AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 ```
 
 ### 使用方法
@@ -194,9 +303,6 @@ v1.7 引入了新的 5 窗格布局脚本，将所有窗格集中在单个 tmux 
 
 # 自定义 codex 命令
 ./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --model o1"
-
-# 调整左侧窗格比例（60% master，40% codex）
-./scripts/swarm_layout_5.sh --left-ratio 60
 ```
 
 ### 参数说明
@@ -205,13 +311,12 @@ v1.7 引入了新的 5 窗格布局脚本，将所有窗格集中在单个 tmux 
 |------|------|
 | `--session, -s` | tmux 会话名称 |
 | `--workdir, -d` | 工作目录 |
-| `--left-ratio, -l` | 左侧垂直分割比例 (50-80) |
 | `--codex-cmd, -c` | codex 窗格执行的命令 |
 | `--attach, -a` | 创建后附加到会话 |
 
 ### 快速启动
 
-在任意目录执行以下命令，即可使用本地代理启动 5 窗格布局，并让 codex 默认使用 --yolo：
+在任意目录执行以下命令，即可使用本地代理启动 2 窗口布局：
 
 ```bash
 LLM_BASE_URL="http://127.0.0.1:15721" SWARM_WORKDIR="$PWD" CODEX_CMD="codex --yolo" ./scripts/swarm_layout_5.sh --attach
@@ -438,6 +543,8 @@ Note: `claude status` is a Claude CLI command, not a swarm command. Swarm comman
 | `swarm broadcast` | `swarm_broadcast.sh` | Status broadcasting |
 | `swarm rescue` | `claude_auto_rescue.sh` | Auto-confirm prompts |
 | `swarm tasks-bridge` | `swarm_tasks_bridge.sh` | CLAUDE_CODE_TASK_LIST_ID bridge for lock/state operations |
+| `swarm bridge` | `swarm_bridge.sh` | Claude master window bridge for task dispatch |
+| `swarm fifo-write` | `swarm_fifo_write.sh` | Write to FIFO input channel |
 
 ## Changelog
 
