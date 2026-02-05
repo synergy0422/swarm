@@ -51,20 +51,29 @@ def write_to_fifo_nonblocking(fifo_path: str, text: str) -> bool:
         text: Text to write
 
     Returns:
-        True on success, False if no reader (EAGAIN/EWOULDBLOCK)
+        True on success, False if no reader (EAGAIN/EWOULDBLOCK/ENXIO)
     Raises:
         Exception: On other errors (FileNotFoundError, etc.)
     """
-    fd = os.open(fifo_path, os.O_WRONLY | os.O_NONBLOCK)
+    try:
+        fd = os.open(fifo_path, os.O_WRONLY | os.O_NONBLOCK)
+    except OSError as e:
+        if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK, errno.ENXIO):
+            return False  # No reader
+        raise
+
     try:
         os.write(fd, (text + '\n').encode('utf-8'))
         return True
     except OSError as e:
-        if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+        if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK, errno.ENXIO):
             return False  # No reader
         raise
     finally:
-        os.close(fd)
+        try:
+            os.close(fd)
+        except OSError:
+            pass
 
 
 class FifoInputHandler:
