@@ -9,6 +9,23 @@
 - `swarm task add "<prompt>"` - CLI 命令向 FIFO 写入任务
 - `./scripts/swarm_fifo_write.sh write "<prompt>"` - Bash 辅助脚本
 - `/task`, `/help`, `/quit` 指令解析
+- **Claude Bridge** - 监控 Claude Code 主脑窗口并自动派发任务 (Phase 34-02)
+  - 通过 `tmux capture-pane` 监控主脑窗口**输出**
+  - 重要：Claude Code 必须把 `/task ...` 或 `TASK: ...` 回显到 pane
+  - 支持 `/task <prompt>` 和 `TASK: <prompt>` 格式
+  - 去重：100 条滑动窗口哈希（行号不可靠，不采用）
+  - 环境变量：`AI_SWARM_BRIDGE_SESSION`, `AI_SWARM_BRIDGE_WINDOW`,
+    `AI_SWARM_BRIDGE_PANE`, `AI_SWARM_BRIDGE_LINES`, `AI_SWARM_BRIDGE_POLL_INTERVAL`
+  - 启动脚本：`./scripts/swarm_bridge.sh start|stop|status`
+  - 状态日志：`bridge.log`（文本）+ `status.log`（JSONL，HELP 状态，meta.type=BRIDGE）
+  - **V1.91 增强**：
+    - LineFilter 过滤 Bridge 输出和 Claude 回显
+    - send-keys 派发确认到 Claude Code 主脑窗口
+    - DISPATCHED 状态广播（HELP + meta.type=BRIDGE）
+
+### Deleted
+
+- **cli_up_new.py** - 完整功能的 `cli.py` 已替代，删除废止文件
 
 ### Fixed
 
@@ -20,6 +37,8 @@
 - Proxy base URL without path now auto-expands to `/v1/messages` for cc-switch compatibility.
 - Worker response parsing now handles proxy content blocks without `text` fields.
 - Added E2E script for cc-switch proxy validation (`scripts/swarm_e2e_ccswitch_test.py`).
+- Ensure AI_SWARM_INTERACTIVE is injected into tmux session at creation (FIFO works even if tmux server already running).
+- Fix FIFO poll event handling (prevent tuple TypeError in non-blocking read).
 
 ## v1.6 (2026-02-XX) - 长期可维护性 + 流程闭环
 

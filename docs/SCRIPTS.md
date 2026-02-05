@@ -398,6 +398,109 @@ cat input.txt | ./scripts/swarm_fifo_write.sh write -
 
 ---
 
+### swarm_bridge.sh
+
+**用途：** Claude Master Window Bridge - 监控 Claude Code 主脑窗口并自动派发任务。
+
+**工作原理：**
+```
+1. Bridge 定期执行: tmux capture-pane -t <pane> -p
+2. 解析输出行，匹配 /task 或 TASK: 前缀
+3. 去重检查（100 条滑动窗口哈希）
+4. 写入 FIFO ($AI_SWARM_DIR/master_inbox)
+5. Master 从 FIFO 读取并派发任务
+```
+
+**前提条件：**
+- Bridge 监控的是**窗口输出**，不是键盘输入
+- **重要**：`AI_SWARM_BRIDGE_WINDOW` 或 `AI_SWARM_BRIDGE_PANE` 必须指向运行 **Claude Code** 的窗口/窗格
+  （你输入 `/task` 命令的地方）。**不要**指向运行 `python3 -m swarm.cli master` 的窗口 -
+  send-keys 会把按键注入 master 进程输入
+- Claude Code 必须把 `/task ...` 或 `TASK: ...` 回显到 pane
+- 确保 `AI_SWARM_INTERACTIVE=1` 已设置（Master 需启用 FIFO）
+
+**参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `start` | 启动 bridge 进程 |
+| `stop` | 停止 bridge 进程 |
+| `status` | 检查 bridge 运行状态 |
+| `help` | 显示帮助信息 |
+
+**环境变量：**
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `AI_SWARM_DIR` | swarm 状态目录 | `/tmp/ai_swarm` |
+| `AI_SWARM_BRIDGE_SESSION` | tmux session 名称 | `swarm-default` |
+| `AI_SWARM_BRIDGE_WINDOW` | tmux window 名称 | `master` |
+| `AI_SWARM_BRIDGE_PANE` | tmux pane_id（最高优先级） | - |
+| `AI_SWARM_BRIDGE_LINES` | capture-pane 行数 | `200` |
+| `AI_SWARM_BRIDGE_POLL_INTERVAL` | 轮询间隔（秒） | `1.0` |
+| `AI_SWARM_INTERACTIVE` | 必须为 `1` | `0` |
+
+**示例：**
+
+```bash
+# 启动 bridge（默认配置）
+AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
+
+# 指定 session 和 window
+AI_SWARM_BRIDGE_SESSION=my-swarm AI_SWARM_BRIDGE_WINDOW=main \
+  AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
+
+# 指定 pane_id（最高优先级）
+AI_SWARM_BRIDGE_PANE=$TMUX_PANE AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
+
+# 查看状态
+./scripts/swarm_bridge.sh status
+
+# 停止 bridge
+./scripts/swarm_bridge.sh stop
+```
+
+**日志查看：**
+
+```bash
+# Bridge 调试日志
+tail -f $AI_SWARM_DIR/bridge.log
+
+# 状态日志（JSONL）
+tail -f $AI_SWARM_DIR/status.log
+
+# Bridge 事件
+grep "BRIDGE" $AI_SWARM_DIR/status.log
+```
+
+**故障排查：**
+
+```bash
+# tmux session 不存在
+tmux list-sessions
+# 或设置正确的 AI_SWARM_BRIDGE_SESSION
+
+# FIFO 无 reader
+# 确认 master 已启动：AI_SWARM_INTERACTIVE=1 python3 -m swarm.cli master
+
+# 任务未发送
+# 检查 bridge.log 查看详细日志
+
+# Claude 不回显
+# 确认 Claude Code 配置为回显命令到终端
+```
+
+**退出码：**
+
+| 退出码 | 说明 |
+|--------|------|
+| 0 | 成功 |
+| 1 | 错误（session 不存在、参数错误等） |
+
+**依赖：** Python 3, tmux, `swarm.claude_bridge` 模块
+
+---
+
 ## 任务管理脚本
 
 ### swarm_task_wrap.sh
