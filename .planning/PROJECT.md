@@ -186,6 +186,31 @@
 
 ---
 
+## Current Milestone: v1.9 自然语言任务入口
+
+**Goal:** 支持通过 master 的 FIFO 输入通道发布自然语言任务，实现 tmux 后台运行时的任务派发
+
+**Target features:**
+- FIFO 输入通道 — `$AI_SWARM_DIR/master_inbox`，非阻塞监听
+- 指令语法 — `/task <prompt>` 创建任务，`/help` 查看帮助，`/quit` 终止输入线程
+- TaskQueue 原子追加 — 任务格式与现有系统一致，task_id 递增
+- CLI 辅助命令 — `swarm task add "<prompt>"` 向 FIFO 写入
+
+### Acceptance Criteria
+- [ ] FIFO 监听线程不阻塞 master 主循环
+- [ ] 自然语言任务能正确追加到 tasks.json
+- [ ] `/help` 输出正确指令说明
+- [ ] `/quit` 仅终止输入线程
+- [ ] `swarm task add` 命令可用
+- [ ] TDD 测试覆盖 FIFO 输入
+
+### Out of Scope
+- 不修改任务锁逻辑
+- 不修改 dispatcher 行为
+- 不引入自动调度系统
+
+---
+
 ## Context
 
 **Reference Implementation:** `/home/user/group/ai_swarm_phase2/`
@@ -236,4 +261,4 @@
 
 ---
 
-*Last updated: 2026-02-04 after v1.90 milestone initialization*
+*Last updated: 2026-02-05 after v1.9 milestone initialization*

@@ -2,7 +2,8 @@
 
 ## Milestones
 
-- ✅ **v1.90** — 统一任务入口 CLI (Active)
+- ✅ **v1.9** — 自然语言任务入口 (Active)
+- ✅ **v1.90** — 统一任务入口 CLI (2026-02-05)
 - ✅ **v1.89** — 测试重写 (2026-02-04) - Bug fix
 - ✅ **v1.88** — 一键启动配置 (2026-02-04)
 - ✅ **v1.87** — 强化指挥官可感知能力 (2026-02-04)
@@ -19,99 +20,72 @@
 - ✅ **v1.0** — MVP (2026-01-31)
 
 <details>
-<summary>✅ v1.88 一键启动配置 (SHIPPED 2026-02-04)</summary>
+<summary>✅ v1.90 统一任务入口 CLI (SHIPPED 2026-02-05)</summary>
 
-- [x] Phase 30: 文档更新 (1/1 plan)
+- [x] Phase 32: CLI task 子命令实现 (1/1 plan)
+- [x] Phase 33: 文档更新 (1/1 plan)
 
-**Delivered:** README.md 新增"快速启动"小节，一行命令即可在任意目录启动 5 窗格布局
+**Delivered:** Unified `swarm task` subcommand for task management
 
 **Key accomplishments:**
-1. 默认 codex 命令已为 `codex --yolo` (v1.87 期间完成)
-2. README.md 新增"快速启动"小节
+1. `swarm task claim/done/fail/run` commands implemented
+2. Exit code passthrough from underlying scripts
+3. Documentation updated in README.md and docs/SCRIPTS.md
 
 **Stats:**
-- 1 phase, 1 plan
-- 7/7 verification criteria passed
+- 2 phases, 2 plans
+- 7/7 requirements implemented
+- 4/4 documentation requirements completed
 
 </details>
 
 <details>
-<summary>✅ v1.89 测试重写 (SHIPPED 2026-02-04)</summary>
+<summary>🔵 v1.9 自然语言任务入口 (IN PROGRESS)</summary>
 
-- [x] Phase 31: 测试重写 (1/1 plan)
+- [ ] Phase 34: FIFO 输入通道 + 指令解析 (1/1 plan) - 34-01-PLAN.md created
+- [ ] Phase 35: 测试覆盖 (1/1 plan)
+- [ ] Phase 36: 文档更新 (1/1 plan)
 
-**Delivered:** 重写 3 个测试文件，适配新的 AutoRescuer API
-
-**Key accomplishments:**
-1. test_auto_rescuer.py - 9 个测试（模式检测、冷却机制、配置）
-2. test_auto_rescuer_patterns.py - 6 个测试（模式常量）
-3. test_e2e_auto_rescue.py - 4 个测试（E2E 工作流）
-
-**Stats:**
-- 1 phase, 1 plan
-- 19/19 tests passed
-
-</details>
-
-<details>
-<summary>🔵 v1.90 统一任务入口 CLI (IN PROGRESS)</summary>
-
-- [x] Phase 32: CLI task 子命令实现 (1/1 plan) - 32-01-PLAN.md created
-- [ ] Phase 33: 文档更新 (1/1 plan)
-
-**Goal:** 新增 `swarm task` 子命令，统一调用任务管理脚本
+**Goal:** 支持通过 master 的 FIFO 输入通道发布自然语言任务，实现 tmux 后台运行时的任务派发
 
 **Requirements mapped:**
-- CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, EXIT-01 → Phase 32
-- DOCS-01, DOCS-02 → Phase 33
+- FIFO-01 ~ FIFO-06 → Phase 34
+- CMD-01 ~ CMD-05 → Phase 34
+- TASK-01 ~ TASK-04 → Phase 34
+- CFG-01 → Phase 34
+- CLI-01 ~ CLI-03 → Phase 34
+- TEST-01 ~ TEST-03 → Phase 34
+- TEST-04 ~ TEST-05 → Phase 35
+- DOCS-01 ~ DOCS-04 → Phase 36
 
 **Success Criteria:**
 
-**Phase 32: CLI task 子命令实现**
-1. `swarm task --help` 显示 task 子命令帮助
-2. `swarm task claim <task_id> <worker>` 调用脚本并透传退出码
-3. `swarm task done <task_id> <worker>` 调用脚本并透传退出码
-4. `swarm task fail <task_id> <worker> <reason>` 调用脚本并透传退出码
-5. `swarm task run <task_id> <worker> <command...>` 调用脚本并透传退出码
+**Phase 34: FIFO 输入通道 + 指令解析**
+1. `$AI_SWARM_DIR/master_inbox` FIFO 存在
+2. master 非阻塞监听 FIFO（不挂起主循环）
+3. `/task <prompt>` 创建 pending 任务
+4. `/help` 输出指令说明
+5. `/quit` 停止输入线程（主循环继续运行）
+6. `swarm task add "<prompt>"` 向 FIFO 写入
+7. 自然语言任务正确追加到 tasks.json
+8. AI_SWARM_TASKS_FILE 环境变量被尊重
 
-**Phase 33: 文档更新**
-1. README.md 包含 swarm task 用法示例
-2. docs/SCRIPTS.md 包含完整参数说明
+**Phase 35: 测试覆盖**
+1. FIFO 输入新增 pending 任务（单元测试）
+2. `/help` 输出正确（单元测试）
+3. `/quit` 不影响主循环（单元测试）
+4. master 运行时 FIFO 任务被 dispatcher 识别（集成测试）
+5. 非交互模式不阻塞主循环（验证测试）
 
-</details>
-
-<details>
-<summary>✅ v1.87 强化指挥官可感知能力 (SHIPPED 2026-02-04)</summary>
-
-- [x] Phase 27: 状态汇总表增强 (1/1 plan)
-- [x] Phase 28: 自动救援策略可配置化 (2/2 plans)
-- [x] Phase 29: 任务指派回执闭环 (1/1 plan)
-
-**Key accomplishments:**
-- 状态汇总表增强 (last_update, wait_for, error_streak)
-- 自动救援策略可配置化 (ENABLED, ALLOW, BLOCK)
-- 任务指派状态广播 (ASSIGNED → START → DONE/ERROR)
-
-See: `.planning/milestones/v1.87-ROADMAP.md` for full details.
-
-</details>
-
-<details>
-<summary>✅ v1.86 主控自动救援闭环 + 状态汇总表 (SHIPPED 2026-02-04)</summary>
-
-- [x] Phase 24: Master 救援核心 (2 plans)
-- [x] Phase 25: 状态汇总表 (1 plan)
-- [x] Phase 26: 集成与配置 (1 plan)
-
-**13/13 requirements complete**
+**Phase 36: 文档更新**
+1. CHANGELOG.md 新增 V1.9 功能条目
+2. README.md 包含自然语言发布任务用法
+3. docs/SCRIPTS.md 包含 FIFO/CLI 命令说明
+4. 兼容性与限制说明已记录
 
 </details>
 
 ---
 
-_For detailed v1.86 scope, see `.planning/milestones/v1.86-ROADMAP.md`_
-
----
-
-*Roadmap created: 2026-02-04*
-*Last updated: 2026-02-04 after v1.90 milestone initialization*
+*Roadmap created: 2026-02-05*
+*Last updated: 2026-02-05 after v1.9 milestone initialization*
