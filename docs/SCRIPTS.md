@@ -347,6 +347,57 @@ nohup ./scripts/claude_auto_rescue.sh run worker-0 > rescue.log 2>&1 &
 
 ---
 
+### swarm_fifo_write.sh
+
+**用途：** 向 master FIFO 输入通道写入任务提示。支持非阻塞写入，在没有读者时返回错误。
+
+**参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `write "<prompt>"` | 写入单个任务提示 |
+| `write -` | 从 stdin 读取任务提示 |
+| `help` | 显示帮助信息 |
+
+**选项：**
+
+| 选项 | 说明 |
+|------|------|
+| `-h, --help` | 显示帮助信息 |
+
+**示例：**
+
+```bash
+# 写入单个任务
+./scripts/swarm_fifo_write.sh write "Review PR #123"
+
+# 从 stdin 读取
+echo "Fix bug" | ./scripts/swarm_fifo_write.sh write -
+
+# 从文件读取
+cat input.txt | ./scripts/swarm_fifo_write.sh write -
+
+# 显示帮助
+./scripts/swarm_fifo_write.sh help
+```
+
+**环境变量：**
+
+| 变量 | 说明 |
+|------|------|
+| `AI_SWARM_DIR` | swarm 状态目录（默认: /tmp/ai_swarm） |
+
+**退出码：**
+
+| 退出码 | 说明 |
+|--------|------|
+| 0 | 成功 |
+| 1 | 错误（FIFO 不存在、无输入等） |
+
+**注意：** 脚本使用非阻塞写入，如果 FIFO 没有读者会返回错误。
+
+---
+
 ## 任务管理脚本
 
 ### swarm_task_wrap.sh

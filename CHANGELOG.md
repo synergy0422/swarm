@@ -2,15 +2,28 @@
 
 ## [Unreleased]
 
+### Features
+
+- FIFO 输入通道 - 通过命名管道向 master 发布自然语言任务 (Phase 34-01)
+- `AI_SWARM_INTERACTIVE=1` 启用交互模式
+- `swarm task add "<prompt>"` - CLI 命令向 FIFO 写入任务
+- `./scripts/swarm_fifo_write.sh write "<prompt>"` - Bash 辅助脚本
+- `/task`, `/help`, `/quit` 指令解析
+
 ### Fixed
 
 - Treat START workers without a task_id as idle to allow initial task dispatch.
 - Inject AI_SWARM_DIR, LLM_BASE_URL, and ANTHROPIC_API_KEY into tmux session on `swarm up`.
 - Update tasks.json to DONE when worker completes task.
+- Fail fast with clear guidance when LLM env is missing (prevents launching a broken swarm).
+- `swarm init` now prints a default cc-switch example when LLM_BASE_URL is not set.
+- Proxy base URL without path now auto-expands to `/v1/messages` for cc-switch compatibility.
+- Worker response parsing now handles proxy content blocks without `text` fields.
+- Added E2E script for cc-switch proxy validation (`scripts/swarm_e2e_ccswitch_test.py`).
 
 ## v1.6 (2026-02-XX) - 长期可维护性 + 流程闭环
 
-**Delivered:** Phase 18 统一配置入口、Phase 20 自检
+**Delivered:** Phase 18 统一配置入口、Phase 20 自检、Phase 34-01 FIFO 输入通道
 
 **Planned:** Phase 19 任务包装、Phase 21 维护文档
 
@@ -19,6 +32,7 @@
 - 新增 _config.sh 统一配置管理 (Phase 18)
 - 新增 swarm_task_wrap.sh 任务生命周期包装器 (Phase 19)
 - 新增 swarm_selfcheck.sh 一键系统自检 (Phase 20)
+- 新增 FIFO 输入通道，支持自然语言任务发布 (Phase 34-01)
 
 ### Under the Hood
 

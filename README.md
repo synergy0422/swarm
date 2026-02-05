@@ -66,6 +66,8 @@ export AI_SWARM_POLL_INTERVAL="1.0"
 ```
 
 **Note:** LLM_BASE_URL is inherited by tmux worker windows. Make sure to export it in the same shell before running `swarm up`.
+For cc-switch, set `LLM_BASE_URL="http://127.0.0.1:15721/v1/messages"` and optionally `ANTHROPIC_API_KEY="dummy"` before launching.
+You can also run `swarm init` to see the default cc-switch environment example if LLM_BASE_URL is not set.
 
 ## Commands
 
@@ -86,6 +88,57 @@ Display tmux session and agent status.
 
 ### `swarm down [--cluster-id ID]`
 Terminate swarm tmux session.
+
+### `swarm task add "<prompt>"`
+Add task via FIFO input channel (requires `AI_SWARM_INTERACTIVE=1`).
+
+```bash
+# Add task from argument
+swarm task add "Review PR #123"
+
+# Add task from stdin
+echo "Fix bug" | swarm task add -
+```
+
+## 自然语言发布任务
+
+当 master 在 tmux 后台运行时，可以通过 FIFO 输入通道发布任务：
+
+```bash
+# 启用交互模式
+export AI_SWARM_INTERACTIVE=1
+
+# 启动 master
+python3 -m swarm.cli master --cluster-id default
+```
+
+### 发布任务
+
+**方式 1: CLI 命令**
+```bash
+swarm task add "Review PR #123"
+echo "Fix bug" | swarm task add -
+```
+
+**方式 2: Bash 脚本**
+```bash
+./scripts/swarm_fifo_write.sh write "Review PR #123"
+echo "Task" | ./scripts/swarm_fifo_write.sh write -
+```
+
+**方式 3: 直接写入 FIFO**
+```bash
+echo "Task description" > $AI_SWARM_DIR/master_inbox
+```
+
+### FIFO 指令
+
+- `/task <prompt>` - 创建任务
+- `/help` - 显示帮助
+- `/quit` - 停止输入线程（master 继续运行）
+- 无前缀文本 - 直接作为任务
+
+**注意:** 需要 master 运行并设置 `AI_SWARM_INTERACTIVE=1`
 
 ## Architecture
 
@@ -342,6 +395,14 @@ pytest --cov=swarm --cov-report=html
 
 # Lint
 flake8 swarm/
+```
+
+### E2E (cc-switch)
+
+```bash
+export LLM_BASE_URL="http://127.0.0.1:15721/v1/messages"
+export ANTHROPIC_API_KEY="dummy"
+python3 scripts/swarm_e2e_ccswitch_test.py
 ```
 
 ## Maintenance Guide
