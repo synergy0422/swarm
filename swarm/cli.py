@@ -86,6 +86,18 @@ def preflight_check():
     return True
 
 
+def llm_env_ok() -> bool:
+    """
+    Check if LLM environment is configured for workers.
+
+    Returns:
+        bool: True if ANTHROPIC_API_KEY or LLM_BASE_URL is set.
+    """
+    api_key = os.environ.get('ANTHROPIC_API_KEY') or os.environ.get('OPENAI_API_KEY')
+    llm_base_url = os.environ.get('LLM_BASE_URL')
+    return bool(api_key or llm_base_url)
+
+
 def cmd_init(args):
     """
     Initialize swarm environment.
@@ -136,6 +148,9 @@ def cmd_init(args):
         print(f"  LLM_BASE_URL: {llm_base_url}")
     else:
         print("  LLM_BASE_URL: (not set)")
+        print("\n[SWARM] Default cc-switch example:")
+        print("  export LLM_BASE_URL=\"http://127.0.0.1:15721/v1/messages\"")
+        print("  export ANTHROPIC_API_KEY=\"dummy\"")
 
     print("\n[SWARM] Swarm initialized successfully!")
     print(f"[SWARM] Directory: {ai_swarm_dir}")
@@ -188,6 +203,12 @@ def cmd_worker(args):
     Creates SmartWorker instance and calls run().
     """
     try:
+        if not llm_env_ok():
+            print("[ERROR] No LLM config found. Set LLM_BASE_URL (cc-switch proxy) or ANTHROPIC_API_KEY.", file=sys.stderr)
+            print("        Example for cc-switch:", file=sys.stderr)
+            print("        export LLM_BASE_URL=\"http://127.0.0.1:15721/v1/messages\"", file=sys.stderr)
+            print("        export ANTHROPIC_API_KEY=\"dummy\"", file=sys.stderr)
+            return 1
         from swarm.worker_smart import SmartWorker
         worker_name = f"worker-{args.id}"
         print(f"[SWARM] Starting worker: {worker_name}")
@@ -257,6 +278,12 @@ def cmd_up(args):
     # Preflight checks
     if not check_tmux_installed():
         print("[ERROR] tmux not installed", file=sys.stderr)
+        return 1
+    if not llm_env_ok():
+        print("[ERROR] No LLM config found. Set LLM_BASE_URL (cc-switch proxy) or ANTHROPIC_API_KEY.", file=sys.stderr)
+        print("        Example for cc-switch:", file=sys.stderr)
+        print("        export LLM_BASE_URL=\"http://127.0.0.1:15721/v1/messages\"", file=sys.stderr)
+        print("        export ANTHROPIC_API_KEY=\"dummy\"", file=sys.stderr)
         return 1
 
     # Check if session already exists
@@ -549,6 +576,7 @@ def cmd_task(args):
         print("usage: swarm task <command> [<args>]")
         print("")
         print("Task management commands:")
+        print("  add \"<prompt>\"                  Add task via FIFO (or - for stdin)")
         print("  claim <task_id> <worker> [lock_key]  Claim a task")
         print("  done <task_id> <worker> [lock_key]   Mark task as done")
         print("  fail <task_id> <worker> <reason> [lock_key]  Mark task as failed")
@@ -661,6 +689,32 @@ def cmd_task(args):
         parsed.dry_run = getattr(args, 'dry_run', False)
         return cmd_task_run(parsed)
 
+    elif task_cmd == 'add':
+        # add "<prompt>"  or  add -
+        # Check for --help before parsing
+        if '--help' in task_args or '-h' in task_args:
+            print("usage: swarm task add \"<prompt>\"")
+            print("       swarm task add -")
+            print("")
+            print("Add task via FIFO:")
+            print("  \"<prompt>\"   Task prompt (quoted string)")
+            print("  -            Read prompt from stdin")
+            print("")
+            print("Examples:")
+            print("  swarm task add \"Review PR #123\"")
+            print("  echo \"Fix bug\" | swarm task add -")
+            return 0
+
+        # Parse: add takes optional prompt or stdin flag
+        parser = _argparse.ArgumentParser(prog=f'swarm task {task_cmd}', parents=[], add_help=False)
+        parser.add_argument('prompt', nargs='?', default=None, help='Task prompt')
+        parser.add_argument('stdin_flag', nargs='?', const='-', default=None, help='Read from stdin')
+        try:
+            parsed = parser.parse_args(task_args)
+        except SystemExit:
+            return 1
+        return cmd_task_add(parsed)
+
     else:
         print(f"[ERROR] Unknown task command: {task_cmd}", file=sys.stderr)
         return 1
@@ -728,6 +782,60 @@ def cmd_task_fail(args):
         print(result.stderr.strip(), file=sys.stderr)
 
     return result.returncode
+
+
+def cmd_task_add(args):
+    """
+    Write task prompt to FIFO for master to pick up.
+
+    Exit codes: 0=success, 1=error (FIFO not found, no reader, etc.)
+
+    Usage:
+      swarm task add "prompt text"      # From argument
+      swarm task add -                   # From stdin
+      echo "text" | swarm task add -    # Piped stdin
+    """
+    from swarm.fifo_input import get_fifo_path, write_to_fifo_nonblocking
+
+    fifo_path = get_fifo_path()
+
+    # Determine prompt source
+    prompt = None
+
+    # Check for stdin flag '-'
+    if hasattr(args, 'stdin_flag') and args.stdin_flag:
+        prompt = sys.stdin.read().strip()
+    elif args.prompt:
+        prompt = args.prompt
+    else:
+        # No arg, try reading from stdin (non-blocking check)
+        if not sys.stdin.isatty():
+            prompt = sys.stdin.read().strip()
+
+    if not prompt:
+        print("[ERROR] No prompt provided", file=sys.stderr)
+        print("[ERROR] Usage: swarm task add \"<prompt>\" OR echo \"<prompt>\" | swarm task add -", file=sys.stderr)
+        return 1
+
+    # Write to FIFO with non-blocking (won't hang if no reader)
+    try:
+        success = write_to_fifo_nonblocking(fifo_path, prompt)
+        if not success:
+            print(f"[ERROR] No reader on FIFO (is master running with AI_SWARM_INTERACTIVE=1?)", file=sys.stderr)
+            return 1
+    except FileNotFoundError:
+        print(f"[ERROR] FIFO not found: {fifo_path}", file=sys.stderr)
+        print("[ERROR] Is master running with AI_SWARM_INTERACTIVE=1?", file=sys.stderr)
+        return 1
+    except BrokenPipeError:
+        print("[ERROR] FIFO write failed (reader closed?)", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"[ERROR] FIFO write failed: {e}", file=sys.stderr)
+        return 1
+
+    print(f"[OK] Task written to FIFO: {prompt[:50]}...")
+    return 0
 
 
 def cmd_task_run(args):
@@ -864,8 +972,8 @@ def main():
     subparsers.add_parser('down', parents=[parent_parser], help='Terminate swarm session')
 
     # task command - use a simpler parser for the main subcommand
-    task_parser = subparsers.add_parser('task', parents=[parent_parser], help='Task management commands (claim, done, fail, run)')
-    task_parser.add_argument('task_command', nargs='?', default=None, help='Task subcommand (claim, done, fail, run)')
+    task_parser = subparsers.add_parser('task', parents=[parent_parser], help='Task management commands (add, claim, done, fail, run)')
+    task_parser.add_argument('task_command', nargs='?', default=None, help='Task subcommand (add, claim, done, fail, run)')
     task_parser.add_argument('task_args', nargs=argparse.REMAINDER, help='Arguments for task subcommand')
 
     # Override task_parser's _get_formatter to show custom help
@@ -873,6 +981,7 @@ def main():
         print("usage: swarm task <command> [<args>]")
         print("")
         print("Task management commands:")
+        print("  add \"<prompt>\"                  Add task via FIFO (or - for stdin)")
         print("  claim <task_id> <worker> [lock_key]  Claim a task")
         print("  done <task_id> <worker> [lock_key]   Mark task as done")
         print("  fail <task_id> <worker> <reason> [lock_key]  Mark task as failed")
