@@ -702,6 +702,10 @@ class ClaudeBridge:
             # Capture worker pane
             capture = self._capture_worker_pane(target_pane)
 
+            # Get current line count for delta detection
+            current_lines = [l for l in capture.split('\n') if l.strip()]
+            current_line_count = len(current_lines)
+
             # Check 1: Explicit ACK markers (highest confidence)
             if explicit_ack_pattern.search(capture) or explicit_started_pattern.search(capture):
                 latency_ms = (time.time() - start_time) * 1000
@@ -713,11 +717,30 @@ class ClaudeBridge:
                 # Get content AFTER the dispatch marker
                 after_marker = capture[marker_match.end():]
 
-                # Look for processing signals in new content
-                has_processing_signal = any(p.search(after_marker) for p in processing_signal_patterns)
+                # CRITICAL: Strip the TASK: <text> line first
+                # This prevents false positives when task text contains "Sure", "I'll", etc.
+                lines_after_marker = [l.strip() for l in after_marker.split('\n') if l.strip()]
 
-                # Also check: if baseline provided, verify line count increased
-                if has_processing_signal:
+                # Remove first line if it contains TASK: (our dispatched task text)
+                if lines_after_marker and lines_after_marker[0].startswith('TASK:'):
+                    lines_after_marker = lines_after_marker[1:]
+
+                # Get content AFTER the TASK line (if any)
+                content_for_check = '\n'.join(lines_after_marker)
+
+                # Constraint 1: Must have new content (line count increased)
+                has_new_content = (
+                    baseline_line_count is not None and
+                    current_line_count > baseline_line_count
+                )
+
+                # Constraint 2: Processing signal must be in new content
+                has_processing_signal = any(
+                    p.search(content_for_check) for p in processing_signal_patterns
+                )
+
+                # ACK success only if both constraints satisfied
+                if has_new_content and has_processing_signal:
                     latency_ms = (time.time() - start_time) * 1000
                     return True, latency_ms
 

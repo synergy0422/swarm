@@ -756,6 +756,53 @@ I'll help you with that."""
 
         assert ack_received is True
 
+    @patch('subprocess.run')
+    def test_wait_for_ack_task_text_with_sure_no_new_content(self, mock_run):
+        """Test critical false positive: TASK: Sure, ... with NO new output after
+
+        This is the key test case from Codex review:
+        - Task text contains "Sure" (processing signal word)
+        - But there's no NEW content after the dispatch marker
+        - Must NOT falsely ACK
+        """
+        bridge = ClaudeBridge()
+
+        with patch.object(bridge, '_capture_worker_pane') as mock_capture:
+            # Task text contains "Sure" but no new content after marker
+            # baseline=1 (before dispatch), current=2 (marker + task line only)
+            mock_capture.return_value = "[BRIDGE_TASK_ID: br-test-3] TASK: Sure, do nothing"
+            # This should timeout because:
+            # 1. TASK line stripped
+            # 2. No new content after task line
+            # 3. Line count increased only by dispatch (1 -> 2), not by processing
+            ack_received, elapsed_ms = bridge._wait_for_ack("br-test-3", '%0', baseline_line_count=1, timeout=0.1)
+
+        assert ack_received is False  # CRITICAL: must be False!
+        assert elapsed_ms >= 90
+
+    @patch('subprocess.run')
+    def test_wait_for_ack_task_text_with_sure_and_new_content(self, mock_run):
+        """Test true positive: TASK: Sure, ... WITH new content after
+
+        This verifies the fix still allows real ACKs:
+        - Task text contains "Sure"
+        - There IS new content after the task line
+        - Must ACK successfully
+        """
+        bridge = ClaudeBridge()
+
+        with patch.object(bridge, '_capture_worker_pane') as mock_capture:
+            # Task text contains "Sure" AND there's real new content after
+            mock_capture.return_value = """[BRIDGE_TASK_ID: br-real-1] TASK: Sure, do this
+I'll help you with that right away."""
+            # This should succeed because:
+            # 1. TASK line stripped
+            # 2. New content exists ("I'll help...")
+            # 3. Line count increased by processing content
+            ack_received, latency_ms = bridge._wait_for_ack("br-real-1", '%0', baseline_line_count=1, timeout=0.1)
+
+        assert ack_received is True
+
 
 class TestRetryLogic:
     """Retry logic unit tests"""
