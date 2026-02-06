@@ -280,10 +280,12 @@ class MasterDispatcher:
         Dispatch a single task to a worker.
 
         Dispatch sequence:
-        1. Acquire task lock using worker's ID (skip if already locked)
-        2. Broadcast ASSIGNED status with meta
-        3. Write RUN_TASK instruction to worker's mailbox (JSONL)
-        4. Update tasks.json status to ASSIGNED
+        1. Re-check tasks.json to verify task is still pending (prevent stale data)
+        2. Acquire task lock using worker's ID (skip if already locked)
+        3. Broadcast ASSIGNED status with meta
+        4. Write RUN_TASK instruction to worker's mailbox (JSONL)
+        5. Update tasks.json status to ASSIGNED
+        6. Verify status update succeeded, rollback on failure
 
         Args:
             task: Task to dispatch
@@ -292,7 +294,14 @@ class MasterDispatcher:
         Returns:
             bool: True if dispatch succeeded, False otherwise
         """
-        # 2.1 Acquire task lock using worker's ID (not master's)
+        # === 1. 派发前: 重新检查 tasks.json ===
+        current_tasks = self.load_tasks()
+        current_task = next((t for t in current_tasks if t.task_id == task.task_id), None)
+        if current_task and current_task.status != 'pending':
+            # 任务已被分配，跳过
+            return False
+
+        # 2. Acquire task lock using worker's ID (not master's)
         # Create temporary lock manager for the target worker
         worker_lock_manager = task_lock.TaskLockManager(worker_id=worker_id)
         acquired = worker_lock_manager.acquire_lock(task.task_id)
@@ -302,7 +311,7 @@ class MasterDispatcher:
             return False
 
         try:
-            # 2.2 Broadcast ASSIGNED status with meta
+            # === 3. Broadcast ASSIGNED status with meta ===
             import time
             ts_ms = int(time.time() * 1000)
             self._broadcaster._broadcast(
@@ -314,19 +323,46 @@ class MasterDispatcher:
                 }
             )
 
-            # 2.3 Write to mailbox (JSONL append-only)
+            # === 4. Write to mailbox (JSONL append-only) ===
             self._write_to_mailbox(task, worker_id)
 
-            # 2.4 Update tasks.json
-            self._update_task_status(task.task_id, worker_id, ts_ms)
+            # === 5. Update tasks.json ===
+            update_success = self._update_task_status(task.task_id, worker_id, ts_ms)
+
+            if not update_success:
+                # 状态更新失败，回滚
+                self._rollback_dispatch(task.task_id, worker_id)
+                return False
+
+            # === 6. 派发后: 再次验证状态 ===
+            updated_tasks = self.load_tasks()
+            updated_task = next((t for t in updated_tasks if t.task_id == task.task_id), None)
+            if not updated_task or updated_task.status != 'ASSIGNED':
+                # 验证失败，回滚
+                self._rollback_dispatch(task.task_id, worker_id)
+                return False
 
             return True
 
         except Exception as e:
             # If dispatch fails, release the lock
             print(f"[MasterDispatcher] Dispatch failed for {task.task_id}: {e}")
-            worker_lock_manager.release_lock(task.task_id)
+            self._rollback_dispatch(task.task_id, worker_id)
             return False
+
+    def _rollback_dispatch(self, task_id: str, worker_id: str) -> None:
+        """
+        Rollback dispatch operation: release lock.
+
+        Args:
+            task_id: Task ID
+            worker_id: Worker ID
+        """
+        try:
+            worker_lock_manager = task_lock.TaskLockManager(worker_id=worker_id)
+            worker_lock_manager.release_lock(task_id)
+        except Exception:
+            pass
 
     def _write_to_mailbox(self, task: TaskInfo, worker_id: str) -> None:
         """
@@ -360,40 +396,61 @@ class MasterDispatcher:
         with open(mailbox_path, 'a') as f:
             f.write(json.dumps(instruction) + '\n')
 
-    def _update_task_status(self, task_id: str, worker_id: str, ts_ms: int) -> None:
+    def _update_task_status(self, task_id: str, worker_id: str, ts_ms: int) -> bool:
         """
         Update task status in tasks.json to ASSIGNED.
+
+        Uses atomic write (temp file + rename) to ensure consistency.
 
         Args:
             task_id: Task ID
             worker_id: Worker ID
             ts_ms: Timestamp in milliseconds
+
+        Returns:
+            bool: True if update succeeded, False otherwise
         """
         tasks_file = self._get_tasks_file_path()
 
         if not os.path.exists(tasks_file):
-            return
+            return False
+
+        # Use temp file with PID suffix to avoid conflicts
+        temp_path = tasks_file + '.tmp.' + str(os.getpid())
 
         try:
             with open(tasks_file, 'r') as f:
                 data = json.load(f)
 
             # Find and update the task
+            found = False
             for task_dict in data.get('tasks', []):
                 if task_dict.get('id') == task_id:
                     task_dict['status'] = 'ASSIGNED'
                     task_dict['assigned_worker_id'] = worker_id
                     task_dict['assigned_at'] = ts_ms
+                    found = True
                     break
 
-            # Write back atomically
-            temp_path = tasks_file + '.tmp'
+            if not found:
+                return False
+
+            # Atomic write: write to temp file first, then rename
             with open(temp_path, 'w') as f:
                 json.dump(data, f, indent=2)
             os.replace(temp_path, tasks_file)
 
-        except (json.JSONDecodeError, FileNotFoundError, IOError) as e:
+            return True
+
+        except (json.JSONDecodeError, FileNotFoundError, IOError, OSError) as e:
             print(f"[MasterDispatcher] Failed to update tasks.json: {e}")
+            # Clean up temp file if exists
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
+            return False
 
     def dispatch_all(
         self,

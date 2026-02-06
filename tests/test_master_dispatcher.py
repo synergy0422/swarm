@@ -34,6 +34,9 @@ class TestMasterDispatcher(unittest.TestCase):
         # Create tasks.json
         self.tasks_file = os.path.join(self.base_dir, 'tasks.json')
 
+        # Set AI_SWARM_DIR for this test directory
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
         # Initialize dispatcher
         self.dispatcher = master_dispatcher.MasterDispatcher(
             cluster_id='test-cluster'
@@ -275,6 +278,17 @@ class TestMasterDispatcher(unittest.TestCase):
 
     def test_dispatch_acquires_lock(self):
         """Test: successful dispatch acquires lock"""
+        # Create tasks.json first (required for pre-check)
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test command',
+                'priority': 1,
+                'status': 'pending'
+            }
+        ]
+        self._create_tasks_file(tasks)
+
         task = master_dispatcher.TaskInfo(
             task_id='task-001',
             command='Test command',
@@ -392,6 +406,17 @@ class TestMasterDispatcher(unittest.TestCase):
         """Test: dispatch_one() broadcasts ASSIGNED state (not START)"""
         from unittest.mock import MagicMock, patch
 
+        # Create task first (required for pre-check)
+        tasks = [
+            {
+                'id': 'task-test-001',
+                'prompt': 'Test command',
+                'priority': 1,
+                'status': 'pending'
+            }
+        ]
+        self._create_tasks_file(tasks)
+
         # Create task first
         task = master_dispatcher.TaskInfo(
             task_id='task-test-001',
@@ -452,6 +477,226 @@ class TestMasterDispatcher(unittest.TestCase):
                 os.environ.pop('AI_SWARM_DIR', None)
             else:
                 os.environ['AI_SWARM_DIR'] = original_ai_swarm_dir
+
+    def test_no_duplicate_dispatch_same_task(self):
+        """
+        Test: 同一任务不会被派发到多个 Worker
+
+        场景:
+        1. 创建 1 个 pending 任务
+        2. 创建 2 个 idle workers
+        3. 多次调用 dispatch_all
+        4. 验证只有 1 个 Worker 收到任务
+        """
+        # Setup
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
+        # 创建 tasks.json: 1 个 pending 任务
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test task',
+                'priority': 1,
+                'status': 'pending'
+            }
+        ]
+        self._create_tasks_file(tasks)
+
+        # 创建 2 个 idle workers
+        worker_statuses = {
+            'worker-1': master_scanner.WorkerStatus(
+                worker_id='worker-1',
+                state='DONE',
+                task_id=None,
+                timestamp='2026-01-31T12:00:00.000Z',
+                message='Idle'
+            ),
+            'worker-2': master_scanner.WorkerStatus(
+                worker_id='worker-2',
+                state='DONE',
+                task_id=None,
+                timestamp='2026-01-31T12:00:00.000Z',
+                message='Idle'
+            )
+        }
+
+        # 多次 dispatch_all 模拟并发
+        results1 = self.dispatcher.dispatch_all(worker_statuses)
+        results2 = self.dispatcher.dispatch_all(worker_statuses)
+        results3 = self.dispatcher.dispatch_all(worker_statuses)
+
+        # 验证: 总共只有 1 次成功派发
+        total_success = len([r for r in results1 + results2 + results3 if r.success])
+        self.assertEqual(
+            total_success, 1,
+            f"同一任务不应派发到多个 Worker，实际派发次数: {total_success}"
+        )
+
+        # 验证: tasks.json 状态为 ASSIGNED
+        updated_tasks = self.dispatcher.load_tasks()
+        self.assertEqual(updated_tasks[0].status, 'ASSIGNED')
+
+        # Cleanup
+        worker_lock_mgr = task_lock.TaskLockManager(worker_id='worker-1')
+        worker_lock_mgr.release_lock('task-001')
+        worker_lock_mgr = task_lock.TaskLockManager(worker_id='worker-2')
+        worker_lock_mgr.release_lock('task-001')
+
+    def test_dispatch_fails_if_task_already_assigned(self):
+        """
+        Test: 如果任务已被分配，后续派发应失败
+
+        场景:
+        1. 创建 tasks.json，task-A 状态为 ASSIGNED
+        2. 尝试派发 task-A
+        3. 验证派发失败
+        """
+        # Setup
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
+        # 创建 tasks.json: 任务已被 ASSIGNED
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test task',
+                'priority': 1,
+                'status': 'ASSIGNED',
+                'assigned_worker_id': 'worker-1'
+            }
+        ]
+        self._create_tasks_file(tasks)
+
+        # 尝试派发 (传入的 TaskInfo 状态是 pending，但实际 tasks.json 是 ASSIGNED)
+        task = master_dispatcher.TaskInfo(
+            task_id='task-001',
+            command='Test command',
+            priority=1,
+            status='pending'
+        )
+        result = self.dispatcher.dispatch_one(task, 'worker-2')
+
+        # 验证: 派发失败
+        self.assertFalse(result, "任务已 ASSIGNED 时不应再次派发")
+
+    def test_atomic_status_update(self):
+        """
+        Test: _update_task_status 原子更新并返回 bool
+
+        场景:
+        1. 调用 _update_task_status
+        2. 验证返回 True
+        3. 验证 tasks.json 状态正确更新
+        """
+        # Setup
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test task',
+                'priority': 1,
+                'status': 'pending'
+            }
+        ]
+        self._create_tasks_file(tasks)
+
+        # 调用
+        result = self.dispatcher._update_task_status(
+            task_id='task-001',
+            worker_id='worker-1',
+            ts_ms=1730000000000
+        )
+
+        # 验证: 返回 True
+        self.assertTrue(result, "_update_task_status 应返回 True")
+
+        # 验证: 状态更新 (TaskInfo 没有 assigned_worker_id，检查 tasks.json)
+        with open(self.tasks_file, 'r') as f:
+            data = json.load(f)
+        task_dict = data['tasks'][0]
+        self.assertEqual(task_dict['status'], 'ASSIGNED')
+        self.assertEqual(task_dict['assigned_worker_id'], 'worker-1')
+
+    def test_atomic_status_update_nonexistent_task(self):
+        """
+        Test: _update_task_status 处理不存在的任务
+
+        场景:
+        1. 调用 _update_task_status 更新不存在的任务
+        2. 验证返回 False
+        """
+        # Setup
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test task',
+                'priority': 1,
+                'status': 'pending'
+            }
+        ]
+        self._create_tasks_file(tasks)
+
+        # 调用 (不存在的任务)
+        result = self.dispatcher._update_task_status(
+            task_id='task-nonexistent',
+            worker_id='worker-1',
+            ts_ms=1730000000000
+        )
+
+        # 验证: 返回 False
+        self.assertFalse(result, "_update_task_status 对不存在的任务应返回 False")
+
+    def test_dispatch_one_rollback_on_status_update_failure(self):
+        """
+        Test: 状态更新失败时释放锁
+
+        场景:
+        1. 模拟 _update_task_status 失败
+        2. 验证锁被释放
+        3. 验证派发返回 False
+        """
+        # Setup
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
+        # 创建 tasks.json
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test task',
+                'priority': 1,
+                'status': 'pending'
+            }
+        ]
+        self._create_tasks_file(tasks)
+
+        # Mock _update_task_status 使其失败
+        original_update = self.dispatcher._update_task_status
+        self.dispatcher._update_task_status = lambda *args, **kwargs: False
+
+        try:
+            task = master_dispatcher.TaskInfo(
+                task_id='task-001',
+                command='Test command',
+                priority=1,
+                status='pending'
+            )
+            result = self.dispatcher.dispatch_one(task, 'worker-1')
+
+            # 验证: 派发失败
+            self.assertFalse(result, "状态更新失败时应返回 False")
+
+            # 验证: 锁被释放 (另一个 worker 可以获取)
+            other_lock_mgr = task_lock.TaskLockManager(worker_id='worker-2')
+            acquired = other_lock_mgr.acquire_lock('task-001')
+            self.assertTrue(acquired, "状态更新失败后锁应被释放")
+
+            # Cleanup
+            other_lock_mgr.release_lock('task-001')
+        finally:
+            # Restore original method
+            self.dispatcher._update_task_status = original_update
 
 
 if __name__ == '__main__':
