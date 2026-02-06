@@ -627,7 +627,8 @@ class TestAckDetection:
         bridge = ClaudeBridge()
 
         with patch.object(bridge, '_capture_worker_pane') as mock_capture:
-            mock_capture.return_value = "[ACK] br-123\nTask received"
+            # New ACK format: [ACK: {bridge_task_id}] or dispatch echo [BRIDGE_TASK_ID: {bridge_task_id}]
+            mock_capture.return_value = "[ACK: br-123]\nTask received"
             ack_received, latency_ms = bridge._wait_for_ack("br-123", '%0', timeout=0.1)
 
         assert ack_received is True
@@ -1212,8 +1213,8 @@ class TestAckPatternMatching:
         bridge_task_id = "br-123-abc"  # Normal ID
 
         with patch.object(bridge, '_capture_worker_pane') as mock_capture:
-            # Should match with ACK
-            mock_capture.return_value = f"[ACK] {bridge_task_id}\nTask received"
+            # Should match with new ACK format [ACK: {bridge_task_id}]
+            mock_capture.return_value = f"[ACK: {bridge_task_id}]\nTask received"
             ack_received, _ = bridge._wait_for_ack(bridge_task_id, '%0', timeout=0.1)
 
         assert ack_received is True

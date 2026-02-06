@@ -4,8 +4,8 @@ set -euo pipefail
 # =============================================================================
 # AI Swarm - 2-Window Layout Script (V1.92)
 # Creates 2 tmux windows:
-#   Window 1 (codex-master): codex (50%) + master (50%) - horizontal split
-#   Window 2 (workers): worker-0 + worker-1 + worker-2 - equal horizontal split
+#   Window 1 (codex-master): codex (50%) + master(Claude) (50%) - horizontal split
+#   Window 2 (workers): worker-0/1/2 (Claude) - equal horizontal split
 #
 # Usage:
 #   ./scripts/swarm_layout_5.sh              # Create session and attach
@@ -17,10 +17,13 @@ set -euo pipefail
 # Environment variables:
 #   CLAUDE_SESSION    - Session name override
 #   SWARM_WORKDIR     - Default working directory (default: current directory)
-#   CODEX_CMD         - Codex command override (default: "codex --yolo")
+#   CODEX_CMD         - Codex command override (default: "codex --ask-for-approval never")
+#   MASTER_CMD        - Master pane command override (default: "claude")
+#   WORKER_CMD        - Worker pane command override (default: "claude")
 # =============================================================================
 # NOTE: This script has been upgraded to 2-window layout (V1.92).
 # The original 5-pane single-window layout is available in git history.
+# NOTE: Preferred entrypoint is scripts/swarm_layout_2windows.sh.
 # =============================================================================
 
 # Source configuration and common utilities
@@ -28,10 +31,74 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/_config.sh"
 source "${SCRIPT_DIR}/_common.sh"
 
+# =============================================================================
+# Help function
+# =============================================================================
+show_help() {
+    cat << EOF
+AI Swarm - 2-Window Layout Script (V1.92)
+
+Creates 2 tmux windows:
+  - Window 1 (codex-master): codex (50%) + master(Claude) (50%) - horizontal split
+  - Window 2 (workers): worker-0/1/2 (Claude) - equal horizontal split
+
+Usage: $0 [OPTIONS]
+
+Options:
+  --session, -s NAME     tmux session name (default: swarm-claude-default)
+  --workdir, -d DIR      working directory (default: current directory)
+  --codex-cmd, -c CMD    codex command to run in codex pane (default: "codex --ask-for-approval never")
+  --attach, -a           attach to tmux session after creation (default)
+  --no-attach            create session but don't attach
+  --help, -h             show this help message
+
+Environment variables:
+  CLAUDE_SESSION         session name override
+  SWARM_WORKDIR          default working directory override
+  CODEX_CMD              codex command override
+  MASTER_CMD             master pane command override
+  WORKER_CMD             worker pane command override
+
+Examples:
+  # Basic usage
+  $0
+
+  # Create and attach
+  $0 --attach
+
+  # Custom session name
+  $0 --session my-session
+
+  # Custom working directory
+  $0 --workdir /path/to/project
+
+Window layout:
+  Window 1 (codex-master):
+    ┌─────────────────────┬────────────────────────────┐
+    │                     │                            │
+    │        codex        │      master (claude)       │
+    │                     │                            │
+    └─────────────────────┴────────────────────────────┘
+
+  Window 2 (workers):
+    ┌───────────────┬───────────────┬───────────────┐
+    │               │               │               │
+    │ worker-0(claude) │ worker-1(claude) │ worker-2(claude) │
+    │               │               │               │
+    └───────────────┴───────────────┴───────────────┘
+
+Bridge Setup:
+  After running this script, set AI_SWARM_BRIDGE_PANE to the master pane ID
+  (output at the end of script execution), then start Bridge.
+EOF
+}
+
 # Default values
 SESSION="${CLAUDE_SESSION:-${SESSION_NAME:-swarm-claude-default}}"
 WORKDIR="${SWARM_WORKDIR:-$PWD}"
-CODEX_CMD="${CODEX_CMD:-codex --yolo}"
+CODEX_CMD="${CODEX_CMD:-codex --ask-for-approval never}"
+MASTER_CMD="${MASTER_CMD:-claude}"
+WORKER_CMD="${WORKER_CMD:-claude}"
 AI_SWARM_DIR="${AI_SWARM_DIR:-/tmp/ai_swarm}"
 AI_SWARM_INTERACTIVE="${AI_SWARM_INTERACTIVE:-}"
 ATTACH=true
@@ -93,6 +160,10 @@ fi
 if ! command -v codex >/dev/null 2>&1; then
     log_warn "codex command not found. Install OpenAI Codex or ensure it's in PATH."
 fi
+if ! command -v claude >/dev/null 2>&1; then
+    log_error "claude command not found. Please install Claude Code CLI."
+    exit 1
+fi
 
 # Validate working directory
 if [[ ! -d "$WORKDIR" ]]; then
@@ -129,34 +200,44 @@ CLUSTER_ID="${SESSION#swarm-}"
 # Window 1: codex-master (horizontal split, 50% each)
 # =============================================================================
 # Create session with first window named "codex-master"
-CODEX_PANE=$(tmux new-session -d -P -F '#{pane_id}' -s "$SESSION" -n codex-master -x 200 -y 60)
+CODEX_PANE=$(tmux new-session -d -P -F '#{pane_id}' -s "$SESSION" -n codex-master)
 
 # =============================================================================
 # Environment setup (session-level, after creating session)
 # =============================================================================
 # Set environment at session level (will be inherited by all windows)
 tmux set-environment -t "$SESSION" AI_SWARM_DIR "$AI_SWARM_DIR"
+
+# Capture current LLM settings for tmux environment (WSL compatibility)
+LLM_BASE_URL_VAL="${LLM_BASE_URL:-}"
+ANTHROPIC_API_KEY_VAL="${ANTHROPIC_API_KEY:-}"
+
 if [[ -n "${AI_SWARM_INTERACTIVE:-}" ]]; then
     tmux set-environment -t "$SESSION" AI_SWARM_INTERACTIVE "$AI_SWARM_INTERACTIVE"
 fi
-if [[ -n "${LLM_BASE_URL:-}" ]]; then
-    tmux set-environment -t "$SESSION" LLM_BASE_URL "$LLM_BASE_URL"
+if [[ -n "$LLM_BASE_URL_VAL" ]]; then
+    tmux set-environment -t "$SESSION" LLM_BASE_URL "$LLM_BASE_URL_VAL"
 fi
-if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-    tmux set-environment -t "$SESSION" ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
+if [[ -n "$ANTHROPIC_API_KEY_VAL" ]]; then
+    tmux set-environment -t "$SESSION" ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY_VAL"
 fi
+
+# Build environment export string for pane commands
+PANE_ENV_EXPORT=""
+[[ -n "$LLM_BASE_URL_VAL" ]] && PANE_ENV_EXPORT="${PANE_ENV_EXPORT}export LLM_BASE_URL=\"$LLM_BASE_URL_VAL\" && "
+[[ -n "$ANTHROPIC_API_KEY_VAL" ]] && PANE_ENV_EXPORT="${PANE_ENV_EXPORT}export ANTHROPIC_API_KEY=\"$ANTHROPIC_API_KEY_VAL\" && "
 
 # Split horizontally to create master pane (50% width each)
 MASTER_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$CODEX_PANE")
 
-# Send startup commands (use --cluster-id for consistency with CLI)
-tmux send-keys -t "$CODEX_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && $CODEX_CMD" Enter
-tmux send-keys -t "$MASTER_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && python3 -m swarm.cli --cluster-id $CLUSTER_ID master" Enter
+# Send startup commands
+tmux send-keys -t "$CODEX_PANE" "${PANE_ENV_EXPORT}cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && $CODEX_CMD" C-m
+tmux send-keys -t "$MASTER_PANE" "${PANE_ENV_EXPORT}cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && $MASTER_CMD" Enter
 
 # =============================================================================
 # Window 2: workers (3 equal horizontal panes)
 # =============================================================================
-WORKER0_PANE=$(tmux new-window -P -F '#{pane_id}' -t "$SESSION" -n workers -x 200 -y 60)
+WORKER0_PANE=$(tmux new-window -P -F '#{pane_id}' -t "$SESSION" -n workers)
 
 # Split for worker-1 and worker-2 (equal 33% each)
 WORKER1_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$WORKER0_PANE")
@@ -165,10 +246,10 @@ WORKER2_PANE=$(tmux split-window -h -P -F '#{pane_id}' -t "$WORKER1_PANE")
 # Apply even-horizontal layout to ensure equal distribution
 tmux select-layout -t "$SESSION:workers" even-horizontal
 
-# Send startup commands (use --cluster-id and --id for consistency with CLI)
-tmux send-keys -t "$WORKER0_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && python3 -m swarm.cli --cluster-id $CLUSTER_ID worker --id 0" Enter
-tmux send-keys -t "$WORKER1_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && python3 -m swarm.cli --cluster-id $CLUSTER_ID worker --id 1" Enter
-tmux send-keys -t "$WORKER2_PANE" "cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && python3 -m swarm.cli --cluster-id $CLUSTER_ID worker --id 2" Enter
+# Send startup commands (all worker panes run Claude Code CLI)
+tmux send-keys -t "$WORKER0_PANE" "${PANE_ENV_EXPORT}cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && $WORKER_CMD" Enter
+tmux send-keys -t "$WORKER1_PANE" "${PANE_ENV_EXPORT}cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && $WORKER_CMD" Enter
+tmux send-keys -t "$WORKER2_PANE" "${PANE_ENV_EXPORT}cd \"$WORKDIR\" && export AI_SWARM_DIR=\"$AI_SWARM_DIR\"${AI_SWARM_INTERACTIVE:+ && export AI_SWARM_INTERACTIVE=\"$AI_SWARM_INTERACTIVE\"} && $WORKER_CMD" Enter
 
 # Select codex pane as starting point
 tmux select-pane -t "$CODEX_PANE"
@@ -201,10 +282,10 @@ log_info ""
 log_info "=============================================="
 log_info "Bridge Configuration (IMPORTANT):"
 log_info "=============================================="
-log_info "Codex pane ID: $CODEX_PANE"
+log_info "Master pane ID: $MASTER_PANE"
 log_info ""
 log_info "To run Bridge, set the environment variable:"
-log_info "  export AI_SWARM_BRIDGE_PANE=$CODEX_PANE"
+log_info "  export AI_SWARM_BRIDGE_PANE=$MASTER_PANE"
 log_info ""
 log_info "Then start Bridge:"
 log_info "  AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start"
@@ -212,7 +293,9 @@ log_info "=============================================="
 log_info ""
 
 log_info "Session created successfully!"
-log_info "2 windows: codex-master (2 panes) + workers (3 panes)"
+log_info "2 windows: codex-master (codex+master) + workers (3 claude workers)"
+log_info "Window list:"
+tmux list-windows -t "$SESSION" -F "  - #{window_index}:#{window_name} (panes=#{window_panes})"
 log_info ""
 log_info "Commands:"
 log_info "  Attach:   tmux attach -t $SESSION"
@@ -227,63 +310,3 @@ else
     log_info "Session ready. Run 'tmux attach -t $SESSION' to connect."
     exit 0
 fi
-
-# =============================================================================
-# Help function
-# =============================================================================
-show_help() {
-    cat << EOF
-AI Swarm - 2-Window Layout Script (V1.92)
-
-Creates 2 tmux windows:
-  - Window 1 (codex-master): codex (50%) + master (50%) - horizontal split
-  - Window 2 (workers): worker-0 + worker-1 + worker-2 - equal horizontal split
-
-Usage: $0 [OPTIONS]
-
-Options:
-  --session, -s NAME     tmux session name (default: swarm-claude-default)
-  --workdir, -d DIR      working directory (default: current directory)
-  --codex-cmd, -c CMD    codex command to run in codex pane (default: "codex --yolo")
-  --attach, -a           attach to tmux session after creation (default)
-  --no-attach            create session but don't attach
-  --help, -h             show this help message
-
-Environment variables:
-  CLAUDE_SESSION         session name override
-  SWARM_WORKDIR          default working directory override
-  CODEX_CMD              codex command override
-
-Examples:
-  # Basic usage
-  $0
-
-  # Create and attach
-  $0 --attach
-
-  # Custom session name
-  $0 --session my-session
-
-  # Custom working directory
-  $0 --workdir /path/to/project
-
-Window layout:
-  Window 1 (codex-master):
-    ┌─────────────────────┬────────────────────────────┐
-    │                     │                            │
-    │        codex        │          master            │
-    │                     │                            │
-    └─────────────────────┴────────────────────────────┘
-
-  Window 2 (workers):
-    ┌───────────────┬───────────────┬───────────────┐
-    │               │               │               │
-    │    worker-0   │    worker-1   │    worker-2   │
-    │               │               │               │
-    └───────────────┴───────────────┴───────────────┘
-
-Bridge Setup:
-  After running this script, set AI_SWARM_BRIDGE_PANE to the codex pane ID
-  (output at the end of script execution), then start Bridge.
-EOF
-}

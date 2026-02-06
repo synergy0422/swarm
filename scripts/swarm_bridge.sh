@@ -16,27 +16,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 log_info() { echo "[$(date +%H:%M:%S)][Bridge] $*"; }
 log_error() { echo "[$(date +%H:%M:%S)][Bridge][ERROR] $*" >&2; }
 
-cmd_status() {
-    local ai_swarm_dir
-    ai_swarm_dir=$(get_ai_swarm_dir)
-    local pid_file="$ai_swarm_dir/bridge.pid"
-
-    if [[ -f "$pid_file" ]]; then
-        local pid
-        pid=$(cat "$pid_file")
-        if kill -0 "$pid" 2>/dev/null; then
-            echo "Bridge running (PID: $pid)"
-            return 0
-        else
-            echo "Bridge not running (stale PID file)"
-            return 1
-        fi
-    else
-        echo "Bridge not running"
-        return 1
-    fi
-}
-
 # Parse a single JSON log entry into key=value pairs
 _parse_json_entry() {
     local entry="$1"
@@ -93,6 +72,27 @@ cmd_bridge_status() {
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --help|-h)
+                cat << EOF
+Usage: $(basename "$0") bridge-status [OPTIONS]
+
+Analyze bridge.log for dispatch lifecycle tracking.
+
+Options:
+  --recent N    Show last N bridge events (default: 10)
+  --failed      Show only FAILED/RETRY events
+  --task ID     Show lifecycle of specific bridge_task_id
+  --phase PHASE Filter by phase (CAPTURED|PARSED|DISPATCHED|ACKED|RETRY|FAILED)
+  --json        Output as JSON for piping
+  --help, -h    Show this help message
+
+Examples:
+  $(basename "$0") bridge-status --recent 20
+  $(basename "$0") bridge-status --failed
+  $(basename "$0") bridge-status --task br-123456-abc --json
+EOF
+                return 0
+                ;;
             --recent)
                 show_recent="$2"
                 shift 2

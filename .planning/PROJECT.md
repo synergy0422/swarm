@@ -143,6 +143,20 @@
 
 ### Active
 
+**v1.93 - 主脑自然语言派发闭环 (Planned 2026-02-06)**
+
+- [ ] **V193-01**: master 输入 `TASK: ...` 稳定捕获（含 `❯` 前缀）
+- [ ] **V193-02**: bridge direct dispatch 增加 ACK/超时/重试闭环
+- [ ] **V193-03**: 全链路可观测（captured/parsed/dispatched/acked/retry/failed）
+- [ ] **V193-04**: 异常恢复（worker 不响应时自动切换）
+- [ ] **V193-05**: 文档与运行行为一致（V1.92 双页面 Claude 模式）
+
+See:
+- `.planning/milestones/v1.93-REQUIREMENTS.md`
+- `.planning/milestones/v1.93-ROADMAP.md`
+
+---
+
 **v1.90 - 统一任务入口 CLI (Active)**
 
 - [ ] **CLI-01**: 新增 `swarm task` 子命令入口

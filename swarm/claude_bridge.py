@@ -637,7 +637,13 @@ class ClaudeBridge:
         Wait for ACK confirmation from worker.
 
         After dispatching to a worker, capture the worker pane periodically
-        to check for ACK pattern: [ACK] <bridge-task-id>
+        to check for ACK pattern. Two patterns are checked (in order):
+
+        1. Explicit ACK: [ACK: {bridge_task_id}] - worker explicitly confirms
+        2. Dispatch echo: [BRIDGE_TASK_ID: {bridge_task_id}] - dispatched text echoed back
+
+        The dispatch echo pattern is checked because workers typically echo
+        the task text they receive, which serves as implicit acknowledgment.
 
         Args:
             bridge_task_id: The task ID to look for in ACK
@@ -655,8 +661,12 @@ class ClaudeBridge:
         start_time = time.time()
         poll_interval = 0.5  # Check every 500ms
 
-        # ACK pattern to match
-        ack_pattern = re.compile(r'\[ACK\]\s*' + re.escape(bridge_task_id))
+        # ACK pattern to match - explicit ACK from worker
+        ack_pattern = re.compile(r'\[ACK:\s*' + re.escape(bridge_task_id) + r'\]')
+
+        # Dispatch echo pattern - dispatched text echoed back by worker
+        # This serves as implicit acknowledgment when explicit ACK is not available
+        dispatch_echo_pattern = re.compile(r'\[BRIDGE_TASK_ID:\s*' + re.escape(bridge_task_id) + r'\]')
 
         while True:
             elapsed = time.time() - start_time
@@ -666,7 +676,9 @@ class ClaudeBridge:
 
             # Capture worker pane and check for ACK
             capture = self._capture_worker_pane(target_pane)
-            if ack_pattern.search(capture):
+
+            # Check explicit ACK first, then dispatch echo
+            if ack_pattern.search(capture) or dispatch_echo_pattern.search(capture):
                 latency_ms = (time.time() - start_time) * 1000
                 return True, latency_ms
 
@@ -734,13 +746,19 @@ class ClaudeBridge:
             task_preview=task[:100]
         )
 
-        # Try each worker in round-robin, with retries per worker
+        # Dispatch algorithm: Try each worker, retry same worker N times, then failover
+        #
+        # pane_index points to the CURRENT worker being tried
+        # When we failover, we increment pane_index to move to next worker
+        # When we retry same worker, pane_index stays the same
+        #
+        # Flow: worker0 (attempt 1) -> worker0 (attempt 2) -> worker0 (attempt 3) -> worker1 (attempt 4) -> ...
+        #
         while total_attempts < max_total_attempts:
             pane_id = panes[pane_index % len(panes)]
-            pane_index += 1
             total_attempts += 1
 
-            # Calculate which retry attempt this is for current worker
+            # Calculate retry counter for current worker (1, 2, 3, then reset)
             worker_attempt = ((total_attempts - 1) % self.max_retries) + 1
 
             # Log DISPATCHED phase
@@ -759,9 +777,10 @@ class ClaudeBridge:
             send_success = self._send_text_to_pane(pane_id, payload)
 
             if not send_success:
-                # Send failed, log and continue to next attempt
+                # Send failed, log and failover to next worker
                 latency_ms = (time.time() - dispatch_start) * 1000
                 attempts.append((pane_id, False, latency_ms, "send_keys_failed"))
+                pane_index += 1  # Failover to next worker
                 continue
 
             # Wait for ACK from worker
@@ -786,7 +805,7 @@ class ClaudeBridge:
 
                 # Determine if we should retry same worker or failover
                 if worker_attempt < self.max_retries:
-                    # Retry same worker
+                    # Retry SAME worker (don't increment pane_index)
                     self._log_phase(
                         phase=BridgePhase.RETRY,
                         bridge_task_id=bridge_task_id,
@@ -795,13 +814,11 @@ class ClaudeBridge:
                         attempt=total_attempts,
                         latency_ms=latency_ms,
                         dispatch_mode=DispatchMode.DIRECT,
-                        reason="ack_timeout"
+                        reason="ack_timeout_retry_same_worker"
                     )
-                    # Don't advance pane_index (retry same worker)
-                    # Add retry delay
                     time.sleep(self.retry_delay)
                 else:
-                    # All retries exhausted for this worker, failover to next
+                    # All retries exhausted for this worker, FAILOVER to next
                     self._log_phase(
                         phase=BridgePhase.RETRY,
                         bridge_task_id=bridge_task_id,
@@ -812,7 +829,7 @@ class ClaudeBridge:
                         dispatch_mode=DispatchMode.DIRECT,
                         reason="worker_failover"
                     )
-                    # Small delay before trying next worker
+                    pane_index += 1  # Failover: move to next worker
                     time.sleep(self.retry_delay)
 
         # All attempts exhausted, log FAILED phase

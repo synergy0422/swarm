@@ -6,26 +6,26 @@ set -euo pipefail
 #
 # Usage:
 #   ./run_claude_swarm.sh              # Create and attach (default)
-#   ./run_claude_swarm.sh --no-attach  # Create only, don't attach
-#   ./run_claude_swarm.sh --attach     # Explicitly attach
+#   ./run_claude_swarm.sh --no-attach|-n  # Create only, don't attach
+#   ./run_claude_swarm.sh --attach|-a     # Explicitly attach
 #   ./run_claude_swarm.sh -d /path     # Override working directory
 #
 # Environment:
 #   SWARM_WORKDIR - Default working directory (default: /home/user/projects/AAA/swarm)
 
 # Configuration
-SESSION_NAME="swarm-claude-default"
+SESSION_NAME="${CLAUDE_SESSION:-swarm-claude-default}"
 WORKDIR="${SWARM_WORKDIR:-/home/user/projects/AAA/swarm}"
 
 # Parse arguments
 ATTACH=true
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --attach)
+        --attach|-a)
             ATTACH=true
             shift
             ;;
-        --no-attach)
+        --no-attach|-n)
             ATTACH=false
             shift
             ;;
@@ -37,6 +37,14 @@ while [[ $# -gt 0 ]]; do
             WORKDIR="$2"
             shift 2
             ;;
+        --session|-s)
+            if [[ -z "${2:-}" ]]; then
+                echo "Error: --session requires a session name argument"
+                exit 1
+            fi
+            SESSION_NAME="$2"
+            shift 2
+            ;;
         --help|-h)
             echo "AI Swarm - Claude Code CLI Multi-Window Launcher"
             echo
@@ -46,9 +54,11 @@ while [[ $# -gt 0 ]]; do
             echo "  --attach, -a        Attach to tmux session after creation (default)"
             echo "  --no-attach, -n     Create session but don't attach"
             echo "  --workdir, -d DIR   Set working directory (default: /home/user/projects/AAA/swarm)"
+            echo "  --session, -s NAME  Set tmux session name (default: swarm-claude-default)"
             echo "  --help, -h          Show this help message"
             echo
             echo "Environment variables:"
+            echo "  CLAUDE_SESSION      Default tmux session name"
             echo "  SWARM_WORKDIR       Default working directory"
             echo
             echo "Creates tmux session '$SESSION_NAME' with 4 windows:"
@@ -115,6 +125,10 @@ tmux select-window -t "$SESSION_NAME:master"
 
 echo "[CLAUDE-SWARM] Session created successfully!"
 echo "               4 windows: master, worker-0, worker-1, worker-2"
+echo "               Session: $SESSION_NAME"
+echo
+echo "[CLAUDE-SWARM] Window list:"
+tmux list-windows -t "$SESSION_NAME" -F "  - #{window_index}:#{window_name} (panes=#{window_panes})"
 echo
 echo "[CLAUDE-SWARM] Commands:"
 printf "               Attach:   tmux attach -t %s\n" "$SESSION_NAME"
