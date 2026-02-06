@@ -634,24 +634,28 @@ class ClaudeBridge:
 
     def _wait_for_ack(self, bridge_task_id: str, target_pane: str, timeout: float = None) -> Tuple[bool, float]:
         """
-        Wait for worker confirmation that task has been received and processing has started.
+        Wait for worker to acknowledge task receipt by detecting content change.
 
-        Checks for two patterns (in order of priority):
+        Strategy (since we cannot modify Claude Code to output explicit ACK):
+        1. Capture pane baseline BEFORE dispatch (includes dispatch markers)
+        2. After dispatch, wait for pane content to stabilize
+        3. Check if pane contains the dispatched task content (not just the dispatch marker)
+        4. If task content is present and pane has new content beyond dispatch marker,
+           consider task as received and being processed
 
-        1. Explicit ACK: [ACK: {bridge_task_id}] - worker explicitly confirms receipt
-        2. Execution started: [STARTED: {bridge_task_id}] - worker begins processing
-
-        Note: We do NOT use dispatch echo ([BRIDGE_TASK_ID: ...]) as success condition
-        because that only proves text was injected to pane, not that worker is processing.
+        Detection logic:
+        - Wait for pane to contain: "[BRIDGE_TASK_ID: {id}] TASK: {task_content}"
+        - Also check for Claude's actual response (e.g., "I'll help you with...")
+        - This confirms the pane is processing the task, not just echoing dispatch
 
         Args:
-            bridge_task_id: The task ID to look for in worker response
+            bridge_task_id: The bridge task ID
             target_pane: The pane ID to capture (worker pane)
             timeout: Timeout in seconds (default: self.ack_timeout)
 
         Returns:
             (ack_received: bool, latency_ms: float)
-            - ack_received: True if worker confirmed receipt/start, False on timeout
+            - ack_received: True if task content detected in pane, False on timeout
             - latency_ms: Time from dispatch to confirmation in milliseconds
         """
         if timeout is None:
@@ -660,25 +664,49 @@ class ClaudeBridge:
         start_time = time.time()
         poll_interval = 0.5  # Check every 500ms
 
-        # Explicit ACK pattern - worker explicitly confirms
-        ack_pattern = re.compile(r'\[ACK:\s*' + re.escape(bridge_task_id) + r'\]')
+        # Patterns to detect task presence in pane:
+        # 1. Dispatch marker: [BRIDGE_TASK_ID: xxx] TASK: ...
+        # 2. Claude's acknowledgment patterns (indicates actual processing)
+        dispatch_marker_pattern = re.compile(
+            r'\[BRIDGE_TASK_ID:\s*' + re.escape(bridge_task_id) + r'\]'
+        )
 
-        # Worker started execution pattern - worker begins processing the task
-        started_pattern = re.compile(r'\[STARTED:\s*' + re.escape(bridge_task_id) + r'\]')
+        # Claude's response indicators (not just echo)
+        # These indicate Claude has actually seen and started processing the task
+        claude_ack_patterns = [
+            re.compile(r"I'll\s+", re.IGNORECASE),  # "I'll help you with..."
+            re.compile(r"Sure,?\s*", re.IGNORECASE),  # "Sure, I can..."
+            re.compile(r"Okay,?\s*", re.IGNORECASE),  # "Okay, let me..."
+            re.compile(r'\[THINKING\]'),  # Claude is thinking
+            re.compile(r'\[\d+\s+tokens'),  # Claude output indicator
+            re.compile(r'^Task:'),  # Task marker
+            re.compile(r'^Input:'),  # Input marker
+        ]
 
         while True:
             elapsed = time.time() - start_time
             if elapsed >= timeout:
-                # Timeout reached
+                # Timeout reached - no acknowledgment detected
                 return False, elapsed * 1000
 
-            # Capture worker pane and check for confirmation
+            # Capture worker pane
             capture = self._capture_worker_pane(target_pane)
 
-            # Check for explicit ACK first, then execution started
-            if ack_pattern.search(capture) or started_pattern.search(capture):
-                latency_ms = (time.time() - start_time) * 1000
-                return True, latency_ms
+            # Check 1: Dispatch marker present?
+            if dispatch_marker_pattern.search(capture):
+                # Dispatch marker found - check if Claude is responding (not just echo)
+
+                # Check 2: Claude's response indicators present?
+                has_claude_response = any(p.search(capture) for p in claude_ack_patterns)
+
+                # Check 3: Multiple lines or substantial content (not just single line echo)
+                lines = [l.strip() for l in capture.split('\n') if l.strip()]
+                has_substantial_content = len(lines) > 1
+
+                if has_claude_response or has_substantial_content:
+                    # Worker is actually processing the task
+                    latency_ms = (time.time() - start_time) * 1000
+                    return True, latency_ms
 
             # Sleep before next check
             time.sleep(poll_interval)

@@ -622,30 +622,69 @@ class TestAckDetection:
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     @patch('subprocess.run')
-    def test_wait_for_ack_receives(self, mock_run):
-        """Test ACK pattern detection in _wait_for_ack"""
+    def test_wait_for_ack_receives_with_dispatch_marker_and_response(self, mock_run):
+        """Test ACK detection: dispatch marker + Claude response indicator"""
         bridge = ClaudeBridge()
 
         with patch.object(bridge, '_capture_worker_pane') as mock_capture:
-            # New ACK format: [ACK: {bridge_task_id}] or dispatch echo [BRIDGE_TASK_ID: {bridge_task_id}]
-            mock_capture.return_value = "[ACK: br-123]\nTask received"
+            # Dispatch marker + Claude's acknowledgment response
+            mock_capture.return_value = "[BRIDGE_TASK_ID: br-123] TASK: Fix the bug\nI'll help you with that."
             ack_received, latency_ms = bridge._wait_for_ack("br-123", '%0', timeout=0.1)
 
         assert ack_received is True
         assert latency_ms >= 0
 
     @patch('subprocess.run')
-    def test_wait_for_ack_timeout(self, mock_run):
-        """Test ACK timeout behavior"""
+    def test_wait_for_ack_with_thinking_marker(self, mock_run):
+        """Test ACK detection with [THINKING] marker"""
         bridge = ClaudeBridge()
 
         with patch.object(bridge, '_capture_worker_pane') as mock_capture:
-            # No ACK in response
+            # Dispatch marker + [THINKING] indicator
+            mock_capture.return_value = "[BRIDGE_TASK_ID: br-456] TASK: Write tests\n[THINKING]"
+            ack_received, latency_ms = bridge._wait_for_ack("br-456", '%0', timeout=0.1)
+
+        assert ack_received is True
+
+    @patch('subprocess.run')
+    def test_wait_for_ack_with_substantial_content(self, mock_run):
+        """Test ACK detection with substantial multi-line content"""
+        bridge = ClaudeBridge()
+
+        with patch.object(bridge, '_capture_worker_pane') as mock_capture:
+            # Dispatch marker + multiple lines (substantial content)
+            mock_capture.return_value = """[BRIDGE_TASK_ID: br-789] TASK: Review code
+Line 2 of response
+Line 3 of response"""
+            ack_received, latency_ms = bridge._wait_for_ack("br-789", '%0', timeout=0.1)
+
+        assert ack_received is True
+
+    @patch('subprocess.run')
+    def test_wait_for_ack_timeout_no_dispatch_marker(self, mock_run):
+        """Test ACK timeout when dispatch marker not present"""
+        bridge = ClaudeBridge()
+
+        with patch.object(bridge, '_capture_worker_pane') as mock_capture:
+            # No dispatch marker
             mock_capture.return_value = "Worker busy..."
             ack_received, elapsed_ms = bridge._wait_for_ack("br-123", '%0', timeout=0.1)
 
         assert ack_received is False
         assert elapsed_ms >= 90  # Allow some tolerance
+
+    @patch('subprocess.run')
+    def test_wait_for_ack_timeout_dispatch_marker_only(self, mock_run):
+        """Test ACK timeout when only dispatch marker present, no Claude response"""
+        bridge = ClaudeBridge()
+
+        with patch.object(bridge, '_capture_worker_pane') as mock_capture:
+            # Only dispatch marker, no Claude response
+            mock_capture.return_value = "[BRIDGE_TASK_ID: br-123] TASK: Fix the bug"
+            ack_received, elapsed_ms = bridge._wait_for_ack("br-123", '%0', timeout=0.1)
+
+        assert ack_received is False  # Single line, no Claude response
+        assert elapsed_ms >= 90
 
 
 class TestRetryLogic:
@@ -1185,36 +1224,36 @@ class TestAckPatternMatching:
         import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def test_ack_pattern_regex(self):
-        """Test ACK pattern is correctly compiled"""
+    def test_dispatch_marker_pattern(self):
+        """Test dispatch marker pattern is correctly compiled"""
         import re
 
         bridge = ClaudeBridge()
         bridge_task_id = "br-12345-xyz"
 
-        # Pattern should be compiled
-        ack_pattern = re.compile(r'\[ACK\]\s*' + re.escape(bridge_task_id))
+        # Pattern should match dispatch marker
+        dispatch_pattern = re.compile(
+            r'\[BRIDGE_TASK_ID:\s*' + re.escape(bridge_task_id) + r'\]'
+        )
 
         # Should match
-        assert ack_pattern.search(f"[ACK] {bridge_task_id}") is not None
-        assert ack_pattern.search(f"[ACK]  {bridge_task_id}") is not None  # Extra spaces
-        assert ack_pattern.search(f"[ACK]\t{bridge_task_id}") is not None  # Tab
+        assert dispatch_pattern.search(f"[BRIDGE_TASK_ID: {bridge_task_id}] TASK: Fix bug") is not None
+        assert dispatch_pattern.search(f"[BRIDGE_TASK_ID:  {bridge_task_id}]") is not None  # Extra spaces after colon
 
-        # Should not match
-        assert ack_pattern.search(f"[ACK] br-other-id") is None
-        assert ack_pattern.search(f"No ACK here") is None
+        # Should not match (extra spaces before closing bracket)
+        assert dispatch_pattern.search(f"[BRIDGE_TASK_ID: {bridge_task_id} ]") is None
 
     @patch('subprocess.run')
     def test_ack_with_special_chars_in_id(self, mock_run):
-        """Test ACK detection with special characters in ID"""
+        """Test ACK detection with special characters in ID and Claude response"""
         mock_run.return_value.stdout = "output"
 
         bridge = ClaudeBridge()
         bridge_task_id = "br-123-abc"  # Normal ID
 
         with patch.object(bridge, '_capture_worker_pane') as mock_capture:
-            # Should match with new ACK format [ACK: {bridge_task_id}]
-            mock_capture.return_value = f"[ACK: {bridge_task_id}]\nTask received"
+            # Dispatch marker + Claude response (I'll help...)
+            mock_capture.return_value = f"[BRIDGE_TASK_ID: {bridge_task_id}] TASK: Fix bug\nI'll help you with that."
             ack_received, _ = bridge._wait_for_ack(bridge_task_id, '%0', timeout=0.1)
 
         assert ack_received is True
