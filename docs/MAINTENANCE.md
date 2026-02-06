@@ -7,6 +7,7 @@
 - [维护入口](#维护入口)
 - [环境恢复](#环境恢复)
 - [故障排查](#故障排查)
+- [Bridge 可观测性](#bridge-可观测性)
 - [紧急流程](#紧急流程)
 - [维护清单](#维护清单)
 - [最佳实践](#最佳实践)
@@ -139,8 +140,8 @@ mkdir -p /tmp/ai_swarm/locks
 # 4. 运行自检验证
 ./scripts/swarm_selfcheck.sh
 
-# 5. 启动新会话
-./run_claude_swarm.sh
+# 5. 启动新会话（4 个独立 Claude 窗口模式）
+./run_claude_swarm.sh --session swarm-claude-default
 ```
 
 ---
@@ -190,6 +191,163 @@ ls -la scripts/*.sh
 
 # 查看所有窗口实时状态
 ./scripts/claude_status.sh
+```
+
+---
+
+## Bridge 可观测性
+
+v1.93 引入了 Bridge 可观测性功能，用于监控主脑任务派发的完整生命周期。
+
+### Bridge 日志格式
+
+Bridge 将结构化日志写入 `bridge.log`，格式为 JSON：
+
+```json
+{"ts":"2026-02-06T15:10:00.000Z","phase":"CAPTURED","bridge_task_id":"br-1234567890-abc","task_preview":"Fix bug","attempt":1}
+{"ts":"2026-02-06T15:10:00.100Z","phase":"PARSED","bridge_task_id":"br-1234567890-abc","task_preview":"Fix bug","attempt":1}
+{"ts":"2026-02-06T15:10:00.200Z","phase":"DISPATCHED","bridge_task_id":"br-1234567890-abc","target_worker":"%4","attempt":1,"latency_ms":200}
+{"ts":"2026-02-06T15:10:00.500Z","phase":"ACKED","bridge_task_id":"br-1234567890-abc","target_worker":"%4","attempt":1,"latency_ms":500}
+```
+
+### 阶段说明（Phase）
+
+| 阶段 | 说明 |
+|------|------|
+| CAPTURED | 任务命令从 Master 窗口捕获 |
+| PARSED | 任务命令成功解析 |
+| DISPATCHED | 任务已派发到 Worker |
+| ACKED | Worker 确认收到任务 |
+| RETRY | 派发失败，正在重试 |
+| FAILED | 所有重试耗尽，任务失败 |
+
+### bridge-status 命令
+
+查看 Bridge 日志，分析任务派发生命周期：
+
+```bash
+# 查看最近 10 条事件（默认）
+./scripts/swarm_bridge.sh bridge-status
+
+# 查看最近 20 条事件
+./scripts/swarm_bridge.sh bridge-status --recent 20
+
+# 只显示失败和重试事件
+./scripts/swarm_bridge.sh bridge-status --failed
+
+# 跟踪特定任务的完整生命周期
+./scripts/swarm_bridge.sh bridge-status --task br-1234567890-abc
+
+# 只显示 DISPATCHED 阶段
+./scripts/swarm_bridge.sh bridge-status --phase DISPATCHED
+
+# JSON 格式输出（用于自动化）
+./scripts/swarm_bridge.sh bridge-status --json > /tmp/bridge_events.json
+```
+
+**输出示例：**
+
+```
+TS                   PHASE      BRIDGE_TASK_ID     WORKER   ATTEMPT LATENCY    TASK
+-------------------- ---------- ------------------ -------- ------- ---------- ----
+2026-02-06T15:10:00.500Z ACKED    br-1234567890-abc  %4       1       500        -
+2026-02-06T15:10:00.200Z DISPATCHED br-1234567890-abc  %4       1       200        -
+2026-02-06T15:10:00.100Z PARSED    br-1234567890-abc  -        1       -          Fix bug in auth module
+2026-02-06T15:10:00.000Z CAPTURED  br-1234567890-abc  -        1       -          Fix bug in auth module
+
+Total entries: 4
+```
+
+### bridge-dashboard 命令
+
+实时监控 Bridge 运行状态：
+
+```bash
+# 单次查看
+./scripts/swarm_bridge.sh bridge-dashboard
+
+# 实时监控（每 30 秒刷新，按 Ctrl+C 退出）
+./scripts/swarm_bridge.sh bridge-dashboard --watch
+```
+
+**输出示例：**
+
+```
+==============================================
+         BRIDGE DASHBOARD
+==============================================
+
+=== BRIDGE STATUS ===
+  Status:     RUNNING
+  PID:        12345
+  Uptime:     5 min 30 sec
+
+=== DISPATCH STATISTICS ===
+  Total Log Entries:  42
+  Dispatched:         15
+  Acknowledged:       14
+  Retries:            2
+  Failed:             1
+  Success Rate:       93%
+
+=== LAST ERROR ===
+  Task ID:    br-9876543210-xyz
+  Error:      worker_timeout
+  Log:        {"phase":"FAILED",...}
+
+=== POTENTIALLY STUCK DISPATCHES ===
+  No stuck dispatches detected
+
+=== RECENT ACTIVITY (Last 5) ===
+  {"phase":"ACKED",...}
+  {"phase":"DISPATCHED",...}
+
+==============================================
+```
+
+### 故障排查流程
+
+使用 Bridge 可观测性快速定位问题：
+
+```
+发现问题（如 Worker 没有执行任务）
+    |
+    v
+1. 检查 bridge-dashboard 确认 Bridge 运行状态
+    |
+    v
+2. 查看 bridge-status --failed 定位失败任务
+    |
+    v
+3. bridge-status --task <ID> 查看任务完整生命周期
+    |
+    v
+根据阶段判断问题：
+- CAPTURED 问题：Master 窗口是否正确捕获命令
+- PARSED 问题：命令格式是否正确（/task 或 TASK:）
+- DISPATCHED 问题：Worker 窗口是否可达
+- ACKED 问题：Worker 是否响应
+- RETRY/FAILED 问题：检查 Worker 状态和网络连接
+```
+
+### 常见问题诊断
+
+```bash
+# 1. Bridge 未运行
+./scripts/swarm_bridge.sh status
+# 解决: AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
+
+# 2. 任务卡在 DISPATCHED（无 ACK）
+./scripts/swarm_bridge.sh bridge-status --phase DISPATCHED
+# 检查: Worker 窗口是否正常响应
+
+# 3. 频繁 RETRY
+./scripts/swarm_bridge.sh bridge-status --failed
+# 检查: Worker 窗口是否忙碌或无响应
+
+# 4. 成功率低
+./scripts/swarm_bridge.sh bridge-dashboard
+# 查看 Success Rate 和 Last Error
 ```
 
 ---
