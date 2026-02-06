@@ -632,30 +632,38 @@ class ClaudeBridge:
         except Exception:
             return ""
 
-    def _wait_for_ack(self, bridge_task_id: str, target_pane: str, timeout: float = None) -> Tuple[bool, float]:
+    def _wait_for_ack(
+        self,
+        bridge_task_id: str,
+        target_pane: str,
+        baseline_line_count: int = None,
+        timeout: float = None
+    ) -> Tuple[bool, float]:
         """
-        Wait for worker to acknowledge task receipt by detecting content change.
+        Wait for worker to acknowledge task receipt by detecting new content.
 
         Strategy (since we cannot modify Claude Code to output explicit ACK):
-        1. Capture pane baseline BEFORE dispatch (includes dispatch markers)
-        2. After dispatch, wait for pane content to stabilize
-        3. Check if pane contains the dispatched task content (not just the dispatch marker)
-        4. If task content is present and pane has new content beyond dispatch marker,
-           consider task as received and being processed
 
-        Detection logic:
-        - Wait for pane to contain: "[BRIDGE_TASK_ID: {id}] TASK: {task_content}"
-        - Also check for Claude's actual response (e.g., "I'll help you with...")
-        - This confirms the pane is processing the task, not just echoing dispatch
+        ACK is confirmed if EITHER:
+        1. Explicit markers: [ACK: {id}] or [STARTED: {id}], OR
+        2. NEW content after dispatch contains processing signals:
+           - "I'll...", "Sure...", "Okay..." (Claude acknowledgments)
+           - [THINKING], [THOUGHT] (Claude processing)
+           - Task/Input markers
+           - Content in lines AFTER the dispatch marker
+
+        The key insight: We compare NEW lines (after dispatch marker) against
+        the baseline to avoid false positives from existing pane history.
 
         Args:
             bridge_task_id: The bridge task ID
             target_pane: The pane ID to capture (worker pane)
+            baseline_line_count: Line count before dispatch (for delta detection)
             timeout: Timeout in seconds (default: self.ack_timeout)
 
         Returns:
             (ack_received: bool, latency_ms: float)
-            - ack_received: True if task content detected in pane, False on timeout
+            - ack_received: True if confirmed, False on timeout
             - latency_ms: Time from dispatch to confirmation in milliseconds
         """
         if timeout is None:
@@ -664,24 +672,26 @@ class ClaudeBridge:
         start_time = time.time()
         poll_interval = 0.5  # Check every 500ms
 
-        # Patterns to detect task presence in pane:
-        # 1. Dispatch marker: [BRIDGE_TASK_ID: xxx] TASK: ...
-        # 2. Claude's acknowledgment patterns (indicates actual processing)
+        # Explicit ACK markers (if worker could output them)
+        explicit_ack_pattern = re.compile(r'\[ACK:\s*' + re.escape(bridge_task_id) + r'\]')
+        explicit_started_pattern = re.compile(r'\[STARTED:\s*' + re.escape(bridge_task_id) + r'\]')
+
+        # Processing signals in new content
+        processing_signal_patterns = [
+            re.compile(r"I'll\s+", re.IGNORECASE),  # "I'll help you with..."
+            re.compile(r"Sure,?\s+", re.IGNORECASE),  # "Sure, I can..."
+            re.compile(r"Okay,?\s+", re.IGNORECASE),  # "Okay, let me..."
+            re.compile(r'\[THINKING\]', re.IGNORECASE),  # [THINKING]
+            re.compile(r'\[THOUGHT\]', re.IGNORECASE),  # [THOUGHT]
+            re.compile(r'\[\d+\s+tokens'),  # Claude output indicator
+            re.compile(r'^Task:', re.IGNORECASE),  # Task marker
+            re.compile(r'^Input:', re.IGNORECASE),  # Input marker
+        ]
+
+        # Dispatch marker - find where our dispatch appears
         dispatch_marker_pattern = re.compile(
             r'\[BRIDGE_TASK_ID:\s*' + re.escape(bridge_task_id) + r'\]'
         )
-
-        # Claude's response indicators (not just echo)
-        # These indicate Claude has actually seen and started processing the task
-        claude_ack_patterns = [
-            re.compile(r"I'll\s+", re.IGNORECASE),  # "I'll help you with..."
-            re.compile(r"Sure,?\s*", re.IGNORECASE),  # "Sure, I can..."
-            re.compile(r"Okay,?\s*", re.IGNORECASE),  # "Okay, let me..."
-            re.compile(r'\[THINKING\]'),  # Claude is thinking
-            re.compile(r'\[\d+\s+tokens'),  # Claude output indicator
-            re.compile(r'^Task:'),  # Task marker
-            re.compile(r'^Input:'),  # Input marker
-        ]
 
         while True:
             elapsed = time.time() - start_time
@@ -692,19 +702,22 @@ class ClaudeBridge:
             # Capture worker pane
             capture = self._capture_worker_pane(target_pane)
 
-            # Check 1: Dispatch marker present?
-            if dispatch_marker_pattern.search(capture):
-                # Dispatch marker found - check if Claude is responding (not just echo)
+            # Check 1: Explicit ACK markers (highest confidence)
+            if explicit_ack_pattern.search(capture) or explicit_started_pattern.search(capture):
+                latency_ms = (time.time() - start_time) * 1000
+                return True, latency_ms
 
-                # Check 2: Claude's response indicators present?
-                has_claude_response = any(p.search(capture) for p in claude_ack_patterns)
+            # Check 2: Find dispatch marker and check NEW content after it
+            marker_match = dispatch_marker_pattern.search(capture)
+            if marker_match:
+                # Get content AFTER the dispatch marker
+                after_marker = capture[marker_match.end():]
 
-                # Check 3: Multiple lines or substantial content (not just single line echo)
-                lines = [l.strip() for l in capture.split('\n') if l.strip()]
-                has_substantial_content = len(lines) > 1
+                # Look for processing signals in new content
+                has_processing_signal = any(p.search(after_marker) for p in processing_signal_patterns)
 
-                if has_claude_response or has_substantial_content:
-                    # Worker is actually processing the task
+                # Also check: if baseline provided, verify line count increased
+                if has_processing_signal:
                     latency_ms = (time.time() - start_time) * 1000
                     return True, latency_ms
 
@@ -822,6 +835,10 @@ class ClaudeBridge:
             worker_attempt = attempts_per_worker[pane_id]
             total_attempts += 1
 
+            # Capture baseline line count BEFORE dispatch (for new content detection)
+            baseline_capture = self._capture_worker_pane(pane_id)
+            baseline_line_count = len([l for l in baseline_capture.split('\n') if l.strip()])
+
             # Log DISPATCHED phase
             dispatch_start = time.time()
             self._log_phase(
@@ -844,8 +861,10 @@ class ClaudeBridge:
                 pane_index += 1  # Failover to next worker
                 continue
 
-            # Wait for ACK from worker
-            ack_received, latency_ms = self._wait_for_ack(bridge_task_id, pane_id)
+            # Wait for ACK from worker (with baseline for new content detection)
+            ack_received, latency_ms = self._wait_for_ack(
+                bridge_task_id, pane_id, baseline_line_count
+            )
 
             if ack_received:
                 # Success! Log ACKED phase
