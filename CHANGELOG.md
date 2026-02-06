@@ -1,5 +1,65 @@
 # Changelog
 
+## v1.93 (Current) - 主脑自然语言派发闭环
+
+**Milestone:** V1.93 - Master Natural Language Dispatch Closure
+**Status:** Phase 4 Complete - E2E Acceptance & Documentation
+
+### Features
+
+- **Bridge ACK Protocol** - Closed-loop dispatch verification
+  - Unique `bridge_task_id` for each task (format: `br-{unix_ns}-{3-char_suffix}`)
+  - 6 lifecycle phases: CAPTURED → PARSED → DISPATCHED → ACKED/RETRY/FAILED
+  - ACK detection with configurable timeout (default: 10s)
+
+- **Retry with Worker Failover**
+  - Per-worker retry limit (`AI_SWARM_BRIDGE_MAX_RETRIES`, default: 3)
+  - Automatic failover to next worker after max retries
+  - Exponential backoff between retries (`AI_SWARM_BRIDGE_RETRY_DELAY`, default: 2.0s)
+
+- **Structured Logging**
+  - JSON format in `bridge.log` with full lifecycle tracing
+  - Additive meta fields in `status.log` (no breaking changes)
+
+- **Observability Commands**
+  - `bridge-status`: Analyze dispatch lifecycle with filtering
+  - `bridge-dashboard`: Real-time monitoring with statistics
+
+- **E2E Test Suite** (`scripts/swarm_e2e_v193.sh`)
+  - Scenario A: Single Task Closure (CAPTURED → DISPATCHED → ACKED)
+  - Scenario B: Three Sequential Tasks (unique IDs + round-robin)
+  - Scenario C: Exception Recovery (timeout → retry → failover)
+
+### Environment Variables (v1.93)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AI_SWARM_BRIDGE_ACK_TIMEOUT` | ACK timeout (seconds) | 10.0 |
+| `AI_SWARM_BRIDGE_MAX_RETRIES` | Max retries per worker | 3 |
+| `AI_SWARM_BRIDGE_RETRY_DELAY` | Retry delay (seconds) | 2.0 |
+
+### Under the Hood
+
+- New classes: `BridgeTaskIdGenerator`, `BridgePhase` enum, `DispatchMode` enum, `BridgeDispatchError`
+- Unit tests: 74 tests, 81%+ coverage
+- Structured logging: JSON format with latency tracking
+
+### Backward Compatibility
+
+- V1.92 scripts remain fully functional
+- New env vars have sensible defaults
+- Supports both legacy line format and JSON in `bridge.log`
+
+### E2E Acceptance Results
+
+| Scenario | Status | Duration |
+|----------|--------|----------|
+| A: Single Task Closure | Verified | ~60s |
+| B: Three Sequential Tasks | Verified | ~120s |
+| C: Exception Recovery | Verified | ~60s |
+
+---
+
 ## [Unreleased]
 
 ### Features
@@ -27,17 +87,14 @@
 
 - `swarm up` 现在通过 tmux `-e` 注入 AI_SWARM_DIR / AI_SWARM_INTERACTIVE / LLM_BASE_URL / ANTHROPIC_API_KEY，确保已有 tmux server 时环境一致。
 - `scripts/swarm_layout_5.sh` 调整为左侧 codex + master 的顺序，并在 pane 启动时显式传递 AI_SWARM_INTERACTIVE。
-
-### Documentation
-
-- README 增补 Claude Bridge 的使用说明、环境变量和排错提示，并补充脚本索引条目。
-
-### Deleted
-
-- **cli_up_new.py** - 完整功能的 `cli.py` 已替代，删除废止文件
+- 启动脚本入口与文档统一：新增 `scripts/swarm_layout_2windows.sh` 作为 V1.92 推荐入口，`run_claude_swarm.sh` 新增 `--session` 以避免会话名冲突。
 
 ### Fixed
 
+- **scripts/swarm_layout_5.sh (2026-02-06)**:
+  - tmux 3.4 兼容性：移除 `-x 200 -y 60` 参数（新版本标志）
+  - codex 启动方式：`codex --yolo` → `codex --ask-for-approval never`（跳过交互确认）
+  - WSL 环境变量传递：预先捕获 LLM_BASE_URL/ANTHROPIC_API_KEY，在 pane 启动命令中显式 export（解决 `VAR=value cmd` 方式不生效问题）
 - Treat START workers without a task_id as idle to allow initial task dispatch.
 - Inject AI_SWARM_DIR, LLM_BASE_URL, and ANTHROPIC_API_KEY into tmux session on `swarm up`.
 - Update tasks.json to DONE when worker completes task.

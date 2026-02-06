@@ -18,9 +18,10 @@
 
 ## 布局脚本
 
-### swarm_layout_5.sh
+### swarm_layout_2windows.sh（推荐）/ swarm_layout_5.sh（兼容入口）
 
 **用途：** 2 窗口 tmux 布局脚本（V1.92 已升级）。
+`swarm_layout_2windows.sh` 为推荐入口，`swarm_layout_5.sh` 保留兼容。
 
 **布局结构：**
 
@@ -28,7 +29,7 @@
 ```
 ┌─────────────────────┬────────────────────────────┐
 │                     │                            │
-│        codex        │          master            │
+│        codex        │      master (claude)       │
 │                     │                            │
 └─────────────────────┴────────────────────────────┘
 ```
@@ -37,7 +38,7 @@
 ```
 ┌───────────────┬───────────────┬───────────────┐
 │               │               │               │
-│    worker-0   │    worker-1   │    worker-2   │
+│ worker-0(claude) │ worker-1(claude) │ worker-2(claude) │
 │               │               │               │
 └───────────────┴───────────────┴───────────────┘
 ```
@@ -46,7 +47,7 @@
 
 **Bridge 配置：**
 
-脚本执行后会输出 codex pane ID，需设置环境变量：
+脚本执行后会输出 master pane ID，需设置环境变量：
 ```bash
 export AI_SWARM_BRIDGE_PANE=<pane_id>
 ```
@@ -73,7 +74,9 @@ AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 |------|------|
 | `CLAUDE_SESSION` | 会话名称覆盖 |
 | `SWARM_WORKDIR` | 工作目录覆盖（默认当前目录） |
-| `CODEX_CMD` | codex 命令覆盖（默认 "codex --yolo"） |
+| `CODEX_CMD` | codex 命令覆盖（默认 "codex --ask-for-approval never"） |
+| `MASTER_CMD` | master 窗格命令覆盖（默认 "claude"） |
+| `WORKER_CMD` | worker 窗格命令覆盖（默认 "claude"） |
 
 **注意：** `--left-ratio` 参数已移除（2 窗口布局使用固定 50/50 分割）。
 
@@ -81,23 +84,23 @@ AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 
 ```bash
 # 基本用法
-./scripts/swarm_layout_5.sh
+./scripts/swarm_layout_2windows.sh
 
 # 创建并附加
-./scripts/swarm_layout_5.sh --attach
+./scripts/swarm_layout_2windows.sh --attach
 
 # 自定义会话名称
-./scripts/swarm_layout_5.sh --session my-session
+./scripts/swarm_layout_2windows.sh --session my-session
 
 # 自定义工作目录
-./scripts/swarm_layout_5.sh --workdir /path/to/project
+./scripts/swarm_layout_2windows.sh --workdir /path/to/project
 
 # 自定义 codex 命令
-./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --model o1"
+./scripts/swarm_layout_2windows.sh --codex-cmd "codex --ask-for-approval never --model o1"
 
 # 使用环境变量
-SWARM_WORKDIR=/my/project ./scripts/swarm_layout_5.sh
-CODEX_CMD="codex --yolo" ./scripts/swarm_layout_5.sh
+SWARM_WORKDIR=/my/project ./scripts/swarm_layout_2windows.sh
+CODEX_CMD="codex --ask-for-approval never" ./scripts/swarm_layout_2windows.sh
 ```
 
 **依赖：** `_config.sh`, `_common.sh`, tmux
@@ -491,6 +494,43 @@ tmux list-sessions
 # Claude 不回显
 # 确认 Claude Code 配置为回显命令到终端
 ```
+
+### Bridge Observability (V1.93)
+
+V1.93 adds comprehensive observability commands for debugging dispatch issues:
+
+```bash
+# View recent bridge events
+./scripts/swarm_bridge.sh bridge-status --recent 20
+
+# Filter by phase/task/failure
+./scripts/swarm_bridge.sh bridge-status --failed
+./scripts/swarm_bridge.sh bridge-status --task br-123456
+./scripts/swarm_bridge.sh bridge-status --phase DISPATCHED
+
+# JSON output for automation
+./scripts/swarm_bridge.sh bridge-status --json
+
+# Real-time dashboard
+./scripts/swarm_bridge.sh bridge-dashboard --watch
+```
+
+**bridge-status options:**
+
+| Option | Description |
+|--------|-------------|
+| `--recent N` | Show last N events (default: 10) |
+| `--failed` | Show only FAILED/RETRY events |
+| `--task ID` | Filter by bridge_task_id |
+| `--phase PHASE` | Filter by phase (CAPTURED/PARSED/DISPATCHED/ACKED/RETRY/FAILED) |
+| `--json` | Output as JSON |
+
+**bridge-dashboard shows:**
+- Bridge running status (PID, uptime)
+- Dispatch statistics (total, dispatched, acknowledged, retries, failed)
+- Success rate calculation
+- Last error with task ID and reason
+- Potentially stuck dispatches detection
 
 **退出码：**
 
@@ -1006,3 +1046,84 @@ _config.sh
 # 清理锁
 rm -f /tmp/ai_swarm/locks/*
 ```
+
+---
+
+## E2E 测试脚本
+
+### swarm_e2e_v193.sh
+
+**用途：** AI Swarm V1.93 E2E Acceptance Test Suite - Tests Bridge ACK + Retry + Failover Protocol
+
+**参数：**
+
+| 参数 | 说明 |
+|------|------|
+| `A` | Single Task Closure - Verify CAPTURED -> DISPATCHED -> ACKED lifecycle |
+| `B` | Three Sequential Tasks - Verify unique IDs and round-robin assignment |
+| `C` | Exception Recovery - Verify retry with worker failover |
+| `all` | Run all scenarios (default) |
+
+**选项：**
+
+| 选项 | 说明 |
+|------|------|
+| `--help` | 显示帮助信息 |
+
+**环境变量：**
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `AI_SWARM_DIR` | Swarm 状态目录 | `/tmp/ai_swarm` |
+| `AI_SWARM_BRIDGE_SESSION` | tmux 会话名称 | `swarm-claude-default` |
+| `AI_SWARM_BRIDGE_PANE` | Master pane ID（必需） | - |
+| `AI_SWARM_BRIDGE_WORKER_PANES` | Worker panes（C 场景使用） | - |
+| `LLM_BASE_URL` | LLM 端点（可选） | - |
+| `ANTHROPIC_API_KEY` | API key（可选） | - |
+
+**示例：**
+
+```bash
+# 运行所有场景
+./scripts/swarm_e2e_v193.sh
+
+# 只运行场景 A
+./scripts/swarm_e2e_v193.sh A
+
+# 使用自定义会话和 pane
+AI_SWARM_BRIDGE_SESSION=my-swarm AI_SWARM_BRIDGE_PANE=%3 ./scripts/swarm_e2e_v193.sh
+```
+
+**场景说明：**
+
+- **Scenario A (Single Task Closure):**
+  1. 启动 V1.93 tmux 会话
+  2. 启动 bridge
+  3. 输入任务
+  4. 验证：bridge.log 显示 CAPTURED -> DISPATCHED -> ACKED
+  5. 验证：status.log 有 BRIDGE 条目
+  6. 超时：60s
+
+- **Scenario B (Three Sequential Tasks):**
+  1. 快速输入 3 个任务
+  2. 验证：bridge_task_id 唯一
+  3. 验证：Worker 轮询分配
+  4. 验证：所有 3 个任务在 120s 内完成
+
+- **Scenario C (Exception Recovery):**
+  1. 使 worker-1 无响应
+  2. 派发任务
+  3. 验证：Bridge 在 worker-1 上超时
+  4. 验证：重试 worker-2，成功
+  5. 验证：日志显示 RETRY -> DISPATCHED -> ACKED
+
+**输出：**
+
+```
+E2E 测试结果保存到: /tmp/ai_swarm_e2e_v193/evidence/
+  - scenario_a_evidence.txt
+  - scenario_b_evidence.txt
+  - scenario_c_evidence.txt
+```
+
+**依赖：** tmux, Python 3, AI Swarm 模块

@@ -142,16 +142,16 @@ echo "Task description" > $AI_SWARM_DIR/master_inbox
 
 ## 主脑窗口任务发布
 
-从 Claude Code 主脑窗口（codex 窗口）直接发布任务到 swarm（自动监控 + 派发）。
+从 Claude Code 主脑窗口（master 窗格）直接发布任务到 swarm（自动监控 + 派发）。
 
 ### 重要说明
 
-**Bridge 监控的是 codex 窗口的输出，不是 master 进程窗口。**
+**Bridge 监控的是 master Claude 窗格的输出。**
 
-必须在 **codex 窗口**（运行 Claude Code 的窗口）输入 `/task` 或 `TASK:` 开头的行，Bridge 才能捕获到。
+必须在 **master 窗格**（Claude Code 聊天输入框）输入 `/task` 或 `TASK:` 开头的行，Bridge 才能捕获到。
 
 ```
-codex 窗口                    Bridge 进程
+master 窗格                   Bridge 进程
     │                            │
     │  输入: /task ...           │
     │  ────────────────────────────────▶
@@ -166,9 +166,9 @@ codex 窗口                    Bridge 进程
 
 ```bash
 # 1. 启动 tmux session（使用 2 窗口布局脚本）
-./scripts/swarm_layout_5.sh --no-attach
+./scripts/swarm_layout_2windows.sh --no-attach
 
-# 2. 查看输出获取 codex pane ID
+# 2. 查看输出获取 master pane ID
 # 脚本会输出类似：export AI_SWARM_BRIDGE_PANE=%3
 
 # 3. 设置环境变量（根据脚本输出）
@@ -177,19 +177,19 @@ export AI_SWARM_BRIDGE_PANE=<pane_id>
 # 4. 新终端启动 bridge
 AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 
-# 5. 在 codex 窗口输入（以下内容必须回显到 pane）：
+# 5. 在 master 窗格输入（以下内容必须回显到 pane）：
 /task Review PR #123 and leave comments
 TASK: Fix authentication bug in login module
 ```
 
-**重要：** Bridge 指向的是 codex 窗口（你输入 /task 的地方），不是 master 进程窗口！
+**重要：** Bridge 指向的是 master Claude 窗格（你输入 /task 的地方）。
 
 ### 环境变量
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `AI_SWARM_BRIDGE_SESSION` | tmux session 名称 | `swarm-claude-default` |
-| `AI_SWARM_BRIDGE_WINDOW` | tmux window 名称（codex 窗口） | `codex-master` |
+| `AI_SWARM_BRIDGE_WINDOW` | tmux window 名称（包含 master/codex 的窗口） | `codex-master` |
 | `AI_SWARM_BRIDGE_PANE` | tmux pane_id（最高优先级，推荐使用） | - |
 | `AI_SWARM_BRIDGE_LINES` | capture-pane 行数 | `200` |
 | `AI_SWARM_BRIDGE_POLL_INTERVAL` | 轮询间隔（秒） | `1.0` |
@@ -221,7 +221,7 @@ grep "BRIDGE" $AI_SWARM_DIR/status.log
 - **tmux session 不存在**: 先创建 tmux session 或设置 `AI_SWARM_BRIDGE_SESSION`
 - **FIFO 无 reader**: 确认 master 已启动（`AI_SWARM_INTERACTIVE=1`）
 - **任务未发送**: 检查 `bridge.log` 和 `status.log`
-- **Claude 不回显**: 确认 Claude Code 配置为回显命令到终端
+- **Claude 不回显**: 确认 master 窗格会回显你输入的命令
 
 ## Architecture
 
@@ -246,7 +246,76 @@ grep "BRIDGE" $AI_SWARM_DIR/status.log
 └─────────────────────────────────────┘
 ```
 
-## 2 窗口布局 (V1.92)
+## v1.93 (Current) - 主脑自然语言派发闭环
+
+**Milestone:** V1.93 - Master Natural Language Dispatch Closure
+**Status:** Phase 4 Complete - E2E Acceptance & Documentation
+
+### Features (v1.93)
+
+- **Bridge ACK Protocol** - Closed-loop dispatch verification
+  - Unique `bridge_task_id` for each task (format: `br-{unix_ns}-{3-char_suffix}`)
+  - Structured JSON logging in `bridge.log`
+  - 6 lifecycle phases: CAPTURED → PARSED → DISPATCHED → ACKED (success) or RETRY → FAILED
+  - ACK detection with configurable timeout (default: 10s)
+
+- **Retry with Worker Failover**
+  - Per-worker retry limit (`AI_SWARM_BRIDGE_MAX_RETRIES`, default: 3)
+  - Automatic failover to next worker after max retries
+  - Exponential backoff between retries (`AI_SWARM_BRIDGE_RETRY_DELAY`, default: 2.0s)
+  - Structured failure reporting with all attempts in meta
+
+- **Bridge Observability Commands**
+  ```bash
+  # View recent bridge events
+  ./scripts/swarm_bridge.sh bridge-status --recent 20
+
+  # Filter by phase/task/failure
+  ./scripts/swarm_bridge.sh bridge-status --failed
+  ./scripts/swarm_bridge.sh bridge-status --task br-123456
+  ./scripts/swarm_bridge.sh bridge-status --phase DISPATCHED
+
+  # Real-time dashboard
+  ./scripts/swarm_bridge.sh bridge-dashboard --watch
+  ```
+
+- **E2E Test Suite**
+  ```bash
+  # Run all acceptance tests
+  ./scripts/swarm_e2e_v193.sh
+
+  # Run specific scenario
+  ./scripts/swarm_e2e_v193.sh A   # Single Task Closure
+  ./scripts/swarm_e2e_v193.sh B   # Three Sequential Tasks
+  ./scripts/swarm_e2e_v193.sh C   # Exception Recovery
+  ```
+
+### Environment Variables (v1.93)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AI_SWARM_BRIDGE_ACK_TIMEOUT` | Wait for ACK timeout (seconds) | 10.0 |
+| `AI_SWARM_BRIDGE_MAX_RETRIES` | Max retries per worker | 3 |
+| `AI_SWARM_BRIDGE_RETRY_DELAY` | Delay between retries (seconds) | 2.0 |
+
+### Backward Compatibility
+
+- V1.92 scripts (`swarm_layout_2windows.sh`, `swarm_bridge.sh`) remain fully functional
+- New environment variables have sensible defaults
+- `status.log` meta fields are additive (no breaking changes)
+- `bridge.log` supports both legacy line format and new JSON format
+
+### Version Comparison
+
+| Feature | v1.92 | v1.93 |
+|---------|-------|-------|
+| Dispatch verification | No | ACK confirmation |
+| Task tracking | Task ID only | bridge_task_id + lifecycle |
+| Failure handling | Manual detection | Auto-retry + failover |
+| Log format | Text lines | Structured JSON |
+| Observability | bridge.log only | bridge-status + dashboard |
+
+## v1.92 - 2窗口布局
 
 V1.92 引入了新的 2 窗口布局，将窗格分离到两个独立窗口：
 
@@ -254,7 +323,7 @@ V1.92 引入了新的 2 窗口布局，将窗格分离到两个独立窗口：
 ```
 ┌─────────────────────┬────────────────────────────┐
 │                     │                            │
-│        codex        │          master            │
+│        codex        │      master (claude)       │
 │                     │                            │
 └─────────────────────┴────────────────────────────┘
 ```
@@ -263,12 +332,12 @@ V1.92 引入了新的 2 窗口布局，将窗格分离到两个独立窗口：
 ```
 ┌───────────────┬───────────────┬───────────────┐
 │               │               │               │
-│    worker-0   │    worker-1   │    worker-2   │
+│ worker-0(claude) │ worker-1(claude) │ worker-2(claude) │
 │               │               │               │
 └───────────────┴───────────────┴───────────────┘
 ```
 
-**注意：** 此布局需要配置 Bridge 才能监控 codex 窗口。
+**注意：** 此布局需要配置 Bridge 才能监控 master 窗格。
 
 ### Bridge 配置
 
@@ -276,7 +345,7 @@ V1.92 引入了新的 2 窗口布局，将窗格分离到两个独立窗口：
 
 ```bash
 # 运行布局脚本后，查看输出：
-./scripts/swarm_layout_5.sh
+./scripts/swarm_layout_2windows.sh
 # 输出类似：export AI_SWARM_BRIDGE_PANE=%3
 
 # 设置环境变量
@@ -286,23 +355,29 @@ export AI_SWARM_BRIDGE_PANE=<pane_id>
 AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 ```
 
+如果你之前已经运行过旧版布局，建议先清理旧会话再启动：
+
+```bash
+tmux kill-session -t swarm-claude-default 2>/dev/null || true
+```
+
 ### 使用方法
 
 ```bash
 # 基本用法（默认工作目录为当前目录）
-./scripts/swarm_layout_5.sh
+./scripts/swarm_layout_2windows.sh
 
 # 创建并附加
-./scripts/swarm_layout_5.sh --attach
+./scripts/swarm_layout_2windows.sh --attach
 
 # 自定义会话名称
-./scripts/swarm_layout_5.sh --session my-session
+./scripts/swarm_layout_2windows.sh --session my-session
 
 # 自定义工作目录
-./scripts/swarm_layout_5.sh --workdir /path/to/project
+./scripts/swarm_layout_2windows.sh --workdir /path/to/project
 
 # 自定义 codex 命令
-./scripts/swarm_layout_5.sh --codex-cmd "codex --yolo --model o1"
+./scripts/swarm_layout_2windows.sh --codex-cmd "codex --ask-for-approval never --model o1"
 ```
 
 ### 参数说明
@@ -319,7 +394,7 @@ AI_SWARM_INTERACTIVE=1 ./scripts/swarm_bridge.sh start
 在任意目录执行以下命令，即可使用本地代理启动 2 窗口布局：
 
 ```bash
-LLM_BASE_URL="http://127.0.0.1:15721" SWARM_WORKDIR="$PWD" CODEX_CMD="codex --yolo" ./scripts/swarm_layout_5.sh --attach
+LLM_BASE_URL="http://127.0.0.1:15721" SWARM_WORKDIR="$PWD" CODEX_CMD="codex --ask-for-approval never" ./scripts/swarm_layout_2windows.sh --attach
 ```
 
 ### 环境变量
@@ -334,6 +409,14 @@ LLM_BASE_URL="http://127.0.0.1:15721" SWARM_WORKDIR="$PWD" CODEX_CMD="codex --yo
 
 ```bash
 tmux attach -t <session-name>
+```
+
+### 4 窗口 Claude 模式
+
+如果你需要 **4 个独立 Claude Code 窗口**（`master` + `worker-0/1/2`），使用：
+
+```bash
+./run_claude_swarm.sh --session swarm-claude-4w
 ```
 
 ## 诊断快照

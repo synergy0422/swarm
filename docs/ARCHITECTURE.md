@@ -177,7 +177,7 @@ graph TD
     C4 --> S3["claude_*.sh<br/>Claude通信协议"]
     C4 --> S4["swarm_*.sh<br/>任务管理"]
     C4 --> S5["swarm_snapshot.sh<br/>诊断快照"]
-    C4 --> S6["swarm_layout_5.sh<br/>5窗格布局"]
+    C4 --> S6["swarm_layout_2windows.sh<br/>2窗口布局"]
 
     C2 --> P1["PROJECT.md<br/>项目定义"]
     C2 --> P2["STATE.md<br/>当前状态"]
@@ -209,7 +209,175 @@ pie showData
 
 ---
 
-## 快速渲染
+## 7. Claude Bridge Protocol (V1.93)
+
+The Claude Bridge monitors the Master Claude Code window and dispatches tasks to workers with closed-loop verification.
+
+### 7.1 Architecture Overview
+
+```mermaid
+sequenceDiagram
+    participant M as Master Claude
+    participant B as Bridge
+    participant F as FIFO
+    participant W as Worker
+    participant S as Status/Logs
+
+    M->>B: Type /task ... (appears in pane output)
+    B->>B: capture-pane every 1s
+    B->>B: Parse line, extract prompt
+    B->>B: Generate unique bridge_task_id
+    B->>B: Deduplicate (100-line window)
+    B->>F: Write /task prompt
+    F->>M: Master reads FIFO
+    M->>W: Dispatch [TASK] with bridge_task_id
+    W->>B: Output [ACK] bridge_task_id
+    B->>B: Detect [ACK] pattern
+    B->>S: Log CAPTURED -> DISPATCHED -> ACKED
+```
+
+### 7.2 Lifecycle Phases
+
+| Phase | Description | Logged To |
+|-------|-------------|-----------|
+| CAPTURED | Task detected in master pane | bridge.log |
+| PARSED | Task parsed and validated | bridge.log |
+| DISPATCHED | Task written to FIFO | bridge.log + status.log |
+| ACKED | Worker confirmed receipt | bridge.log |
+| RETRY | ACK timeout, retrying | bridge.log |
+| FAILED | All workers failed | bridge.log |
+
+### 7.3 Bridge Task ID Format
+
+```
+bridge_task_id: br-{unix_timestamp_ns}-{3-char_random}
+Example: br-1739999999123-abc
+```
+
+**Purpose:**
+- Unique identifier for tracing task lifecycle
+- Correlation between Bridge dispatch and Worker ACK
+- Deduplication across multiple dispatch attempts
+
+### 7.4 ACK Protocol
+
+Workers must output `[ACK] <bridge_task_id>` pattern to confirm receipt:
+
+```bash
+# Worker receives task
+[TASK] Please analyze PR #123
+
+# Worker outputs ACK after processing begins
+[ACK] br-1739999999123-abc
+```
+
+**ACK Detection:**
+- Pattern configurable via `AI_SWARM_BRIDGE_ACK_TIMEOUT` (default: 10s)
+- Bridge polls pane output looking for `[ACK]` pattern
+- If timeout: trigger RETRY -> FAILOVER
+
+### 7.5 Retry with Worker Failover
+
+```mermaid
+stateDiagram-v2
+    [*] --> DISPATCHED
+    DISPATCHED --> ACKED: ACK received
+    DISPATCHED --> RETRY: ACK timeout
+
+    RETRY --> ACKED: ACK received
+    RETRY --> RETRY: Same worker, still timeout
+    RETRY --> NEXT_WORKER: Max retries on current worker
+
+    NEXT_WORKER --> ACKED: ACK received
+    NEXT_WORKER --> RETRY: ACK timeout
+
+    RETRY --> FAILED: All workers exhausted
+```
+
+**Configuration:**
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AI_SWARM_BRIDGE_MAX_RETRIES` | Max retries per worker | 3 |
+| `AI_SWARM_BRIDGE_RETRY_DELAY` | Delay between retries | 2.0s |
+| `AI_SWARM_BRIDGE_ACK_TIMEOUT` | Wait for ACK | 10.0s |
+
+### 7.6 Structured Logging (bridge.log)
+
+V1.93 uses JSON format for structured lifecycle tracking:
+
+```json
+{
+  "ts": "2026-02-06T10:00:00.123Z",
+  "phase": "DISPATCHED",
+  "bridge_task_id": "br-1739999999123-abc",
+  "task_preview": "Review PR #123",
+  "target_worker": "%4",
+  "attempt": 1,
+  "latency_ms": 125
+}
+```
+
+**Legacy Format (V1.92, still supported):**
+```
+[2026-02-06 10:00:00] dispatched to worker %4
+```
+
+### 7.7 Status Log Meta Fields (V1.93)
+
+Bridge entries in `status.log` include:
+
+```json
+{
+  "ts": "2026-02-06T10:00:00.123Z",
+  "type": "HELP",
+  "worker": "master",
+  "task_id": null,
+  "reason": "DISPATCHED: Review PR #123",
+  "meta": {
+    "type": "BRIDGE",
+    "bridge_task_id": "br-1739999999123-abc",
+    "target_worker": "%4",
+    "attempt": 1,
+    "dispatch_mode": "fifo"
+  }
+}
+```
+
+### 7.8 Observability Commands
+
+```bash
+# View recent bridge events
+./scripts/swarm_bridge.sh bridge-status --recent 20
+
+# Filter by phase/task/failure
+./scripts/swarm_bridge.sh bridge-status --failed
+./scripts/swarm_bridge.sh bridge-status --task br-123456
+./scripts/swarm_bridge.sh bridge-status --phase DISPATCHED
+
+# JSON output for automation
+./scripts/swarm_bridge.sh bridge-status --json > /tmp/bridge_events.json
+
+# Real-time dashboard
+./scripts/swarm_bridge.sh bridge-dashboard --watch
+```
+
+### 7.9 Configuration Reference
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AI_SWARM_BRIDGE_PANE` | Recommended | - | tmux pane_id (highest priority) |
+| `AI_SWARM_BRIDGE_SESSION` | No | `swarm-claude-default` | tmux session name |
+| `AI_SWARM_BRIDGE_WINDOW` | No | `codex-master` | tmux window name |
+| `AI_SWARM_BRIDGE_LINES` | No | 200 | capture-pane line count |
+| `AI_SWARM_BRIDGE_POLL_INTERVAL` | No | 1.0 | poll interval (seconds) |
+| `AI_SWARM_BRIDGE_ACK_TIMEOUT` | No | 10.0 | ACK wait timeout |
+| `AI_SWARM_BRIDGE_MAX_RETRIES` | No | 3 | max retries per worker |
+| `AI_SWARM_BRIDGE_RETRY_DELAY` | No | 2.0 | retry delay (seconds) |
+| `AI_SWARM_INTERACTIVE` | Yes | - | Must be `1` for FIFO |
+
+---
+
+## 8. 快速渲染
 
 ### VS Code
 1. 安装 "Markdown Preview Mermaid Support"
@@ -224,4 +392,4 @@ pie showData
 
 ---
 
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-06 - v1.93 protocol added*
