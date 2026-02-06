@@ -634,26 +634,25 @@ class ClaudeBridge:
 
     def _wait_for_ack(self, bridge_task_id: str, target_pane: str, timeout: float = None) -> Tuple[bool, float]:
         """
-        Wait for ACK confirmation from worker.
+        Wait for worker confirmation that task has been received and processing has started.
 
-        After dispatching to a worker, capture the worker pane periodically
-        to check for ACK pattern. Two patterns are checked (in order):
+        Checks for two patterns (in order of priority):
 
-        1. Explicit ACK: [ACK: {bridge_task_id}] - worker explicitly confirms
-        2. Dispatch echo: [BRIDGE_TASK_ID: {bridge_task_id}] - dispatched text echoed back
+        1. Explicit ACK: [ACK: {bridge_task_id}] - worker explicitly confirms receipt
+        2. Execution started: [STARTED: {bridge_task_id}] - worker begins processing
 
-        The dispatch echo pattern is checked because workers typically echo
-        the task text they receive, which serves as implicit acknowledgment.
+        Note: We do NOT use dispatch echo ([BRIDGE_TASK_ID: ...]) as success condition
+        because that only proves text was injected to pane, not that worker is processing.
 
         Args:
-            bridge_task_id: The task ID to look for in ACK
+            bridge_task_id: The task ID to look for in worker response
             target_pane: The pane ID to capture (worker pane)
             timeout: Timeout in seconds (default: self.ack_timeout)
 
         Returns:
             (ack_received: bool, latency_ms: float)
-            - ack_received: True if ACK found, False on timeout
-            - latency_ms: Time from dispatch to ACK in milliseconds
+            - ack_received: True if worker confirmed receipt/start, False on timeout
+            - latency_ms: Time from dispatch to confirmation in milliseconds
         """
         if timeout is None:
             timeout = self.ack_timeout
@@ -661,12 +660,11 @@ class ClaudeBridge:
         start_time = time.time()
         poll_interval = 0.5  # Check every 500ms
 
-        # ACK pattern to match - explicit ACK from worker
+        # Explicit ACK pattern - worker explicitly confirms
         ack_pattern = re.compile(r'\[ACK:\s*' + re.escape(bridge_task_id) + r'\]')
 
-        # Dispatch echo pattern - dispatched text echoed back by worker
-        # This serves as implicit acknowledgment when explicit ACK is not available
-        dispatch_echo_pattern = re.compile(r'\[BRIDGE_TASK_ID:\s*' + re.escape(bridge_task_id) + r'\]')
+        # Worker started execution pattern - worker begins processing the task
+        started_pattern = re.compile(r'\[STARTED:\s*' + re.escape(bridge_task_id) + r'\]')
 
         while True:
             elapsed = time.time() - start_time
@@ -674,11 +672,11 @@ class ClaudeBridge:
                 # Timeout reached
                 return False, elapsed * 1000
 
-            # Capture worker pane and check for ACK
+            # Capture worker pane and check for confirmation
             capture = self._capture_worker_pane(target_pane)
 
-            # Check explicit ACK first, then dispatch echo
-            if ack_pattern.search(capture) or dispatch_echo_pattern.search(capture):
+            # Check for explicit ACK first, then execution started
+            if ack_pattern.search(capture) or started_pattern.search(capture):
                 latency_ms = (time.time() - start_time) * 1000
                 return True, latency_ms
 
@@ -725,8 +723,8 @@ class ClaudeBridge:
             )
 
         attempts = []
-        total_attempts = 0
-        max_total_attempts = self.max_retries * len(panes)
+        total_attempts = 0  # Track total attempts for logging
+        workers_exhausted = set()  # Track workers we've exhausted
 
         # Track which workers we've tried (for round-robin with failover)
         pane_index = self._dispatch_index % len(panes)
@@ -748,18 +746,53 @@ class ClaudeBridge:
 
         # Dispatch algorithm: Try each worker, retry same worker N times, then failover
         #
-        # pane_index points to the CURRENT worker being tried
-        # When we failover, we increment pane_index to move to next worker
-        # When we retry same worker, pane_index stays the same
+        # Per-worker attempt tracking:
+        # - attempts_per_worker[pane_id] = how many times we've tried this specific worker
+        # - When we failover to a new worker, its counter starts at 1
+        # - When we exhaust max_retries for a worker, we add it to workers_exhausted
+        # - When all workers are exhausted, we fail with BridgeDispatchError
         #
-        # Flow: worker0 (attempt 1) -> worker0 (attempt 2) -> worker0 (attempt 3) -> worker1 (attempt 4) -> ...
+        # Flow: worker0(1) -> worker0(2) -> worker0(3) -> worker1(1) -> worker1(2) -> ...
         #
-        while total_attempts < max_total_attempts:
-            pane_id = panes[pane_index % len(panes)]
-            total_attempts += 1
+        attempts_per_worker = {}  # Track attempts per worker
+        workers_exhausted = set()  # Track workers we've exhausted
 
-            # Calculate retry counter for current worker (1, 2, 3, then reset)
-            worker_attempt = ((total_attempts - 1) % self.max_retries) + 1
+        while True:
+            pane_id = panes[pane_index % len(panes)]
+
+            # Check if all workers are exhausted
+            if len(workers_exhausted) >= len(panes):
+                # All workers have been tried and failed
+                self._log_phase(
+                    phase=BridgePhase.FAILED,
+                    bridge_task_id=bridge_task_id,
+                    task_preview=task[:100],
+                    target_worker=pane_id,
+                    attempt=total_attempts,
+                    dispatch_mode=DispatchMode.DIRECT,
+                    attempts_summary=len(attempts)
+                )
+                raise BridgeDispatchError(
+                    bridge_task_id,
+                    attempts,
+                    f"All {total_attempts} attempts failed across {len(panes)} workers"
+                )
+
+            # Initialize or get attempt count for this worker
+            if pane_id not in attempts_per_worker:
+                attempts_per_worker[pane_id] = 0
+
+            # Check if we've exhausted retries for this worker
+            if attempts_per_worker[pane_id] >= self.max_retries:
+                # Mark this worker as exhausted and failover to next
+                workers_exhausted.add(pane_id)
+                pane_index += 1
+                continue
+
+            # Increment attempt count for this worker
+            attempts_per_worker[pane_id] += 1
+            worker_attempt = attempts_per_worker[pane_id]
+            total_attempts += 1
 
             # Log DISPATCHED phase
             dispatch_start = time.time()
@@ -803,8 +836,8 @@ class ClaudeBridge:
                 # ACK timeout, log RETRY phase
                 attempts.append((pane_id, False, latency_ms, "ack_timeout"))
 
-                # Determine if we should retry same worker or failover
-                if worker_attempt < self.max_retries:
+                # Check if we should retry same worker or failover
+                if attempts_per_worker[pane_id] < self.max_retries:
                     # Retry SAME worker (don't increment pane_index)
                     self._log_phase(
                         phase=BridgePhase.RETRY,
@@ -831,23 +864,6 @@ class ClaudeBridge:
                     )
                     pane_index += 1  # Failover: move to next worker
                     time.sleep(self.retry_delay)
-
-        # All attempts exhausted, log FAILED phase
-        self._log_phase(
-            phase=BridgePhase.FAILED,
-            bridge_task_id=bridge_task_id,
-            task_preview=task[:100],
-            target_worker=panes[pane_index % len(panes)],
-            attempt=total_attempts,
-            dispatch_mode=DispatchMode.DIRECT,
-            attempts_summary=len(attempts)
-        )
-
-        raise BridgeDispatchError(
-            bridge_task_id,
-            attempts,
-            f"All {max_total_attempts} attempts failed"
-        )
 
     def _write_to_fifo(self, task: str) -> bool:
         """
