@@ -69,8 +69,7 @@
 
 **Test Results:**
 ```
-pytest tests/test_master_tmux_scan.py: 25 passed
-pytest (all): 375 passed
+pytest (all): 375 passed (70.20s)
 Failures: 23 → 8 → 0 (P2 baseline cleared)
 ```
 
