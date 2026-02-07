@@ -698,6 +698,121 @@ class TestMasterDispatcher(unittest.TestCase):
             # Restore original method
             self.dispatcher._update_task_status = original_update
 
+    def test_mailbox_not_written_on_status_update_failure(self):
+        """
+        Test: 状态更新失败时，mailbox 中不应有有效指令
+
+        场景:
+        1. 模拟 _update_task_status 失败
+        2. 验证 mailbox 中没有该任务的 RUN_TASK 有效指令
+        3. 防止重复执行风险
+        """
+        # Setup
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test task',
+                'priority': 1,
+                'status': 'pending'
+            }
+        ]
+        self._create_tasks_file(tasks)
+
+        # Mock _update_task_status 使其失败
+        original_update = self.dispatcher._update_task_status
+        self.dispatcher._update_task_status = lambda *args, **kwargs: False
+
+        try:
+            task = master_dispatcher.TaskInfo(
+                task_id='task-001',
+                command='Test command',
+                priority=1,
+                status='pending'
+            )
+            result = self.dispatcher.dispatch_one(task, 'worker-1')
+
+            # 验证: 派发失败
+            self.assertFalse(result)
+
+            # 验证: mailbox 中没有 task-001 的有效 RUN_TASK 指令
+            mailbox_path = os.path.join(self.base_dir, 'instructions', 'worker-1.jsonl')
+            if os.path.exists(mailbox_path):
+                with open(mailbox_path, 'r') as f:
+                    lines = f.readlines()
+                # 验证没有 task-001 的有效指令 (JSON has space after colon)
+                has_valid_instruction = any(
+                    'task-001' in line and '"action": "RUN_TASK"' in line
+                    for line in lines
+                )
+                self.assertFalse(
+                    has_valid_instruction,
+                    "状态更新失败时，不应有 RUN_TASK 指令写入 mailbox"
+                )
+        finally:
+            self.dispatcher._update_task_status = original_update
+
+    def test_dispatch_rolls_back_status_when_mailbox_write_fails(self):
+        """
+        Test: mailbox 写失败时，tasks.json 状态应回滚到 pending
+
+        场景:
+        1. 模拟 _write_to_mailbox() 抛异常
+        2. 验证 tasks.json 状态回滚到 pending
+        3. 验证 assigned_worker_id 和 assigned_at 被清空
+        4. 验证锁被释放
+        """
+        # Setup
+        os.environ['AI_SWARM_DIR'] = self.base_dir
+
+        tasks = [
+            {
+                'id': 'task-001',
+                'prompt': 'Test task',
+                'priority': 1,
+                'status': 'pending'
+            }
+        ]
+        self._create_tasks_file(tasks)
+
+        # Mock _write_to_mailbox 使其抛异常
+        original_write = self.dispatcher._write_to_mailbox
+        self.dispatcher._write_to_mailbox = MagicMock(side_effect=Exception("Mailbox write failed"))
+
+        try:
+            task = master_dispatcher.TaskInfo(
+                task_id='task-001',
+                command='Test command',
+                priority=1,
+                status='pending'
+            )
+            result = self.dispatcher.dispatch_one(task, 'worker-1')
+
+            # 验证: 派发失败
+            self.assertFalse(result, "mailbox 写失败时 dispatch_one 应返回 False")
+
+            # 验证: 任务状态回滚到 pending
+            with open(self.tasks_file, 'r') as f:
+                data = json.load(f)
+            task_dict = data['tasks'][0]
+            self.assertEqual(task_dict['status'], 'pending',
+                "mailbox 写失败时，状态应回滚到 pending")
+            self.assertIsNone(task_dict.get('assigned_worker_id'),
+                "assigned_worker_id 应被清空")
+            self.assertIsNone(task_dict.get('assigned_at'),
+                "assigned_at 应被清空")
+
+            # 验证: 锁被释放 (另一个 worker 可以获取)
+            other_lock_mgr = task_lock.TaskLockManager(worker_id='worker-2')
+            acquired = other_lock_mgr.acquire_lock('task-001')
+            self.assertTrue(acquired, "锁应被释放")
+
+            # Cleanup
+            other_lock_mgr.release_lock('task-001')
+        finally:
+            self.dispatcher._write_to_mailbox = original_write
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

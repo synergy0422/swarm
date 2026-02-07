@@ -279,13 +279,16 @@ class MasterDispatcher:
         """
         Dispatch a single task to a worker.
 
-        Dispatch sequence:
+        Dispatch sequence (REVERSED order to ensure atomicity):
         1. Re-check tasks.json to verify task is still pending (prevent stale data)
         2. Acquire task lock using worker's ID (skip if already locked)
         3. Broadcast ASSIGNED status with meta
-        4. Write RUN_TASK instruction to worker's mailbox (JSONL)
-        5. Update tasks.json status to ASSIGNED
-        6. Verify status update succeeded, rollback on failure
+        4. Update tasks.json status to ASSIGNED (must succeed BEFORE writing mailbox)
+        5. Write RUN_TASK instruction to worker's mailbox (JSONL)
+        6. Verify status in tasks.json, rollback on failure
+
+        This order ensures: if status update fails, no mailbox entry exists.
+        Rollback only needs to release lock (mailbox not involved).
 
         Args:
             task: Task to dispatch
@@ -323,22 +326,22 @@ class MasterDispatcher:
                 }
             )
 
-            # === 4. Write to mailbox (JSONL append-only) ===
-            self._write_to_mailbox(task, worker_id)
-
-            # === 5. Update tasks.json ===
+            # === 4. 先更新 tasks.json 状态 (必须在写 mailbox 之前) ===
             update_success = self._update_task_status(task.task_id, worker_id, ts_ms)
 
             if not update_success:
-                # 状态更新失败，回滚
+                # 状态更新失败，回滚 (mailbox 还未写，只需释放锁)
                 self._rollback_dispatch(task.task_id, worker_id)
                 return False
+
+            # === 5. 状态更新成功后，再写 mailbox ===
+            self._write_to_mailbox(task, worker_id)
 
             # === 6. 派发后: 再次验证状态 ===
             updated_tasks = self.load_tasks()
             updated_task = next((t for t in updated_tasks if t.task_id == task.task_id), None)
             if not updated_task or updated_task.status != 'ASSIGNED':
-                # 验证失败，回滚
+                # 验证失败，回滚 (mailbox 已写，但状态回滚即可)
                 self._rollback_dispatch(task.task_id, worker_id)
                 return False
 
@@ -352,17 +355,68 @@ class MasterDispatcher:
 
     def _rollback_dispatch(self, task_id: str, worker_id: str) -> None:
         """
-        Rollback dispatch operation: release lock.
+        Rollback dispatch operation: release lock + rollback status to pending.
+
+        Used when:
+        - Status update fails (lock released, no status change needed)
+        - Mailbox write fails (status must be rolled back to prevent task blackhole)
+        - Verification fails after mailbox written
 
         Args:
             task_id: Task ID
             worker_id: Worker ID
         """
+        # 1. 释放锁
         try:
             worker_lock_manager = task_lock.TaskLockManager(worker_id=worker_id)
             worker_lock_manager.release_lock(task_id)
         except Exception:
             pass
+
+        # 2. 回滚状态到 pending (mailbox 写失败时需要)
+        self._rollback_status_to_pending(task_id)
+
+    def _rollback_status_to_pending(self, task_id: str) -> None:
+        """
+        Rollback task status to pending.
+
+        Used when mailbox write fails to prevent task blackhole.
+        Clears assigned_worker_id and assigned_at fields.
+
+        Args:
+            task_id: Task ID
+        """
+        tasks_file = self._get_tasks_file_path()
+
+        if not os.path.exists(tasks_file):
+            return
+
+        temp_path = tasks_file + '.rollback.' + str(os.getpid())
+
+        try:
+            with open(tasks_file, 'r') as f:
+                data = json.load(f)
+
+            for task_dict in data.get('tasks', []):
+                if task_dict.get('id') == task_id:
+                    # Only rollback if status is ASSIGNED
+                    if task_dict.get('status') == 'ASSIGNED':
+                        task_dict['status'] = 'pending'
+                        task_dict.pop('assigned_worker_id', None)
+                        task_dict.pop('assigned_at', None)
+
+            # Atomic write back
+            with open(temp_path, 'w') as f:
+                json.dump(data, f, indent=2)
+            os.replace(temp_path, tasks_file)
+
+        except Exception as e:
+            print(f"[MasterDispatcher] Failed to rollback status: {e}")
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
 
     def _write_to_mailbox(self, task: TaskInfo, worker_id: str) -> None:
         """
