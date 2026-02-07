@@ -114,6 +114,7 @@ def count_windows(cluster_id):
     return len(lines)
 
 
+@pytest.mark.usefixtures("swarm_with_dummy_env")
 def test_cli_commands_work(unique_cluster_id, isolated_swarm_dir):
     """
     E2E test: Verify swarm CLI commands work with real tmux.

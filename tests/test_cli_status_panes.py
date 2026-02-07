@@ -295,6 +295,7 @@ def isolated_swarm_dir(tmp_path, unique_cluster_id):
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("swarm_with_dummy_env")
 def test_status_panes_flag(unique_cluster_id, isolated_swarm_dir):
     """
     Integration test: Verify --panes flag works end-to-end.

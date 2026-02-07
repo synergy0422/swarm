@@ -23,7 +23,7 @@ from swarm.task_queue import TaskQueue
 from swarm.task_lock import TaskLockManager
 from swarm.status_broadcaster import get_ai_swarm_dir, StatusBroadcaster
 from swarm.master_dispatcher import MasterDispatcher
-from swarm.auto_rescuer import AutoRescuer
+from swarm.auto_rescuer import AutoRescuer, AUTO_ENTER_PATTERNS
 from swarm.fifo_input import FifoInputHandler, get_interactive_mode
 
 
@@ -177,6 +177,22 @@ class WaitDetector:
             return False
         return worker_status.get('state') == 'WAIT'
 
+    def detect_in_pane(self, content: str) -> List[str]:
+        """
+        Detect wait patterns in pane content.
+
+        Compat shim for test_master_tmux_scan.py tests.
+        Uses AUTO_ENTER_PATTERNS from auto_rescuer for consistency.
+        """
+        if not content:
+            return []
+
+        patterns = []
+        for pattern, _ in AUTO_ENTER_PATTERNS:
+            if re.search(pattern, content, re.IGNORECASE):
+                patterns.append(pattern)
+        return patterns
+
 
 class PaneScanner:
     """Scans tmux pane content using TmuxCollaboration."""
@@ -198,6 +214,32 @@ class PaneScanner:
             return self.tmux.capture_all_windows(session_name)
         except Exception:
             return {}
+
+    def send_enter(self, session_name: str, window_name: str) -> bool:
+        """
+        Send Enter key to a window.
+
+        Args:
+            session_name: Tmux session name
+            window_name: Window name to send Enter
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.tmux:
+            return False
+
+        try:
+            # Find window by name
+            windows = self.tmux.list_windows(session_name)
+            for w in windows:
+                if w["name"] == window_name:
+                    # Call actual API (send_keys_to_window needs window_index)
+                    self.tmux.send_keys_to_window(session_name, w["index"], "", enter=True)
+                    return True
+            return False
+        except Exception:
+            return False
 
 
 class PaneSummary:
@@ -362,6 +404,9 @@ class Master:
         # Pane summary tracking {window_name: PaneSummary}
         self._pane_summaries: Dict[str, PaneSummary] = {}
 
+        # Auto-enter cooldown tracking {window_name: timestamp}
+        self._last_auto_enter: Dict[str, float] = {}
+
         # FIFO input handler for interactive mode
         self.fifo_handler: Optional[FifoInputHandler] = None
 
@@ -412,6 +457,8 @@ class Master:
                 summary.update_state('RUNNING', now)
                 summary.last_action = 'AUTO_ENTER'
                 summary.note = f'"{pattern}"'
+                # Track auto-enter for cooldown
+                self._last_auto_enter[window_name] = now
             elif action == 'manual_confirm_needed':
                 summary.update_state('WAIT', now)
                 summary.last_action = 'MANUAL'

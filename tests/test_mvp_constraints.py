@@ -9,8 +9,12 @@ Ensures:
 """
 
 import os
+import pathlib
 import subprocess
 import pytest
+
+# Dynamically resolve swarm root directory (parent of tests/)
+SWARM_ROOT = pathlib.Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class TestNoLegacyPaths:
@@ -32,7 +36,7 @@ class TestNoLegacyPaths:
              'swarm/'],
             capture_output=True,
             text=True,
-            cwd='/home/user/AAA/swarm'
+            cwd=str(SWARM_ROOT)
         )
 
         # Also check root-level Python files
@@ -43,7 +47,7 @@ class TestNoLegacyPaths:
              '--exclude=*.pyc'],
             capture_output=True,
             text=True,
-            cwd='/home/user/AAA/swarm'
+            cwd=str(SWARM_ROOT)
         )
 
         # grep returns exit code 1 when no matches found (which is what we want)
@@ -67,7 +71,7 @@ class TestNoLegacyPaths:
              'swarm/'],
             capture_output=True,
             text=True,
-            cwd='/home/user/AAA/swarm'
+            cwd=str(SWARM_ROOT)
         )
 
         # Also check root-level Python files
@@ -77,7 +81,7 @@ class TestNoLegacyPaths:
              '--exclude-dir=tests'],
             capture_output=True,
             text=True,
-            cwd='/home/user/AAA/swarm'
+            cwd=str(SWARM_ROOT)
         )
 
         combined_output = result.stdout + root_result.stdout
@@ -179,7 +183,7 @@ class TestWrapperNoLogic:
         """Root task_queue.py should only import from swarm.task_queue."""
         import importlib.util
         spec = importlib.util.spec_from_file_location(
-            "task_queue", "/home/user/AAA/swarm/task_queue.py"
+            "task_queue", str(SWARM_ROOT / "task_queue.py")
         )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -189,7 +193,7 @@ class TestWrapperNoLogic:
 
         # Should have minimal imports (only from swarm)
         import ast
-        with open('/home/user/AAA/swarm/task_queue.py') as f:
+        with open(str(SWARM_ROOT / "task_queue.py")) as f:
             tree = ast.parse(f.read())
 
         imports = []
@@ -208,7 +212,7 @@ class TestWrapperNoLogic:
         """Root worker_smart.py should only import from swarm.worker_smart."""
         import importlib.util
         spec = importlib.util.spec_from_file_location(
-            "worker_smart", "/home/user/AAA/swarm/worker_smart.py"
+            "worker_smart", str(SWARM_ROOT / "worker_smart.py")
         )
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -217,7 +221,7 @@ class TestWrapperNoLogic:
         assert hasattr(module, '__all__')
 
         import ast
-        with open('/home/user/AAA/swarm/worker_smart.py') as f:
+        with open(str(SWARM_ROOT / "worker_smart.py")) as f:
             tree = ast.parse(f.read())
 
         imports = []
