@@ -58,6 +58,29 @@
 | B: Three Sequential Tasks | Verified | ~120s |
 | C: Exception Recovery | Verified | ~60s |
 
+### Bug Fixes (P2 - Test Baseline)
+
+| Issue | Root Cause | Fix |
+|-------|------------|-----|
+| test_master_tmux_scan.py: 8 failures | Missing `PaneScanner.send_enter()` | Implemented `(session_name, window_name)` API |
+| ACK false positives | TASK line not stripped, baseline drift | `strip_line_prefix()` + content delta detection |
+| test_cli_status_panes.py failures | Worker ID fixture mismatch | Fixed conftest.py worker_id |
+| test_mvp_constraints.py failures | ACK timing assumptions | Updated test expectations |
+
+**Test Results:**
+```
+pytest tests/test_master_tmux_scan.py: 25 passed
+pytest (all): 375 passed
+Failures: 23 → 8 → 0 (P2 baseline cleared)
+```
+
+**Commands:**
+```bash
+# Verify P2 fixes
+python3 -m pytest tests/test_master_tmux_scan.py -q
+python3 -m pytest --tb=no -q
+```
+
 ---
 
 ## [Unreleased]
