@@ -322,3 +322,175 @@ class TestSmartWorker(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+
+
+class TestMailboxOffsetPersistence(unittest.TestCase):
+    """
+    Test suite for P1.1: Worker Mailbox Offset Persistence
+
+    Ensures worker doesn't re-process tasks after restart.
+    """
+
+    def setUp(self):
+        """Set up test environment"""
+        self.test_dir = tempfile.mkdtemp(prefix='worker_offset_test_')
+        self.instructions_dir = os.path.join(self.test_dir, 'instructions')
+        self.offsets_dir = os.path.join(self.test_dir, 'offsets')
+        os.makedirs(self.instructions_dir, exist_ok=True)
+        os.makedirs(self.offsets_dir, exist_ok=True)
+
+        # Set proxy mode to avoid API key requirement
+        self.original_llm_url = os.environ.get('LLM_BASE_URL')
+        os.environ['LLM_BASE_URL'] = 'http://127.0.0.1:15721/v1/messages'
+
+        # Sample mailbox content
+        self.mailbox_path = os.path.join(self.instructions_dir, 'test-worker.jsonl')
+        self.sample_instructions = [
+            json.dumps({'ts': 1, 'task_id': 'task-001', 'action': 'RUN_TASK', 'payload': {'id': 'task-001', 'prompt': 'Task 1'}}),
+            json.dumps({'ts': 2, 'task_id': 'task-002', 'action': 'RUN_TASK', 'payload': {'id': 'task-002', 'prompt': 'Task 2'}}),
+            json.dumps({'ts': 3, 'task_id': 'task-003', 'action': 'RUN_TASK', 'payload': {'id': 'task-003', 'prompt': 'Task 3'}}),
+        ]
+
+    def tearDown(self):
+        """Clean up test environment"""
+        if self.original_llm_url is not None:
+            os.environ['LLM_BASE_URL'] = self.original_llm_url
+        else:
+            os.environ.pop('LLM_BASE_URL', None)
+        if os.path.exists(self.test_dir):
+            shutil.rmtree(self.test_dir)
+
+    def test_offset_file_path_constructed_correctly(self):
+        """Test: Offset file path follows expected pattern"""
+        os.environ['AI_SWARM_DIR'] = self.test_dir
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        expected_offset_path = os.path.join(self.offsets_dir, 'test-worker.offset.json')
+        self.assertEqual(worker._offset_file_path, expected_offset_path)
+
+    def test_load_mailbox_offset_returns_zero_for_nonexistent_file(self):
+        """Test: Load offset returns 0 when offset file doesn't exist"""
+        os.environ['AI_SWARM_DIR'] = self.test_dir
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Offset file doesn't exist
+        self.assertFalse(os.path.exists(worker._offset_file_path))
+
+        # Should return 0
+        offset = worker._load_mailbox_offset()
+        self.assertEqual(offset, 0)
+
+    def test_load_mailbox_offset_recovers_from_file(self):
+        """Test: Load offset returns saved value from file"""
+        os.environ['AI_SWARM_DIR'] = self.test_dir
+
+        # Pre-create offset file with saved offset
+        offset_file = os.path.join(self.offsets_dir, 'test-worker.offset.json')
+        os.makedirs(os.path.dirname(offset_file), exist_ok=True)
+        with open(offset_file, 'w') as f:
+            json.dump({'offset': 3, 'updated_at': '2026-02-07T10:00:00.000Z'}, f)
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Should load saved offset
+        offset = worker._load_mailbox_offset()
+        self.assertEqual(offset, 3)
+
+    def test_load_mailbox_offset_handles_corruption(self):
+        """Test: Load offset returns 0 when file is corrupted"""
+        os.environ['AI_SWARM_DIR'] = self.test_dir
+
+        # Create corrupted offset file
+        offset_file = os.path.join(self.offsets_dir, 'test-worker.offset.json')
+        with open(offset_file, 'w') as f:
+            f.write('{invalid json}')
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Should handle corruption gracefully, return 0
+        offset = worker._load_mailbox_offset()
+        self.assertEqual(offset, 0)
+
+    def test_save_mailbox_offset_writes_to_file(self):
+        """Test: Save offset writes correct value to file"""
+        os.environ['AI_SWARM_DIR'] = self.test_dir
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        worker._save_mailbox_offset(5)
+
+        # Verify file was created
+        self.assertTrue(os.path.exists(worker._offset_file_path))
+
+        # Verify content
+        with open(worker._offset_file_path, 'r') as f:
+            data = json.load(f)
+        self.assertEqual(data['offset'], 5)
+        self.assertIn('updated_at', data)
+
+    def test_poll_for_instructions_persists_offset(self):
+        """Test: Poll instructions saves offset after processing"""
+        os.environ['AI_SWARM_DIR'] = self.test_dir
+
+        # Create mailbox with instructions
+        with open(self.mailbox_path, 'w') as f:
+            f.write('\n'.join(self.sample_instructions) + '\n')
+
+        worker = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+
+        # Mock _verify_task_lock to always return True
+        worker._verify_task_lock = MagicMock(return_value=True)
+
+        # Mock broadcaster to avoid status log issues
+        worker.broadcaster = MagicMock()
+
+        # Poll first task
+        task = worker.poll_for_instructions()
+
+        # Verify offset was saved
+        self.assertTrue(os.path.exists(worker._offset_file_path))
+        with open(worker._offset_file_path, 'r') as f:
+            data = json.load(f)
+        self.assertEqual(data['offset'], 1)
+
+    def test_worker_restart_resumes_from_last_offset(self):
+        """Test: Worker restart resumes from last saved offset (no duplicate processing)"""
+        os.environ['AI_SWARM_DIR'] = self.test_dir
+
+        # Create mailbox with 3 tasks
+        with open(self.mailbox_path, 'w') as f:
+            f.write('\n'.join(self.sample_instructions) + '\n')
+
+        # First worker instance processes first 2 tasks
+        worker1 = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+        worker1._verify_task_lock = MagicMock(return_value=True)
+        worker1.broadcaster = MagicMock()
+
+        # Process task 1
+        task1 = worker1.poll_for_instructions()
+        self.assertEqual(task1['id'], 'task-001')
+
+        # Process task 2
+        task2 = worker1.poll_for_instructions()
+        self.assertEqual(task2['id'], 'task-002')
+
+        # Simulate crash - offset is saved at 2
+        self.assertTrue(os.path.exists(worker1._offset_file_path))
+
+        # New worker instance starts (simulating restart)
+        worker2 = worker_smart.SmartWorker('test-worker', base_dir=self.test_dir)
+        worker2._verify_task_lock = MagicMock(return_value=True)
+        worker2.broadcaster = MagicMock()
+
+        # Should start from offset 2, process only task-003
+        task3 = worker2.poll_for_instructions()
+
+        # Verify only task-003 was processed (not duplicate)
+        self.assertIsNotNone(task3)
+        self.assertEqual(task3['id'], 'task-003')
+
+        # Verify no more tasks
+        task4 = worker2.poll_for_instructions()
+        self.assertIsNone(task4)

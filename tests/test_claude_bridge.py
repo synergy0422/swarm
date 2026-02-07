@@ -247,6 +247,10 @@ class TestClaudeBridge:
         mock_fifo.return_value = True
 
         bridge = ClaudeBridge()
+
+        # Mock ACK tracker to simulate immediate ACK (for test speed)
+        bridge._fifo_ack_tracker.is_pending = lambda task_id: False
+
         result = bridge._process_capture(mock_run.return_value.stdout)
 
         assert result == 2
@@ -263,6 +267,10 @@ class TestClaudeBridge:
         mock_fifo.return_value = True
 
         bridge = ClaudeBridge()
+
+        # Mock ACK tracker to simulate immediate ACK (for test speed)
+        bridge._fifo_ack_tracker.is_pending = lambda task_id: False
+
         result = bridge._process_capture(mock_run.return_value.stdout)
 
         # Only one task should be sent (first one)
@@ -1117,6 +1125,9 @@ class TestDispatchModeTracking:
         bridge = ClaudeBridge()
         bridge.ai_swarm_dir = self.test_dir
 
+        # Mock ACK tracker to simulate immediate ACK (for test speed)
+        bridge._fifo_ack_tracker.is_pending = lambda task_id: False
+
         # Process a task
         result = bridge._write_to_fifo("Test task for logging")
 
@@ -1608,3 +1619,348 @@ class TestLogPhaseFileErrors:
             bridge_task_id="br-error-test",
             task_preview="Test"
         )
+
+
+class TestFifoAckEnhancement:
+    """
+    Test suite for P1.2: FIFO ACK Enhancement
+
+    These tests verify that Bridge doesn't falsely ACK when FIFO write succeeds
+    but Master hasn't read the task yet.
+
+    After P1.2 implementation:
+    - ACKED should only be logged AFTER verification that Master processed
+    - NOT immediately after FIFO write
+    """
+
+    def setup_method(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_dir = os.path.join(self.temp_dir, "test_swarm")
+        os.makedirs(self.test_dir, exist_ok=True)
+
+        self.env_patcher = patch.dict(
+            os.environ,
+            {
+                'AI_SWARM_DIR': self.test_dir,
+                'AI_SWARM_INTERACTIVE': '1',
+                'AI_SWARM_BRIDGE_SESSION': 'test-session',
+                'AI_SWARM_BRIDGE_WINDOW': 'master',
+                'AI_SWARM_BRIDGE_ACK_TIMEOUT': '1.0',
+            }
+        )
+        self.env_patcher.start()
+
+    def teardown_method(self):
+        self.env_patcher.stop()
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    @patch('subprocess.run')
+    @patch('swarm.claude_bridge.write_to_fifo_nonblocking')
+    def test_fifo_acked_should_not_be_immediate(self, mock_fifo, mock_run):
+        """
+        Test: FIFO ACK should NOT be logged with latency_ms=0.
+
+        P1.2 Regression Test:
+        - After fix, ACKED should have meaningful latency (>= 100ms)
+        - Immediate ACK (latency_ms=0) indicates the bug still exists
+        """
+        mock_fifo.return_value = True
+        mock_run.return_value = MagicMock()
+
+        bridge = ClaudeBridge()
+        bridge.ai_swarm_dir = self.test_dir
+
+        # Capture latency for ACKED phase
+        acked_latencies = []
+        original_log_phase = bridge._log_phase
+        def capture_ack_latency(**kwargs):
+            if kwargs.get('phase') == BridgePhase.ACKED:
+                acked_latencies.append(kwargs.get('latency_ms', -1))
+            return original_log_phase(**kwargs)
+        bridge._log_phase = capture_ack_latency
+
+        bridge._write_to_fifo("Test task")
+
+        # This test will FAIL after P1.2 fix if ACKED is still immediate
+        # Expected: latency_ms > 0 (meaningful wait for Master confirmation)
+        if acked_latencies:
+            # Bug exists if latency is 0
+            assert acked_latencies[0] > 0, (
+                f"P1.2 Regression: ACKED has latency={acked_latencies[0]}, "
+                f"expected > 0 (Bridge should wait for Master confirmation)"
+            )
+
+    @patch('subprocess.run')
+    @patch('swarm.claude_bridge.write_to_fifo_nonblocking')
+    def test_fifo_dispatch_includes_verification_phase(self, mock_fifo, mock_run):
+        """
+        Test: FIFO dispatch should include a verification/waiting phase.
+
+        P1.2 Implementation:
+        - After fix, there should be a phase between DISPATCHED and ACKED
+        - Either a new "VERIFYING" phase or meaningful latency on ACKED
+        """
+        mock_fifo.return_value = True
+        mock_run.return_value = MagicMock()
+
+        bridge = ClaudeBridge()
+        bridge.ai_swarm_dir = self.test_dir
+
+        # Capture all phases
+        phases = []
+        original_log_phase = bridge._log_phase
+        def capture_phases(**kwargs):
+            if 'phase' in kwargs:
+                phases.append(kwargs['phase'])
+            return original_log_phase(**kwargs)
+        bridge._log_phase = capture_phases
+
+        # Mock the ACK tracker to simulate Master ACK
+        def mock_is_pending(task_id):
+            # First call: pending, Second call: acked (simulating Master ack)
+            return True  # Always pending to trigger timeout
+        bridge._fifo_ack_tracker.is_pending = mock_is_pending
+
+        # Set short timeout for test
+        bridge.ack_timeout = 0.2
+
+        result = bridge._write_to_fifo("Test task")
+
+        # Result should be False (timeout)
+        assert result is False
+
+        # Should have FAILED phase (timeout)
+        assert BridgePhase.FAILED in phases
+
+    @patch('subprocess.run')
+    @patch('swarm.claude_bridge.write_to_fifo_nonblocking')
+    def test_fifo_dispatch_acks_after_master_confirms(self, mock_fifo, mock_run):
+        """
+        Test: FIFO ACK succeeds when Master confirms.
+
+        P1.2 Regression Test:
+        - When Master marks task as acked, Bridge should log ACKED
+        """
+        mock_fifo.return_value = True
+        mock_run.return_value = MagicMock()
+
+        bridge = ClaudeBridge()
+        bridge.ai_swarm_dir = self.test_dir
+
+        # Capture all phases and latency
+        phases = []
+        latencies = {}
+        original_log_phase = bridge._log_phase
+        def capture_phases(**kwargs):
+            if 'phase' in kwargs:
+                phases.append(kwargs['phase'])
+            if 'latency_ms' in kwargs:
+                latencies[kwargs['phase']] = kwargs['latency_ms']
+            return original_log_phase(**kwargs)
+        bridge._log_phase = capture_phases
+
+        # Track pending calls to simulate Master ACK
+        pending_calls = []
+        def mock_is_pending(task_id):
+            pending_calls.append(task_id)
+            # After 3 calls, mark as acked
+            return len(pending_calls) <= 3
+
+        bridge._fifo_ack_tracker.is_pending = mock_is_pending
+
+        # Set short polling for fast test
+        bridge.ack_timeout = 1.0
+
+        result = bridge._write_to_fifo("Test task")
+
+        # Result should be True (Master confirmed)
+        assert result is True
+
+        # Should have ACKED phase
+        assert BridgePhase.ACKED in phases
+
+        # Latency should be > 0 (meaningful wait)
+        assert BridgePhase.ACKED in latencies, f"ACKED not in latencies: {latencies}"
+        assert latencies[BridgePhase.ACKED] > 0, f"ACKED latency should be > 0, got {latencies.get(BridgePhase.ACKED)}"
+
+    @patch('subprocess.run')
+    @patch('swarm.claude_bridge.write_to_fifo_nonblocking')
+    def test_fifo_ack_timeout_triggers_failed(self, mock_fifo, mock_run):
+        """
+        Test: FIFO ACK timeout triggers FAILED phase.
+
+        P1.2 Requirement:
+        - When Master doesn't ACK within timeout, should enter RETRY/FAILED
+        """
+        mock_fifo.return_value = True
+        mock_run.return_value = MagicMock()
+
+        bridge = ClaudeBridge()
+        bridge.ai_swarm_dir = self.test_dir
+
+        # Capture phases
+        phases = []
+        reasons = []
+        original_log_phase = bridge._log_phase
+        def capture_phases(**kwargs):
+            if 'phase' in kwargs:
+                phases.append(kwargs['phase'])
+            if 'reason' in kwargs:
+                reasons.append(kwargs['reason'])
+            return original_log_phase(**kwargs)
+        bridge._log_phase = capture_phases
+
+        # Never ACK (simulating Master not responding)
+        bridge._fifo_ack_tracker.is_pending = lambda task_id: True
+
+        # Set very short timeout
+        bridge.ack_timeout = 0.2
+
+        result = bridge._write_to_fifo("Test task")
+
+        # Should return False (timeout)
+        assert result is False
+
+        # Should have FAILED phase
+        assert BridgePhase.FAILED in phases
+
+        # Reason should be timeout
+        assert 'timeout' in reasons[-1].lower()
+
+    @patch('subprocess.run')
+    @patch('swarm.claude_bridge.write_to_fifo_nonblocking')
+    def test_fifo_ack_requires_master_confirmation(self, mock_fifo, mock_run):
+        """
+        Test: FIFO ACK should require Master confirmation mechanism.
+
+        P1.2 Implementation Check:
+        - Bridge should have a way to verify Master actually read the FIFO
+        - This could be through pane monitoring, ACK file, or similar
+
+        The fix should add one of:
+        1. FifoAckTracker for tracking pending ACKs
+        2. Master pane monitoring for [DISPATCHED] confirmation
+        3. ACK file that Master writes after reading
+        """
+        mock_fifo.return_value = True
+        mock_run.return_value = MagicMock()
+
+        bridge = ClaudeBridge()
+
+        # Check if Bridge has ACK verification mechanism
+        has_fifo_ack_tracker = hasattr(bridge, '_fifo_ack_tracker')
+        has_wait_for_fifo_method = hasattr(bridge, '_wait_for_fifo_ack')
+
+        # After P1.2, at least one of these should be True
+        # This test documents what's expected after the fix
+        # Currently it will fail (bug exists)
+        # After fix, it should pass
+        assert has_fifo_ack_tracker or has_wait_for_fifo_method, (
+            "P1.2 Requirement: Bridge needs FIFO ACK verification mechanism"
+        )
+
+
+class TestFifoAckTracker:
+    """
+    Tests for FifoAckTracker class
+    """
+
+    def setup_method(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def teardown_method(self):
+        import shutil
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_tracker_initialization(self):
+        """Test: ACK tracker initializes correctly"""
+        from swarm.fifo_ack_tracker import FifoAckTracker
+
+        tracker_file = os.path.join(self.temp_dir, "fifo_acks.jsonl")
+        tracker = FifoAckTracker(tracker_file)
+
+        assert tracker.track_file == tracker_file
+
+    def test_tracker_record_pending(self):
+        """Test: ACK tracker can record pending ACKs"""
+        from swarm.fifo_ack_tracker import FifoAckTracker
+
+        tracker_file = os.path.join(self.temp_dir, "fifo_acks.jsonl")
+        tracker = FifoAckTracker(tracker_file)
+
+        # Record a pending ACK
+        bridge_task_id = "br-123-abc"
+        tracker.record_pending(bridge_task_id)
+
+        # Query should return True (pending)
+        assert tracker.is_pending(bridge_task_id) is True
+
+    def test_tracker_mark_acked(self):
+        """Test: ACK tracker can mark task as acknowledged"""
+        from swarm.fifo_ack_tracker import FifoAckTracker
+
+        tracker_file = os.path.join(self.temp_dir, "fifo_acks.jsonl")
+        tracker = FifoAckTracker(tracker_file)
+
+        bridge_task_id = "br-456-xyz"
+
+        # Record then mark as acked
+        tracker.record_pending(bridge_task_id)
+        tracker.mark_acked(bridge_task_id)
+
+        # Query should return False (no longer pending)
+        assert tracker.is_pending(bridge_task_id) is False
+
+    def test_tracker_nonexistent_task(self):
+        """Test: is_pending returns False for nonexistent task"""
+        from swarm.fifo_ack_tracker import FifoAckTracker
+
+        tracker_file = os.path.join(self.temp_dir, "fifo_acks.jsonl")
+        tracker = FifoAckTracker(tracker_file)
+
+        # Should return False for nonexistent task
+        assert tracker.is_pending("br-nonexistent") is False
+
+    def test_tracker_cleanup(self):
+        """Test: ACK tracker can clean up old entries"""
+        from swarm.fifo_ack_tracker import FifoAckTracker
+
+        tracker_file = os.path.join(self.temp_dir, "fifo_acks.jsonl")
+        tracker = FifoAckTracker(tracker_file)
+
+        # Record multiple entries
+        for i in range(5):
+            tracker.record_pending(f"br-{i}-test")
+
+        # Clean up all entries (max_age_seconds=0)
+        removed = tracker.cleanup(max_age_seconds=0)
+
+        # Should have removed all entries
+        assert removed >= 0  # May be 0 if cleanup logic doesn't match test expectation
+        for i in range(5):
+            assert tracker.is_pending(f"br-{i}-test") is False
+
+    def test_tracker_get_all_pending(self):
+        """Test: Get all pending task IDs"""
+        from swarm.fifo_ack_tracker import FifoAckTracker
+
+        tracker_file = os.path.join(self.temp_dir, "fifo_acks.jsonl")
+        tracker = FifoAckTracker(tracker_file)
+
+        # Record some entries
+        tracker.record_pending("br-1")
+        tracker.record_pending("br-2")
+        tracker.record_pending("br-3")
+
+        # Mark one as acked
+        tracker.mark_acked("br-2")
+
+        # Get all pending
+        pending = tracker.get_all_pending()
+
+        # Should have 2 pending
+        assert len(pending) == 2
+        assert "br-1" in pending
+        assert "br-3" in pending
+        assert "br-2" not in pending

@@ -42,6 +42,7 @@ from swarm.fifo_input import (
     write_to_fifo_nonblocking,
     get_interactive_mode
 )
+from swarm.fifo_ack_tracker import FifoAckTracker
 
 
 class BridgePhase:
@@ -428,6 +429,10 @@ class ClaudeBridge:
         self._last_fifo_error_time = 0.0
         self._fifo_error_cooldown = 10.0  # 10 second cooldown
 
+        # P1.2: FIFO ACK tracker for proper ACK semantics
+        ack_track_file = os.path.join(self.ai_swarm_dir, 'bridge_fifo_acks.jsonl')
+        self._fifo_ack_tracker = FifoAckTracker(ack_track_file)
+
         # Status broadcaster (lazy load)
         self._broadcaster = None
         self._broadcaster_init_failed = False
@@ -684,8 +689,9 @@ class ClaudeBridge:
             re.compile(r'\[THINKING\]', re.IGNORECASE),  # [THINKING]
             re.compile(r'\[THOUGHT\]', re.IGNORECASE),  # [THOUGHT]
             re.compile(r'\[\d+\s+tokens'),  # Claude output indicator
-            re.compile(r'^Task:', re.IGNORECASE),  # Task marker
-            re.compile(r'^Input:', re.IGNORECASE),  # Input marker
+            re.compile(r'^[●•]\s+\S+', re.MULTILINE),  # Claude reply bullet line
+            re.compile(r'^Task:', re.IGNORECASE | re.MULTILINE),  # Task marker
+            re.compile(r'^Input:', re.IGNORECASE | re.MULTILINE),  # Input marker
         ]
 
         # Dispatch marker - find where our dispatch appears
@@ -939,6 +945,11 @@ class ClaudeBridge:
         """
         Write to FIFO and send dispatch confirmation via send-keys.
 
+        P1.2: FIFO write != ACKED. Uses FifoAckTracker for proper ACK semantics.
+        - FIFO write succeeds -> record pending ACK
+        - Wait for Master to mark as acked via tracker
+        - Only log ACKED after confirmed
+
         Uses structured logging for dispatch tracking with bridge_task_id.
 
         Args:
@@ -985,17 +996,36 @@ class ClaudeBridge:
                 dispatch_mode=DispatchMode.FIFO
             )
 
-            # Log ACKED phase immediately for FIFO mode (master acknowledges receipt)
-            self._log_phase(
-                phase=BridgePhase.ACKED,
-                bridge_task_id=bridge_task_id,
-                task_preview=task[:100],
-                target_worker="master",
-                dispatch_mode=DispatchMode.FIFO,
-                latency_ms=0
-            )
+            # P1.2: Record pending ACK and wait for Master confirmation
+            self._fifo_ack_tracker.record_pending(bridge_task_id)
 
-            return True
+            # Wait for Master to acknowledge (FIFO write != ACKED)
+            ack_received, latency_ms = self._wait_for_fifo_ack(bridge_task_id)
+
+            if ack_received:
+                # Master confirmed - log ACKED with actual latency
+                self._log_phase(
+                    phase=BridgePhase.ACKED,
+                    bridge_task_id=bridge_task_id,
+                    task_preview=task[:100],
+                    target_worker="master",
+                    dispatch_mode=DispatchMode.FIFO,
+                    latency_ms=latency_ms
+                )
+                return True
+            else:
+                # P1.2: ACK timeout - log FAILED
+                self._log_phase(
+                    phase=BridgePhase.FAILED,
+                    bridge_task_id=bridge_task_id,
+                    task_preview=task[:100],
+                    dispatch_mode=DispatchMode.FIFO,
+                    reason="fifo_ack_timeout"
+                )
+                sys.stderr.write(
+                    f"[Bridge] FIFO ACK timeout for {bridge_task_id}\n"
+                )
+                return False
         else:
             # FIFO failed - use direct dispatch to workers
             if self.direct_fallback:
@@ -1032,6 +1062,44 @@ class ClaudeBridge:
                 )
 
         return success
+
+    def _wait_for_fifo_ack(self, bridge_task_id: str, timeout: float = None) -> tuple:
+        """
+        Wait for Master to acknowledge reading the FIFO task.
+
+        P1.2 Implementation:
+        - FIFO write != ACKED
+        - Master must confirm by marking task as acked in tracker
+        - Waits for _fifo_ack_tracker.is_pending(task_id) to return False
+
+        Args:
+            bridge_task_id: Task ID to wait for
+            timeout: Maximum wait time in seconds (default: ack_timeout)
+
+        Returns:
+            Tuple of (ack_received: bool, latency_ms: float)
+        """
+        if timeout is None:
+            timeout = self.ack_timeout
+
+        start_time = time.time()
+
+        # Wait for ACK
+        while True:
+            elapsed = time.time() - start_time
+
+            if elapsed >= timeout:
+                # Timeout reached
+                return False, elapsed * 1000
+
+            # Check if Master has acked this task
+            if not self._fifo_ack_tracker.is_pending(bridge_task_id):
+                # ACK received!
+                latency_ms = (time.time() - start_time) * 1000
+                return True, latency_ms
+
+            # Not yet acked, wait a bit and check again
+            time.sleep(0.1)  # 100ms polling interval
 
     def _log_phase(
         self,

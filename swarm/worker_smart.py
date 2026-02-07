@@ -15,7 +15,7 @@ import fcntl
 import shutil
 import requests
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from swarm import config
@@ -54,13 +54,16 @@ class SmartWorker:
         self.locks_dir = os.path.join(self.base_dir, 'locks')
         self.results_dir = os.path.join(self.base_dir, 'results')
         self.instructions_dir = os.path.join(self.base_dir, 'instructions')
+        self.offsets_dir = os.path.join(self.base_dir, 'offsets')
         self.lock_file = os.path.join(self.locks_dir, f'{self.name}.lock')
         self.mailbox_path = os.path.join(self.instructions_dir, f'{self.name}.jsonl')
+        self._offset_file_path = os.path.join(self.offsets_dir, f'{self.name}.offset.json')
 
         # Ensure directories exist
         os.makedirs(self.locks_dir, exist_ok=True)
         os.makedirs(self.results_dir, exist_ok=True)
         os.makedirs(self.instructions_dir, exist_ok=True)
+        os.makedirs(self.offsets_dir, exist_ok=True)
 
         # Initialize status broadcaster for unified JSONL logging
         self.broadcaster = StatusBroadcaster(worker_id=self.name)
@@ -78,6 +81,51 @@ class SmartWorker:
         except RuntimeError as e:
             print(f"[{self.name}] Configuration error: {e}")
             raise
+
+        # Load persisted mailbox offset (P1.1: prevent duplicate consumption on restart)
+        self._mailbox_offset = self._load_mailbox_offset()
+
+    def _load_mailbox_offset(self) -> int:
+        """
+        Load persisted mailbox offset from file.
+
+        Returns:
+            int: Last saved offset, or 0 if file doesn't exist or is corrupted
+        """
+        if not os.path.exists(self._offset_file_path):
+            return 0
+
+        try:
+            with open(self._offset_file_path, 'r') as f:
+                data = json.load(f)
+            return int(data.get('offset', 0))
+        except (json.JSONDecodeError, ValueError, OSError):
+            print(f"[{self.name}] Failed to load offset file, starting from 0")
+            return 0
+
+    def _save_mailbox_offset(self, offset: int) -> None:
+        """
+        Persist mailbox offset to file atomically.
+
+        Args:
+            offset: The offset value to save
+        """
+        temp_path = self._offset_file_path + '.tmp.' + str(os.getpid())
+        try:
+            data = {
+                'offset': offset,
+                'updated_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+            }
+            with open(temp_path, 'w') as f:
+                json.dump(data, f)
+            os.replace(temp_path, self._offset_file_path)
+        except (OSError, IOError) as e:
+            print(f"[{self.name}] Failed to save offset: {e}")
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
 
     def shutdown(self, signum, frame):
         """
@@ -441,6 +489,8 @@ class SmartWorker:
 
                     # Update offset (we've read up to this line)
                     self._mailbox_offset = i + 1
+                    # P1.1: Persist offset to prevent duplicate consumption on restart
+                    self._save_mailbox_offset(self._mailbox_offset)
 
                     # Only process RUN_TASK actions
                     if instruction.get('action') == 'RUN_TASK':

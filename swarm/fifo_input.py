@@ -93,6 +93,12 @@ class FifoInputHandler:
         self._task_queue = TaskQueue()
         self._broadcaster = None  # Set by Master if provided
 
+        # P1.2: FIFO ACK tracker for proper ACK semantics
+        from swarm.fifo_ack_tracker import FifoAckTracker
+        self._fifo_ack_tracker = FifoAckTracker(
+            os.path.join(os.environ.get('AI_SWARM_DIR', '/tmp/ai_swarm'), 'bridge_fifo_acks.jsonl')
+        )
+
     def _ensure_fifo_exists(self):
         """Create FIFO if not exists."""
         if not os.path.exists(self.fifo_path):
@@ -183,15 +189,32 @@ class FifoInputHandler:
         return ('task', line)
 
     def _handle_task(self, prompt: str):
-        """Call task_queue.add_task(prompt), log result."""
+        """Call task_queue.add_task(prompt), log result, and mark ACK."""
         if not prompt:
             return
+
+        # P1.2: Extract bridge_task_id from prompt if present
+        # Format: [BRIDGE_TASK_ID: xxx] TASK: prompt
+        bridge_task_id = None
+        import re
+        match = re.search(r'\[BRIDGE_TASK_ID:\s*([^\]]+)\]', prompt)
+        if match:
+            bridge_task_id = match.group(1).strip()
+            # Remove the bridge_task_id prefix from the actual prompt
+            prompt = re.sub(r'\[BRIDGE_TASK_ID:\s*[^\]]+\]\s*TASK:\s*', '', prompt)
+            prompt = re.sub(r'\[BRIDGE_TASK_ID:\s*[^\]]+\]\s*', '', prompt)
+
         try:
             task_id = self._task_queue.add_task(prompt)
             # broadcast_start() signature: (task_id, message, meta=None)
             # Note: No worker_id parameter
             if self._broadcaster:
                 self._broadcaster.broadcast_start(task_id=task_id, message=f"FIFO: {prompt[:50]}")
+
+            # P1.2: Mark ACK after successfully creating task
+            if bridge_task_id:
+                self._fifo_ack_tracker.mark_acked(bridge_task_id)
+
             sys.stdout.write(f"[FIFO] Created task: {task_id}\n")
             sys.stdout.flush()
         except Exception as e:
